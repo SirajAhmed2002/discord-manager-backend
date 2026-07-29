@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractSlashCommandJdaBot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.botmaker</a> &gt; <span class="el_source">AbstractSlashCommandJdaBot.java</span></div><h1>AbstractSlashCommandJdaBot.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.botmaker;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.SlashCommandBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.model.JdaSlashCommand;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.service.JdaEventListenerService;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.service.JdaSlashCommandService;
+import jakarta.annotation.PostConstruct;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+
+/**
+ * Abstract base class for Discord bots that handle slash commands.
+ * Provides command registration, interaction handling, and lifecycle management.
+ */
+@Component
+public abstract class AbstractSlashCommandJdaBot extends AbstractJdaBot {
+
+    /**
+     * Logger instance for this class.
+     */
+<span class="fc" id="L36">    private static final Logger log = LoggerFactory.getLogger(AbstractSlashCommandJdaBot.class);</span>
+
+    /**
+     * The type of Discord bot this instance represents.
+     */
+    private SlashCommandBotType botType;
+
+    /**
+     * List of slash commands registered by this bot.
+     */
+<span class="fc" id="L46">    private final List&lt;JdaSlashCommand&gt; commands = new ArrayList&lt;&gt;();</span>
+
+    /**
+     * Map of button interaction handlers indexed by component ID.
+     */
+<span class="fc" id="L51">    private final Map&lt;String, Consumer&lt;ButtonInteractionEvent&gt;&gt; buttonHandlers = new HashMap&lt;&gt;();</span>
+
+    /**
+     * Map of string select interaction handlers indexed by component ID.
+     */
+<span class="fc" id="L56">    private final Map&lt;String, java.util.function.Consumer&lt;StringSelectInteractionEvent&gt;&gt; selectHandlers = new HashMap&lt;&gt;();</span>
+
+    /**
+     * Map of modal interaction handlers indexed by modal ID.
+     */
+<span class="fc" id="L61">    private final Map&lt;String, Consumer&lt;ModalInteractionEvent&gt;&gt; modalHandlers = new HashMap&lt;&gt;();</span>
+
+    /**
+     * Service for managing slash command registration and execution.
+     */
+    private final JdaSlashCommandService slashCommandService;
+
+    /**
+     * Service for handling JDA event listeners and interaction routing.
+     */
+    private final JdaEventListenerService slashCommandListener;
+
+    private String description;
+
+    /**
+     * Constructs an AbstractSlashCommandJdaBot with required dependencies.
+     *
+     * @param jdaBean the JDA instance for Discord API communication
+     * @param slashCommandService service for managing slash commands
+     * @param slashCommandListener service for handling event listeners
+     */
+    @Autowired
+    public AbstractSlashCommandJdaBot(JDA jdaBean, JdaSlashCommandService slashCommandService, JdaEventListenerService slashCommandListener) {
+<span class="fc" id="L84">        super(jdaBean);</span>
+<span class="fc" id="L85">        this.slashCommandService = slashCommandService;</span>
+<span class="fc" id="L86">        this.slashCommandListener = slashCommandListener;</span>
+<span class="fc" id="L87">    }</span>
+
+    /**
+     * Initializes the bot by setting up commands and registering interaction handlers.
+     * Called automatically after dependency injection.
+     */
+    @PostConstruct
+    public void initialize() {
+<span class="fc" id="L95">        log.info(&quot;Initializing JDA slash command bot {}&quot;, getClass().getSimpleName());</span>
+        
+        // Setup commands
+<span class="fc" id="L98">        setupCommands();</span>
+
+<span class="fc" id="L100">        registerButtonInteractionHandlers();</span>
+<span class="fc" id="L101">        registerStringInteractionHandlers();</span>
+<span class="fc" id="L102">        registerModalInteractionHandlers();</span>
+<span class="fc" id="L103">        slashCommandListener.registerButtonHandlers(buttonHandlers);</span>
+<span class="fc" id="L104">        slashCommandListener.registerStringSelectHandlers(selectHandlers);</span>
+<span class="fc" id="L105">        slashCommandListener.registerModalHandlers(modalHandlers);</span>
+        
+        // Register commands with the service
+<span class="pc bpc" id="L108" title="2 of 4 branches missed.">        if (botType != null &amp;&amp; !commands.isEmpty()) {</span>
+<span class="fc" id="L109">            slashCommandService.registerCommandsForBot(botType, commands);</span>
+<span class="fc" id="L110">            log.info(&quot;Registered {} slash commands for bot type {}&quot;, commands.size(), botType);</span>
+        } else {
+<span class="nc" id="L112">            log.warn(&quot;Bot type or commands not set, slash commands will not be registered&quot;);</span>
+        }
+<span class="fc" id="L114">    }</span>
+
+    /**
+     * Sets up the slash commands for this bot.
+     * Must be implemented by subclasses to define bot-specific commands.
+     */
+    protected abstract void setupCommands();
+
+    /**
+     * Registers button interaction handlers for this bot.
+     * Must be implemented by subclasses to handle button interactions.
+     */
+    protected abstract void registerButtonInteractionHandlers();
+
+    /**
+     * Registers string select interaction handlers for this bot.
+     * Must be implemented by subclasses to handle select menu interactions.
+     */
+    protected abstract void registerStringInteractionHandlers();
+
+    /**
+     * Registers modal interaction handlers for this bot.
+     * Must be implemented by subclasses to handle modal form submissions.
+     */
+    protected abstract void registerModalInteractionHandlers();
+
+    /**
+     * Sets the bot type for this instance.
+     *
+     * @param botType the Discord bot type
+     */
+    protected void setBotType(SlashCommandBotType botType) {
+<span class="fc" id="L146">        this.botType = botType;</span>
+<span class="fc" id="L147">    }</span>
+
+    /**
+     * Returns the bot type of this instance.
+     *
+     * @return the Discord bot type
+     */
+    public SlashCommandBotType getBotType() {
+<span class="nc" id="L155">        return botType;</span>
+    }
+
+    /**
+     * Registers a new slash command with the bot.
+     *
+     * @param name the command name
+     * @param description the command description
+     * @param commandData the JDA command data structure
+     * @param handler the event handler for command execution
+     */
+    protected void registerCommand(String name, String description, 
+                                  SlashCommandData commandData, 
+                                  Consumer&lt;SlashCommandInteractionEvent&gt; handler) {
+<span class="pc bpc" id="L169" title="1 of 2 branches missed.">        if (botType == null) {</span>
+<span class="nc" id="L170">            log.warn(&quot;Bot type not set, command {} will not be registered&quot;, name);</span>
+<span class="nc" id="L171">            return;</span>
+        }
+        
+<span class="fc" id="L174">        JdaSlashCommand command = new JdaSlashCommand(name, description, commandData, handler, botType.name());</span>
+<span class="fc" id="L175">        commands.add(command);</span>
+<span class="fc" id="L176">        log.debug(&quot;Command {} registered for bot {}&quot;, name, botType);</span>
+<span class="fc" id="L177">    }</span>
+
+    /**
+     * Creates a basic slash command data structure.
+     *
+     * @param name the command name
+     * @param description the command description
+     * @return SlashCommandData for further customization
+     */
+    protected SlashCommandData createCommand(String name, String description) {
+<span class="fc" id="L187">        return Commands.slash(name, description);</span>
+    }
+
+    /**
+     * Returns all slash commands registered by this bot.
+     *
+     * @return a copy of the command list
+     */
+    public List&lt;JdaSlashCommand&gt; getCommands() {
+<span class="nc" id="L196">        return new ArrayList&lt;&gt;(commands);</span>
+    }
+
+    /**
+     * Unregisters all commands and interaction handlers for this bot.
+     */
+    public void unregisterCommands() {
+<span class="pc bpc" id="L203" title="1 of 2 branches missed.">        if (botType != null) {</span>
+<span class="fc" id="L204">            slashCommandService.unregisterCommandsForBot(botType);</span>
+<span class="fc" id="L205">            removeButtonInteractionHandlers();</span>
+<span class="fc" id="L206">            removeStringInteractionHandlers();</span>
+<span class="fc" id="L207">            removeModalInteractionHandlers();</span>
+<span class="fc" id="L208">            log.info(&quot;Unregistered all commands for bot type {}&quot;, botType);</span>
+        }
+<span class="fc" id="L210">    }</span>
+
+    /**
+     * Removes all button interaction handlers from the listener service.
+     */
+    private void removeButtonInteractionHandlers(){
+<span class="pc bpc" id="L216" title="1 of 2 branches missed.">        for (String id : buttonHandlers.keySet()) {</span>
+<span class="nc" id="L217">            slashCommandListener.removeButtonHandler(id);</span>
+<span class="nc" id="L218">        }</span>
+<span class="fc" id="L219">        buttonHandlers.clear();</span>
+<span class="fc" id="L220">    }</span>
+
+    /**
+     * Removes all string select interaction handlers from the listener service.
+     */
+    private void removeStringInteractionHandlers(){
+<span class="pc bpc" id="L226" title="1 of 2 branches missed.">        for (String id : selectHandlers.keySet()) {</span>
+<span class="nc" id="L227">            slashCommandListener.removeStringSelectHandler(id);</span>
+<span class="nc" id="L228">        }</span>
+<span class="fc" id="L229">        selectHandlers.clear();</span>
+<span class="fc" id="L230">    }</span>
+
+    /**
+     * Removes all modal interaction handlers from the listener service.
+     */
+    private void removeModalInteractionHandlers(){
+<span class="pc bpc" id="L236" title="1 of 2 branches missed.">        for (String id : modalHandlers.keySet()) {</span>
+<span class="nc" id="L237">            slashCommandListener.removeModalHandler(id);</span>
+<span class="nc" id="L238">        }</span>
+<span class="fc" id="L239">        modalHandlers.clear();</span>
+<span class="fc" id="L240">    }</span>
+
+    /**
+     * Registers a button interaction handler for the specified component ID.
+     *
+     * @param id the button component ID
+     * @param handler the event handler for button interactions
+     */
+    public void registerButtonInteractionHandler(String id, Consumer&lt;ButtonInteractionEvent&gt; handler) {
+<span class="fc" id="L249">        buttonHandlers.put(id, handler);</span>
+<span class="fc" id="L250">    }</span>
+
+    /**
+     * Registers a string select interaction handler for the specified component ID.
+     *
+     * @param id the select menu component ID
+     * @param handler the event handler for select interactions
+     */
+    public void registerStringInteractionHandler(String id, Consumer&lt;StringSelectInteractionEvent&gt; handler) {
+<span class="fc" id="L259">        selectHandlers.put(id, handler);</span>
+<span class="fc" id="L260">    }</span>
+
+    /**
+     * Registers a modal interaction handler for the specified modal ID.
+     *
+     * @param id the modal component ID
+     * @param handler the event handler for modal submissions
+     */
+    public void registerModalInteractionHandler(String id, Consumer&lt;ModalInteractionEvent&gt; handler) {
+<span class="fc" id="L269">        modalHandlers.put(id, handler);</span>
+<span class="fc" id="L270">    }</span>
+
+    public void setDescription(String description) {
+<span class="fc" id="L273">        this.description = description;</span>
+<span class="fc" id="L274">    }</span>
+
+    public String getDescription() {
+<span class="nc" id="L277">        return description;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleOperationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.service</a> &gt; <span class="el_source">RoleOperationService.java</span></div><h1>RoleOperationService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.service;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model.RoleSyncAnalysis;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model.RoleSyncResult;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model.RoleUpdateInfo;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ExtendedRoleDTO;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.managers.RoleManager;
+import net.dv8tion.jda.api.requests.restaction.RoleAction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.awt.Color;
+import java.util.*;
+
+import java.util.stream.Collectors;
+
+/**
+ * Handles Discord role operations (create, update, delete).
+ */
+@Component
+<span class="fc" id="L26">public class RoleOperationService {</span>
+    /**
+     * Logger for this service.
+     */
+<span class="fc" id="L30">    private static final Logger logger = LoggerFactory.getLogger(RoleOperationService.class);</span>
+
+    /**
+     * Applies role changes to the specified guild based on the analysis.
+     * @param guild the Discord guild to apply changes to
+     * @param analysis the analysis containing roles to create, update, and delete
+     * @param deleteUnlistedRoles whether to delete roles not listed in the analysis
+     * @return RoleSyncResult containing the results of the operation
+     */
+    public RoleSyncResult applyRoleChanges(Guild guild, RoleSyncAnalysis analysis, boolean deleteUnlistedRoles) {
+<span class="fc" id="L40">        logger.info(&quot;Applying role changes to guild: {}&quot;, guild.getName());</span>
+        
+<span class="fc" id="L42">        RoleSyncResult result = RoleSyncResult.success(&quot;Role sync completed successfully.&quot;);</span>
+        
+        try {
+<span class="fc" id="L45">            executeRoleOperations(guild, analysis, deleteUnlistedRoles, result);</span>
+<span class="nc" id="L46">        } catch (Exception e) {</span>
+<span class="nc" id="L47">            logger.error(&quot;Critical error during role operations&quot;, e);</span>
+<span class="nc" id="L48">            result.setSuccess(false);</span>
+<span class="nc" id="L49">            result.setMessage(&quot;Critical error during role sync: &quot; + e.getMessage());</span>
+<span class="fc" id="L50">        }</span>
+        
+<span class="fc" id="L52">        logger.info(&quot;Role sync completed. {}&quot;, result.getSummary());</span>
+<span class="fc" id="L53">        return result;</span>
+    }
+
+    /**
+     * Executes the role operations based on the analysis.
+     * @param guild the Discord guild to apply changes to
+     * @param analysis the analysis containing roles to create, update, and delete
+     * @param deleteUnlistedRoles whether to delete roles not listed in the analysis
+     * @param result the result object to store operation results
+     */
+    private void executeRoleOperations(Guild guild, RoleSyncAnalysis analysis, 
+                                     boolean deleteUnlistedRoles, RoleSyncResult result) {
+<span class="fc" id="L65">        RoleCreator roleCreator = new RoleCreator(guild, result);</span>
+<span class="fc" id="L66">        RoleUpdater roleUpdater = new RoleUpdater(guild, result);</span>
+<span class="fc" id="L67">        RoleDeleter roleDeleter = new RoleDeleter(guild, result);</span>
+
+<span class="fc" id="L69">        roleCreator.createRoles(analysis.getRolesToCreate());</span>
+<span class="fc" id="L70">        roleUpdater.updateRoles(analysis.getRolesToUpdate());</span>
+        
+<span class="fc bfc" id="L72" title="All 2 branches covered.">        if (deleteUnlistedRoles) {</span>
+<span class="fc" id="L73">            roleDeleter.deleteRoles(analysis.getRolesToDelete());</span>
+        }
+<span class="fc" id="L75">    }</span>
+
+    /**
+     * Handles role creation operations.
+     */
+    private static class RoleCreator {
+
+        /**
+         * The guild where roles will be created.
+         */
+        private final Guild guild;
+
+        /**
+         * The result object to store creation results.
+         */
+        private final RoleSyncResult result;
+
+        /**
+         * Constructor for RoleCreator.
+         * @param guild the Discord guild where roles will be created
+         * @param result the result object to store creation results
+         */
+<span class="fc" id="L97">        RoleCreator(Guild guild, RoleSyncResult result) {</span>
+<span class="fc" id="L98">            this.guild = guild;</span>
+<span class="fc" id="L99">            this.result = result;</span>
+<span class="fc" id="L100">        }</span>
+
+        /**
+         * Creates roles based on the provided list of ExtendedRoleDTO objects.
+         * @param rolesToCreate the list of roles to create
+         */
+        void createRoles(List&lt;ExtendedRoleDTO&gt; rolesToCreate) {
+<span class="fc" id="L107">            logger.debug(&quot;Creating {} roles&quot;, rolesToCreate.size());</span>
+            
+<span class="fc bfc" id="L109" title="All 2 branches covered.">            for (ExtendedRoleDTO roleDto : rolesToCreate) {</span>
+                try {
+<span class="fc" id="L111">                    createSingleRole(roleDto);</span>
+<span class="fc" id="L112">                } catch (Exception e) {</span>
+<span class="fc" id="L113">                    handleCreationError(roleDto, e);</span>
+<span class="fc" id="L114">                }</span>
+<span class="fc" id="L115">            }</span>
+<span class="fc" id="L116">        }</span>
+
+        /**
+         * Creates a single role based on the provided ExtendedRoleDTO.
+         * @param roleDto the role data transfer object containing role details
+         */
+        private void createSingleRole(ExtendedRoleDTO roleDto) {
+<span class="fc" id="L123">            RoleAction roleAction = guild.createRole();</span>
+<span class="fc" id="L124">            RoleActionConfigurer.configure(roleAction, roleDto);</span>
+            
+            try {
+<span class="fc" id="L127">                Role role = roleAction.complete();</span>
+<span class="fc" id="L128">                logger.info(&quot;Successfully created role: {} (ID: {})&quot;, role.getName(), role.getId());</span>
+<span class="fc" id="L129">                result.addCreatedRole(role.getName(), role.getId());</span>
+<span class="fc" id="L130">            } catch (Exception e) {</span>
+<span class="fc" id="L131">                logger.error(&quot;Failed to create role: {}&quot;, roleDto.getName(), e);</span>
+<span class="fc" id="L132">                throw e;</span>
+<span class="fc" id="L133">            }</span>
+<span class="fc" id="L134">        }</span>
+
+        /**
+         * Handles errors that occur during role creation.
+         * @param roleDto the role data transfer object that caused the error
+         * @param e the exception that was thrown
+         */
+        private void handleCreationError(ExtendedRoleDTO roleDto, Exception e) {
+<span class="fc" id="L142">            String errorMsg = String.format(&quot;Failed to create role '%s': %s&quot;, roleDto.getName(), e.getMessage());</span>
+<span class="fc" id="L143">            logger.error(errorMsg, e);</span>
+<span class="fc" id="L144">            result.addError(errorMsg);</span>
+<span class="fc" id="L145">        }</span>
+    }
+
+    /**
+     * Handles role update operations.
+     */
+    private static class RoleUpdater {
+
+        /**
+         * The guild where roles will be updated.
+         */
+        private final RoleSyncResult result;
+
+        /**
+         * The member representing the bot in the guild, used for permission checks.
+         */
+        private final Member botMember;
+
+        /**
+         * Constructor for RoleUpdater.
+         * @param guild the Discord guild where roles will be updated
+         * @param result the result object to store update results
+         */
+<span class="fc" id="L168">        RoleUpdater(Guild guild, RoleSyncResult result) {</span>
+<span class="fc" id="L169">            this.result = result;</span>
+<span class="fc" id="L170">            this.botMember = guild.getSelfMember();</span>
+<span class="fc" id="L171">        }</span>
+
+        /**
+         * Updates roles based on the provided list of RoleUpdateInfo objects.
+         * @param rolesToUpdate the list of roles to update, each containing current and desired state
+         */
+        void updateRoles(List&lt;RoleUpdateInfo&gt; rolesToUpdate) {
+<span class="fc" id="L178">            logger.debug(&quot;Updating {} roles&quot;, rolesToUpdate.size());</span>
+            
+<span class="fc bfc" id="L180" title="All 2 branches covered.">            for (RoleUpdateInfo updateInfo : rolesToUpdate) {</span>
+                try {
+<span class="fc" id="L182">                    updateSingleRole(updateInfo);</span>
+<span class="fc" id="L183">                } catch (Exception e) {</span>
+<span class="fc" id="L184">                    handleUpdateError(updateInfo, e);</span>
+<span class="fc" id="L185">                }</span>
+<span class="fc" id="L186">            }</span>
+<span class="fc" id="L187">        }</span>
+
+        /**
+         * Updates a single role based on the provided RoleUpdateInfo.
+         * @param updateInfo the information about the role update, including current and desired state
+         */
+        private void updateSingleRole(RoleUpdateInfo updateInfo) {
+<span class="fc" id="L194">            Role role = updateInfo.getCurrentRole();</span>
+<span class="fc" id="L195">            ExtendedRoleDTO desiredRole = updateInfo.getDesiredRole();</span>
+            
+<span class="fc bfc" id="L197" title="All 2 branches covered.">            if (!RolePermissionChecker.canModifyRole(botMember, role)) {</span>
+<span class="fc" id="L198">                String errorMsg = String.format(&quot;Cannot update role '%s': Insufficient permissions or managed role&quot;, role.getName());</span>
+<span class="fc" id="L199">                result.addError(errorMsg);</span>
+<span class="fc" id="L200">                return;</span>
+            }
+            
+<span class="fc" id="L203">            RoleManager roleManager = role.getManager();</span>
+<span class="fc" id="L204">            applyUpdates(roleManager, updateInfo, desiredRole);</span>
+            
+            try {
+<span class="fc" id="L207">                roleManager.complete();</span>
+<span class="fc" id="L208">                logger.info(&quot;Successfully updated role: {} with changes: {}&quot;, </span>
+<span class="fc" id="L209">                           role.getName(), updateInfo.getChanges());</span>
+<span class="fc" id="L210">                result.addUpdatedRole(role.getName(), role.getId(), updateInfo.getChanges());</span>
+<span class="fc" id="L211">            } catch (Exception e) {</span>
+<span class="fc" id="L212">                logger.error(&quot;Failed to update role: {}&quot;, role.getName(), e);</span>
+<span class="fc" id="L213">                throw e;</span>
+<span class="fc" id="L214">            }</span>
+<span class="fc" id="L215">        }</span>
+
+        /**
+         * Applies the updates to the role manager based on the update information and desired role.
+         * @param roleManager the role manager to apply updates to
+         * @param updateInfo the information about the role update, including current and desired state
+         * @param desiredRole the desired state of the role as defined in the configuration
+         */
+        private void applyUpdates(net.dv8tion.jda.api.managers.RoleManager roleManager, 
+                                RoleUpdateInfo updateInfo, ExtendedRoleDTO desiredRole) {
+<span class="pc bpc" id="L225" title="1 of 2 branches missed.">            if (updateInfo.isNameChanged()) {</span>
+<span class="fc" id="L226">                roleManager.setName(desiredRole.getName());</span>
+            }
+            
+<span class="pc bpc" id="L229" title="1 of 2 branches missed.">            if (updateInfo.isColorChanged()) {</span>
+<span class="fc" id="L230">                roleManager.setColor(ColorParser.parseColor(desiredRole.getColor()));</span>
+            }
+            
+<span class="pc bpc" id="L233" title="1 of 2 branches missed.">            if (updateInfo.isPermissionsChanged()) {</span>
+<span class="fc" id="L234">                roleManager.setPermissions(PermissionParser.parsePermissions(desiredRole.getPermissions()));</span>
+            }
+<span class="fc" id="L236">        }</span>
+
+        /**
+         * Handles errors that occur during role updates.
+         * @param updateInfo the information about the role update that caused the error
+         * @param e the exception that was thrown
+         */
+        private void handleUpdateError(RoleUpdateInfo updateInfo, Exception e) {
+<span class="fc" id="L244">            String roleName = updateInfo.getCurrentRole().getName();</span>
+<span class="fc" id="L245">            String errorMsg = String.format(&quot;Failed to update role '%s': %s&quot;, roleName, e.getMessage());</span>
+<span class="fc" id="L246">            logger.error(errorMsg, e);</span>
+<span class="fc" id="L247">            result.addError(errorMsg);</span>
+<span class="fc" id="L248">        }</span>
+    }
+
+    /**
+     * Handles role deletion operations.
+     */
+    private static class RoleDeleter {
+        /**
+         * The guild where roles will be deleted.
+         */
+        private final RoleSyncResult result;
+
+        /**
+         * The member representing the bot in the guild, used for permission checks.
+         */
+        private final Member botMember;
+
+        /**
+         * Constructor for RoleDeleter.
+         * @param guild the Discord guild where roles will be deleted
+         * @param result the result object to store deletion results
+         */
+<span class="fc" id="L270">        RoleDeleter(Guild guild, RoleSyncResult result) {</span>
+<span class="fc" id="L271">            this.result = result;</span>
+<span class="fc" id="L272">            this.botMember = guild.getSelfMember();</span>
+<span class="fc" id="L273">        }</span>
+
+        /**
+         * Deletes roles based on the provided list of Role objects.
+         * @param rolesToDelete the list of roles to delete
+         */
+        void deleteRoles(List&lt;Role&gt; rolesToDelete) {
+<span class="fc" id="L280">            logger.debug(&quot;Deleting {} roles&quot;, rolesToDelete.size());</span>
+            
+<span class="fc bfc" id="L282" title="All 2 branches covered.">            for (Role role : rolesToDelete) {</span>
+                try {
+<span class="fc" id="L284">                    deleteSingleRole(role);</span>
+<span class="fc" id="L285">                } catch (Exception e) {</span>
+<span class="fc" id="L286">                    handleDeletionError(role, e);</span>
+<span class="fc" id="L287">                }</span>
+<span class="fc" id="L288">            }</span>
+<span class="fc" id="L289">        }</span>
+
+        /**
+         * Deletes a single role.
+         * @param role the role to delete
+         */
+        private void deleteSingleRole(Role role) {
+<span class="fc bfc" id="L296" title="All 2 branches covered.">            if (!RolePermissionChecker.canModifyRole(botMember, role)) {</span>
+<span class="fc" id="L297">                String errorMsg = String.format(&quot;Cannot delete role '%s': Insufficient permissions or managed role&quot;, role.getName());</span>
+<span class="fc" id="L298">                result.addError(errorMsg);</span>
+<span class="fc" id="L299">                return;</span>
+            }
+            
+            try {
+<span class="fc" id="L303">                role.delete().complete();</span>
+<span class="fc" id="L304">                logger.info(&quot;Successfully deleted role: {} (ID: {})&quot;, role.getName(), role.getId());</span>
+<span class="fc" id="L305">                result.addDeletedRole(role.getName(), role.getId());</span>
+<span class="fc" id="L306">            } catch (Exception e) {</span>
+<span class="fc" id="L307">                logger.error(&quot;Failed to delete role: {}&quot;, role.getName(), e);</span>
+<span class="fc" id="L308">                throw e;</span>
+<span class="fc" id="L309">            }</span>
+<span class="fc" id="L310">        }</span>
+
+        /**
+         * Handles errors that occur during role deletion.
+         * @param role the role that caused the error
+         * @param e the exception that was thrown
+         */
+        private void handleDeletionError(Role role, Exception e) {
+<span class="fc" id="L318">            String errorMsg = String.format(&quot;Failed to delete role '%s': %s&quot;, role.getName(), e.getMessage());</span>
+<span class="fc" id="L319">            logger.error(errorMsg, e);</span>
+<span class="fc" id="L320">            result.addError(errorMsg);</span>
+<span class="fc" id="L321">        }</span>
+    }
+
+    /**
+     * Utility for configuring role actions.
+     */
+    private static class RoleActionConfigurer {
+
+        /**
+         * Configures a RoleAction based on the provided ExtendedRoleDTO.
+         * @param roleAction the RoleAction to configure
+         * @param roleDto the ExtendedRoleDTO containing role details
+         */
+        static void configure(RoleAction roleAction, ExtendedRoleDTO roleDto) {
+<span class="pc bpc" id="L335" title="1 of 2 branches missed.">            if (roleDto.getName() != null) {</span>
+<span class="fc" id="L336">                roleAction.setName(roleDto.getName());</span>
+            }
+            
+<span class="fc bfc" id="L339" title="All 2 branches covered.">            if (roleDto.getColor() != null) {</span>
+<span class="fc" id="L340">                Color color = ColorParser.parseColor(roleDto.getColor());</span>
+<span class="pc bpc" id="L341" title="1 of 2 branches missed.">                if (color != null) {</span>
+<span class="fc" id="L342">                    roleAction.setColor(color);</span>
+                }
+            }
+            
+<span class="pc bpc" id="L346" title="1 of 2 branches missed.">            if (roleDto.getPermissions() != null) {</span>
+<span class="fc" id="L347">                Set&lt;Permission&gt; permissions = PermissionParser.parsePermissions(roleDto.getPermissions());</span>
+<span class="fc" id="L348">                roleAction.setPermissions(permissions);</span>
+            }
+<span class="fc" id="L350">        }</span>
+    }
+
+    /**
+     * Utility for checking role permissions.
+     */
+    private static class RolePermissionChecker {
+
+        /**
+         * Checks if the bot member can modify the specified role.
+         * @param botMember the member representing the bot in the guild
+         * @param role the role to check permissions for
+         * @return true if the bot can modify the role, false otherwise
+         */
+        static boolean canModifyRole(Member botMember, Role role) {
+<span class="fc bfc" id="L365" title="All 6 branches covered.">            return botMember.canInteract(role) &amp;&amp; !role.isManaged() &amp;&amp; !role.isPublicRole();</span>
+        }
+    }
+
+    /**
+     * Utility for parsing colors.
+     */
+    private static class ColorParser {
+
+        /**
+         * Parses a hexadecimal color string into a Color object.
+         * @param hexColor the hexadecimal color string (e.g., &quot;#FF5733&quot; or &quot;FF5733&quot;)
+         * @return the Color object, or null if the string is invalid
+         */
+        static Color parseColor(String hexColor) {
+<span class="pc bpc" id="L380" title="2 of 4 branches missed.">            if (hexColor == null || hexColor.isEmpty()) {</span>
+<span class="nc" id="L381">                return null;</span>
+            }
+            
+            try {
+<span class="pc bpc" id="L385" title="1 of 2 branches missed.">                String hex = hexColor.startsWith(&quot;#&quot;) ? hexColor.substring(1) : hexColor;</span>
+<span class="fc" id="L386">                int rgb = Integer.parseInt(hex, 16);</span>
+<span class="fc" id="L387">                return new Color(rgb);</span>
+<span class="nc" id="L388">            } catch (NumberFormatException e) {</span>
+<span class="nc" id="L389">                logger.warn(&quot;Invalid color format: {}&quot;, hexColor);</span>
+<span class="nc" id="L390">                return null;</span>
+            }
+        }
+    }
+
+    /**
+     * Utility for parsing permissions.
+     */
+    private static class PermissionParser {
+
+        /**
+         * Parses a list of permission names into a set of Permission enums.
+         * @param permissionNames the list of permission names to parse
+         * @return a set of Permission enums, or an empty set if the input is null
+         */
+        static Set&lt;Permission&gt; parsePermissions(List&lt;String&gt; permissionNames) {
+<span class="pc bpc" id="L406" title="1 of 2 branches missed.">            if (permissionNames == null) {</span>
+<span class="nc" id="L407">                return Collections.emptySet();</span>
+            }
+            
+<span class="fc" id="L410">            return permissionNames.stream()</span>
+<span class="fc" id="L411">                .map(PermissionParser::parsePermission)</span>
+<span class="fc" id="L412">                .filter(Objects::nonNull)</span>
+<span class="fc" id="L413">                .collect(Collectors.toSet());</span>
+        }
+
+        private static Permission parsePermission(String permissionName) {
+            try {
+<span class="fc" id="L418">                return Permission.valueOf(permissionName.toUpperCase().replace(&quot; &quot;, &quot;_&quot;));</span>
+<span class="fc" id="L419">            } catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L420">                logger.warn(&quot;Unknown permission: {}&quot;, permissionName);</span>
+<span class="fc" id="L421">                return null;</span>
+            }
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

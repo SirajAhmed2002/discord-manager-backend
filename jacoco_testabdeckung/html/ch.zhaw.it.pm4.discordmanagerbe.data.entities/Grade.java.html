@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Grade.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.data.entities</a> &gt; <span class="el_source">Grade.java</span></div><h1>Grade.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.data.entities;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+/**
+ * Entity representing a grade with value, weight, and description.
+ * Each grade belongs to a specific subject.
+ */
+@Entity
+@Table(name = &quot;grades&quot;)
+public class Grade {
+
+    /** Unique identifier for the grade */
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    /** Numerical value of the grade */
+    @Column(name = &quot;value&quot;, nullable = false)
+    private double value;
+
+    /** Weight of the grade for average calculation */
+    @Column(name = &quot;weight&quot;, nullable = false)
+    private double weight;
+
+    /** Optional description of the grade */
+    @Column(name = &quot;description&quot;)
+    private String description;
+
+    /** Timestamp when the grade was created */
+    @Column(name = &quot;created_at&quot;, nullable = false)
+    private LocalDateTime createdAt;
+
+    /** Subject this grade belongs to */
+    @ManyToOne
+    @JoinColumn(name = &quot;subject_id&quot;, nullable = false)
+    private Subject subject;
+
+    /**
+     * Default constructor initializing creation timestamp.
+     */
+<span class="fc" id="L43">    public Grade() {</span>
+<span class="fc" id="L44">        this.createdAt = LocalDateTime.now();</span>
+<span class="fc" id="L45">    }</span>
+
+    /**
+     * Creates a new grade with specified details.
+     *
+     * @param value numerical grade value
+     * @param weight weight for average calculation
+     * @param description optional grade description
+     * @param subject subject this grade belongs to
+     */
+<span class="fc" id="L55">    public Grade(double value, double weight, String description, Subject subject) {</span>
+<span class="fc" id="L56">        this.value = value;</span>
+<span class="fc" id="L57">        this.weight = weight;</span>
+<span class="fc" id="L58">        this.description = description;</span>
+<span class="fc" id="L59">        this.subject = subject;</span>
+<span class="fc" id="L60">        this.createdAt = LocalDateTime.now();</span>
+<span class="fc" id="L61">    }</span>
+
+    /**
+     * Gets the grade ID.
+     *
+     * @return the grade ID
+     */
+    public Long getId() {
+<span class="nc" id="L69">        return id;</span>
+    }
+
+    /**
+     * Sets the grade ID.
+     *
+     * @param id the grade ID
+     */
+    public void setId(Long id) {
+<span class="fc" id="L78">        this.id = id;</span>
+<span class="fc" id="L79">    }</span>
+
+    /**
+     * Gets the numerical grade value.
+     *
+     * @return the grade value
+     */
+    public double getValue() {
+<span class="fc" id="L87">        return value;</span>
+    }
+
+    /**
+     * Sets the numerical grade value.
+     *
+     * @param value the grade value
+     */
+    public void setValue(double value) {
+<span class="nc" id="L96">        this.value = value;</span>
+<span class="nc" id="L97">    }</span>
+
+    /**
+     * Gets the grade weight.
+     *
+     * @return the grade weight
+     */
+    public double getWeight() {
+<span class="fc" id="L105">        return weight;</span>
+    }
+
+    /**
+     * Sets the grade weight.
+     *
+     * @param weight the grade weight
+     */
+    public void setWeight(double weight) {
+<span class="nc" id="L114">        this.weight = weight;</span>
+<span class="nc" id="L115">    }</span>
+
+    /**
+     * Gets the grade description.
+     *
+     * @return the grade description
+     */
+    public String getDescription() {
+<span class="fc" id="L123">        return description;</span>
+    }
+
+    /**
+     * Sets the grade description.
+     *
+     * @param description the grade description
+     */
+    public void setDescription(String description) {
+<span class="nc" id="L132">        this.description = description;</span>
+<span class="nc" id="L133">    }</span>
+
+    /**
+     * Gets the grade creation timestamp.
+     *
+     * @return the creation timestamp
+     */
+    public LocalDateTime getCreatedAt() {
+<span class="fc" id="L141">        return createdAt;</span>
+    }
+
+    /**
+     * Gets the subject this grade belongs to.
+     *
+     * @return the subject
+     */
+    public Subject getSubject() {
+<span class="fc" id="L150">        return subject;</span>
+    }
+
+    /**
+     * Sets the subject this grade belongs to.
+     *
+     * @param subject the subject
+     */
+    public void setSubject(Subject subject) {
+<span class="fc" id="L159">        this.subject = subject;</span>
+<span class="fc" id="L160">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

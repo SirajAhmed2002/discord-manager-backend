@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AudioPlayerSendHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.music</a> &gt; <span class="el_source">AudioPlayerSendHandler.java</span></div><h1>AudioPlayerSendHandler.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.music;
+
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
+import com.sedmelluq.discord.lavaplayer.track.playback.AudioFrame;
+import net.dv8tion.jda.api.audio.AudioSendHandler;
+
+import java.nio.ByteBuffer;
+
+/**
+ * This class is responsible for sending audio data to Discord.
+ * It implements the AudioSendHandler interface from JDA.
+ * The class uses the AudioPlayer from Lavaplayer to provide audio frames.
+ */
+public class AudioPlayerSendHandler implements AudioSendHandler {
+    private final AudioPlayer audioPlayer;
+    private AudioFrame lastFrame;
+
+    /**
+     * Constructor for AudioPlayerSendHandler.
+     * @param audioPlayer The AudioPlayer instance from Lavaplayer.
+     */
+<span class="fc" id="L22">    public AudioPlayerSendHandler(AudioPlayer audioPlayer) {</span>
+<span class="fc" id="L23">        this.audioPlayer = audioPlayer;</span>
+<span class="fc" id="L24">    }</span>
+
+    /**
+     * Checks if the handler can provide audio data.
+     * @return true if audio data is available, false otherwise.
+     */
+    @Override
+    public boolean canProvide() {
+<span class="fc" id="L32">        lastFrame = audioPlayer.provide();</span>
+<span class="fc bfc" id="L33" title="All 2 branches covered.">        return lastFrame != null;</span>
+    }
+
+    /**
+     * Provides the audio data to Discord.
+     * @return A ByteBuffer containing the audio data.
+     */
+    @Override
+    public ByteBuffer provide20MsAudio() {
+<span class="fc" id="L42">        return ByteBuffer.wrap(lastFrame.getData());</span>
+    }
+
+    /**
+     * Checks if the audio data is Opus encoded.
+     * @return true if the audio data is Opus encoded, false otherwise.
+     */
+    @Override
+    public boolean isOpus() {
+<span class="fc" id="L51">        return true;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TemplateService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.service</a> &gt; <span class="el_source">TemplateService.java</span></div><h1>TemplateService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.service;
+
+import ch.zhaw.it.pm4.discordmanagerbe.dto.*;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Service for managing server configuration templates.
+ * Provides methods to create and retrieve predefined server templates.
+ */
+@Service
+public class TemplateService {
+
+    /**
+     * List of predefined templates for server configurations.
+     */
+    private final List&lt;TemplateDTO&gt; templates;
+
+    /**
+     * Default constructor for TemplateService.
+     */
+<span class="fc" id="L24">    public TemplateService() {</span>
+<span class="fc" id="L25">        templates = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L26">        createSwen2ServerTemplate();</span>
+<span class="fc" id="L27">    }</span>
+
+    /**
+     * Creates a predefined server template for the Swen2 course.
+     */
+    private void createSwen2ServerTemplate() {
+        // Create a server configuration template
+<span class="fc" id="L34">        ServerConfigDTO config = new ServerConfigDTO();</span>
+<span class="fc" id="L35">        List&lt;CategoryDTO&gt; categories = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L36">        List&lt;TextChannelDTO&gt; textChannels = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L37">        List&lt;VoiceChannelDTO&gt; voiceChannels = new ArrayList&lt;&gt;();</span>
+
+<span class="fc" id="L39">        CategoryDTO categorySwen = new CategoryDTO();</span>
+<span class="fc" id="L40">        categorySwen.setName(&quot;Swen2&quot;);</span>
+<span class="fc" id="L41">        categorySwen.setId(&quot;1&quot;);</span>
+<span class="fc" id="L42">        categorySwen.setChannelType(ChannelType.TEXT);</span>
+<span class="fc" id="L43">        categorySwen.setPosition(0);</span>
+<span class="fc" id="L44">        categories.add(categorySwen);</span>
+
+<span class="fc" id="L46">        CategoryDTO categoryPm = new CategoryDTO();</span>
+<span class="fc" id="L47">        categoryPm.setName(&quot;PM4&quot;);</span>
+<span class="fc" id="L48">        categoryPm.setId(&quot;2&quot;);</span>
+<span class="fc" id="L49">        categoryPm.setChannelType(ChannelType.TEXT);</span>
+<span class="fc" id="L50">        categoryPm.setPosition(1);</span>
+<span class="fc" id="L51">        categories.add(categoryPm);</span>
+
+<span class="fc" id="L53">        TextChannelDTO textChannelSwen = new TextChannelDTO();</span>
+<span class="fc" id="L54">        textChannelSwen.setName(&quot;Swen2-Textkanal&quot;);</span>
+<span class="fc" id="L55">        textChannelSwen.setId(&quot;3&quot;);</span>
+<span class="fc" id="L56">        textChannelSwen.setParentCategoryId(categorySwen.getId());</span>
+<span class="fc" id="L57">        textChannelSwen.setChannelType(ChannelType.TEXT);</span>
+<span class="fc" id="L58">        textChannelSwen.setPosition(0);</span>
+<span class="fc" id="L59">        textChannels.add(textChannelSwen);</span>
+
+<span class="fc" id="L61">        TextChannelDTO textChannelPm = new TextChannelDTO();</span>
+<span class="fc" id="L62">        textChannelPm.setName(&quot;PM4-Textkanal&quot;);</span>
+<span class="fc" id="L63">        textChannelPm.setId(&quot;4&quot;);</span>
+<span class="fc" id="L64">        textChannelPm.setParentCategoryId(categoryPm.getId());</span>
+<span class="fc" id="L65">        textChannelPm.setChannelType(ChannelType.TEXT);</span>
+<span class="fc" id="L66">        textChannelPm.setPosition(0);</span>
+<span class="fc" id="L67">        textChannels.add(textChannelPm);</span>
+
+<span class="fc" id="L69">        VoiceChannelDTO voiceChannelSwen = new VoiceChannelDTO();</span>
+<span class="fc" id="L70">        voiceChannelSwen.setName(&quot;Swen2-Sprachkanal&quot;);</span>
+<span class="fc" id="L71">        voiceChannelSwen.setId(&quot;5&quot;);</span>
+<span class="fc" id="L72">        voiceChannelSwen.setParentCategoryId(categorySwen.getId());</span>
+<span class="fc" id="L73">        voiceChannelSwen.setChannelType(ChannelType.VOICE);</span>
+<span class="fc" id="L74">        voiceChannelSwen.setPosition(0);</span>
+<span class="fc" id="L75">        voiceChannels.add(voiceChannelSwen);</span>
+
+<span class="fc" id="L77">        VoiceChannelDTO voiceChannelPm = new VoiceChannelDTO();</span>
+<span class="fc" id="L78">        voiceChannelPm.setName(&quot;PM4-Sprachkanal&quot;);</span>
+<span class="fc" id="L79">        voiceChannelPm.setId(&quot;6&quot;);</span>
+<span class="fc" id="L80">        voiceChannelPm.setParentCategoryId(categoryPm.getId());</span>
+<span class="fc" id="L81">        voiceChannelPm.setChannelType(ChannelType.VOICE);</span>
+<span class="fc" id="L82">        voiceChannelPm.setPosition(0);</span>
+<span class="fc" id="L83">        voiceChannels.add(voiceChannelPm);</span>
+
+<span class="fc" id="L85">        config.setCategories(categories);</span>
+<span class="fc" id="L86">        config.setTextChannels(textChannels);</span>
+<span class="fc" id="L87">        config.setVoiceChannels(voiceChannels);</span>
+
+<span class="fc" id="L89">        TemplateDTO template = new TemplateDTO();</span>
+<span class="fc" id="L90">        template.setTemplateName(&quot;Beispiel&quot;);</span>
+<span class="fc" id="L91">        template.setTemplate(config);</span>
+
+<span class="fc" id="L93">        templates.add(template);</span>
+<span class="fc" id="L94">    }</span>
+
+    /**
+     * Retrieves a server configuration template by its name.
+     * @param name the name of the template to retrieve
+     * @return the ServerConfigDTO for the specified template name, or null if not found
+     */
+    public ServerConfigDTO getTemplateByName(String name) {
+<span class="fc" id="L102">        return templates.stream()</span>
+<span class="fc" id="L103">                .filter(template -&gt; template.getTemplateName().equals(name))</span>
+<span class="fc" id="L104">                .findFirst()</span>
+<span class="fc" id="L105">                .map(TemplateDTO::getTemplate)  // Use map() instead of ifPresent()</span>
+<span class="fc" id="L106">                .orElse(null);  // Return null if not found, or throw exception</span>
+    }
+
+    /**
+     * Retrieves all available templates.
+     * @return a list of TemplateDTO objects representing all templates
+     */
+    public List&lt;TemplateDTO&gt; getAllTemplates() {
+<span class="fc" id="L114">        return templates;  // Return a copy to avoid external modification</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

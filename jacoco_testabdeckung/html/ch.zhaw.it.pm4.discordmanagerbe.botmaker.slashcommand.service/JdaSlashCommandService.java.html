@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdaSlashCommandService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.service</a> &gt; <span class="el_source">JdaSlashCommandService.java</span></div><h1>JdaSlashCommandService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.service;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.SlashCommandBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.model.JdaSlashCommand;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.DiscordServer;
+import ch.zhaw.it.pm4.discordmanagerbe.data.repositories.DiscordServerRepository;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.Guild;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+/**
+ * Service for managing Discord slash commands registration and coordination across servers.
+ * Handles command registration, unregistration, and synchronization between bot types and Discord guilds.
+ */
+@Service
+public class JdaSlashCommandService {
+
+    /**
+     * Logger instance for this class.
+     */
+<span class="fc" id="L28">    private static final Logger log = LoggerFactory.getLogger(JdaSlashCommandService.class);</span>
+
+    /**
+     * JDA instance for Discord API interactions.
+     */
+    private final JDA jda;
+
+    /**
+     * Repository for Discord server data access.
+     */
+    private final DiscordServerRepository discordServerRepository;
+
+    /**
+     * Service for handling Discord event listeners and command execution.
+     */
+    private final JdaEventListenerService commandListener;
+
+    /**
+     * Thread-safe map storing commands organized by bot type.
+     */
+<span class="fc" id="L48">    private final Map&lt;String, List&lt;JdaSlashCommand&gt;&gt; commandsByBotType = new ConcurrentHashMap&lt;&gt;();</span>
+
+    /**
+     * Constructs a new JdaSlashCommandService with required dependencies.
+     *
+     * @param jda the JDA instance for Discord interactions
+     * @param discordServerRepository repository for server data access
+     * @param commandListener service for handling command events
+     */
+    @Autowired
+    public JdaSlashCommandService(JDA jda, 
+                                 DiscordServerRepository discordServerRepository,
+<span class="fc" id="L60">                                 JdaEventListenerService commandListener) {</span>
+<span class="fc" id="L61">        this.jda = jda;</span>
+<span class="fc" id="L62">        this.discordServerRepository = discordServerRepository;</span>
+<span class="fc" id="L63">        this.commandListener = commandListener;</span>
+<span class="fc" id="L64">        initialize();</span>
+<span class="fc" id="L65">    }</span>
+
+    /**
+     * Initializes the slash command service.
+     */
+    public void initialize() {
+<span class="fc" id="L71">        log.info(&quot;Initializing JDA slash command service&quot;);</span>
+<span class="fc" id="L72">    }</span>
+
+    /**
+     * Registers commands for a specific bot type and updates all servers.
+     *
+     * @param botType the bot type to register commands for
+     * @param commands the list of commands to register
+     */
+    public void registerCommandsForBot(SlashCommandBotType botType, List&lt;JdaSlashCommand&gt; commands) {
+<span class="fc" id="L81">        log.info(&quot;Registering {} commands for bot type {}&quot;, commands.size(), botType);</span>
+<span class="fc" id="L82">        commandsByBotType.put(botType.name(), new ArrayList&lt;&gt;(commands));</span>
+<span class="fc" id="L83">        commandListener.appendCommands(commands);</span>
+<span class="fc" id="L84">        updateCommandsForAllServers();</span>
+<span class="fc" id="L85">    }</span>
+
+    /**
+     * Unregisters all commands for a specific bot type and updates all servers.
+     *
+     * @param botType the bot type to unregister commands for
+     */
+    public void unregisterCommandsForBot(SlashCommandBotType botType) {
+<span class="fc" id="L93">        List&lt;JdaSlashCommand&gt; commands = commandsByBotType.remove(botType.name());</span>
+        
+<span class="fc bfc" id="L95" title="All 4 branches covered.">        if (commands != null &amp;&amp; !commands.isEmpty()) {</span>
+<span class="fc" id="L96">            commandListener.removeCommands(commands);</span>
+<span class="fc" id="L97">            updateCommandsForAllServers();</span>
+<span class="fc" id="L98">            log.info(&quot;Unregistered {} commands for bot type {}&quot;, commands.size(), botType);</span>
+        }
+<span class="fc" id="L100">    }</span>
+
+    /**
+     * Updates slash commands for all Discord servers based on their enabled bot configurations.
+     */
+    public void updateCommandsForAllServers() {
+<span class="fc" id="L106">        List&lt;DiscordServer&gt; servers = discordServerRepository.findAll();</span>
+        
+<span class="fc bfc" id="L108" title="All 2 branches covered.">        for (Guild guild : jda.getGuilds()) {</span>
+<span class="fc" id="L109">            String guildId = guild.getId();</span>
+
+<span class="fc" id="L111">            Optional&lt;DiscordServer&gt; serverOpt = servers.stream()</span>
+<span class="fc" id="L112">                    .filter(s -&gt; s.getServerId().equals(guildId))</span>
+<span class="fc" id="L113">                    .findFirst();</span>
+            
+<span class="fc bfc" id="L115" title="All 2 branches covered.">            if (serverOpt.isPresent()) {</span>
+<span class="fc" id="L116">                DiscordServer server = serverOpt.get();</span>
+<span class="fc" id="L117">                updateCommandsForServer(guild, server.getEnabledBots());</span>
+<span class="fc" id="L118">            } else {</span>
+<span class="fc" id="L119">                updateCommandsForServer(guild, new HashSet&lt;&gt;());</span>
+            }
+<span class="fc" id="L121">        }</span>
+<span class="fc" id="L122">    }</span>
+
+    /**
+     * Updates slash commands for a specific Discord server based on enabled bots.
+     *
+     * @param guild the Discord guild to update commands for
+     * @param enabledBots the set of enabled bot types for this server
+     */
+    private void updateCommandsForServer(Guild guild, Set&lt;SlashCommandBotType&gt; enabledBots) {
+<span class="fc" id="L131">        List&lt;JdaSlashCommand&gt; commands = new ArrayList&lt;&gt;();</span>
+        
+<span class="fc bfc" id="L133" title="All 2 branches covered.">        for (SlashCommandBotType botType : enabledBots) {</span>
+<span class="fc" id="L134">            List&lt;JdaSlashCommand&gt; botCommands = commandsByBotType.getOrDefault(botType.name(), Collections.emptyList());</span>
+<span class="fc" id="L135">            commands.addAll(botCommands);</span>
+<span class="fc" id="L136">        }</span>
+
+<span class="fc bfc" id="L138" title="All 2 branches covered.">        if (commands.isEmpty()) {</span>
+<span class="fc" id="L139">            guild.updateCommands().queue(</span>
+<span class="fc" id="L140">                cmds -&gt; log.info(&quot;Cleared all commands for server {}&quot;, guild.getName()),</span>
+<span class="fc" id="L141">                error -&gt; log.error(&quot;Error clearing commands for server {}: {}&quot;, guild.getName(), error.getMessage())</span>
+            );
+        } else {
+<span class="fc" id="L144">            guild.updateCommands()</span>
+<span class="fc" id="L145">                .addCommands(commands.stream()</span>
+<span class="fc" id="L146">                    .map(JdaSlashCommand::getCommandData)</span>
+<span class="fc" id="L147">                    .collect(Collectors.toList()))</span>
+<span class="fc" id="L148">                .queue(</span>
+<span class="fc" id="L149">                    cmds -&gt; log.info(&quot;Updated {} commands for server {}&quot;, cmds.size(), guild.getName()),</span>
+<span class="nc" id="L150">                    error -&gt; log.error(&quot;Error updating commands for server {}: {}&quot;, guild.getName(), error.getMessage())</span>
+                );
+        }
+<span class="fc" id="L153">    }</span>
+
+    /**
+     * Registers commands for a specific bot type on a specific server.
+     *
+     * @param serverId the Discord server ID
+     * @param botTypeName the name of the bot type
+     */
+    public void registerCommandsForServer(String serverId, String botTypeName) {
+<span class="fc" id="L162">        Guild guild = jda.getGuildById(serverId);</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">        if (guild == null) {</span>
+<span class="fc" id="L164">            log.warn(&quot;Guild with ID {} not found&quot;, serverId);</span>
+<span class="fc" id="L165">            return;</span>
+        }
+
+<span class="fc" id="L168">        DiscordServer server = discordServerRepository.findById(serverId).orElse(null);</span>
+<span class="fc bfc" id="L169" title="All 2 branches covered.">        if (server == null) {</span>
+<span class="fc" id="L170">            log.warn(&quot;Server with ID {} not found in database&quot;, serverId);</span>
+<span class="fc" id="L171">            return;</span>
+        }
+
+<span class="fc" id="L174">        Set&lt;SlashCommandBotType&gt; enabledBots = server.getEnabledBots();</span>
+<span class="fc" id="L175">        updateCommandsForServer(guild, enabledBots);</span>
+        
+<span class="fc" id="L177">        log.info(&quot;Registered commands for bot {} on server {}&quot;, botTypeName, serverId);</span>
+<span class="fc" id="L178">    }</span>
+
+    /**
+     * Unregisters commands for a specific bot type on a specific server.
+     *
+     * @param serverId the Discord server ID
+     * @param botTypeName the name of the bot type
+     */
+    public void unregisterCommandsForServer(String serverId, String botTypeName) {
+<span class="fc" id="L187">        Guild guild = jda.getGuildById(serverId);</span>
+<span class="pc bpc" id="L188" title="1 of 2 branches missed.">        if (guild == null) {</span>
+<span class="nc" id="L189">            log.warn(&quot;Guild with ID {} not found&quot;, serverId);</span>
+<span class="nc" id="L190">            return;</span>
+        }
+
+<span class="fc" id="L193">        DiscordServer server = discordServerRepository.findById(serverId).orElse(null);</span>
+<span class="pc bpc" id="L194" title="1 of 2 branches missed.">        if (server == null) {</span>
+<span class="nc" id="L195">            log.warn(&quot;Server with ID {} not found in database&quot;, serverId);</span>
+<span class="nc" id="L196">            return;</span>
+        }
+
+<span class="fc" id="L199">        Set&lt;SlashCommandBotType&gt; enabledBots = server.getEnabledBots();</span>
+<span class="fc" id="L200">        updateCommandsForServer(guild, enabledBots);</span>
+        
+<span class="fc" id="L202">        log.info(&quot;Unregistered commands for bot {} on server {}&quot;, botTypeName, serverId);</span>
+<span class="fc" id="L203">    }</span>
+
+    /**
+     * Retrieves all registered commands for a specific bot type.
+     *
+     * @param botTypeName the name of the bot type
+     * @return a new list containing all commands for the specified bot type
+     */
+    public List&lt;JdaSlashCommand&gt; getCommandsForBotType(String botTypeName) {
+<span class="fc" id="L212">        return new ArrayList&lt;&gt;(commandsByBotType.getOrDefault(botTypeName, Collections.emptyList()));</span>
+    }
+
+    /**
+     * Retrieves all commands available for a specific server, organized by bot type.
+     *
+     * @param serverId the Discord server ID
+     * @return a map of bot type names to their respective command lists
+     */
+    public Map&lt;String, List&lt;JdaSlashCommand&gt;&gt; getCommandsForServer(String serverId) {
+<span class="fc" id="L222">        Map&lt;String, List&lt;JdaSlashCommand&gt;&gt; result = new HashMap&lt;&gt;();</span>
+        
+<span class="fc" id="L224">        DiscordServer server = discordServerRepository.findById(serverId).orElse(null);</span>
+<span class="fc bfc" id="L225" title="All 2 branches covered.">        if (server == null) {</span>
+<span class="fc" id="L226">            return result;</span>
+        }
+        
+<span class="fc" id="L229">        Set&lt;SlashCommandBotType&gt; enabledBots = server.getEnabledBots();</span>
+<span class="fc bfc" id="L230" title="All 2 branches covered.">        for (SlashCommandBotType botType : enabledBots) {</span>
+<span class="fc" id="L231">            List&lt;JdaSlashCommand&gt; commands = commandsByBotType.getOrDefault(botType.name(), Collections.emptyList());</span>
+<span class="pc bpc" id="L232" title="1 of 2 branches missed.">            if (!commands.isEmpty()) {</span>
+<span class="fc" id="L233">                result.put(botType.name(), new ArrayList&lt;&gt;(commands));</span>
+            }
+<span class="fc" id="L235">        }</span>
+        
+<span class="fc" id="L237">        return result;</span>
+    }
+
+    /**
+     * Gets the total number of registered commands across all bot types.
+     *
+     * @return the total command count
+     */
+    public int getTotalCommandCount() {
+<span class="nc" id="L246">        return commandListener.getHandlerCount();</span>
+    }
+
+    /**
+     * Gets the total number of bot types that have registered commands.
+     *
+     * @return the number of bot types with commands
+     */
+    public int getBotTypeCount() {
+<span class="fc" id="L255">        return commandsByBotType.size();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

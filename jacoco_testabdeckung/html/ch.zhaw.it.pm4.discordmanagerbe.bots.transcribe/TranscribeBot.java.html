@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TranscribeBot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe</a> &gt; <span class="el_source">TranscribeBot.java</span></div><h1>TranscribeBot.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.AbstractSlashCommandJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.BotIdentifier;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.SlashCommandBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.service.JdaEventListenerService;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.service.JdaSlashCommandService;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.state.*;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility.BotMessages;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility.MessageKey;
+import jakarta.annotation.PostConstruct;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+import net.dv8tion.jda.api.managers.AudioManager;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+
+/**
+ * Discord bot for voice channel transcription with state-based workflow.
+ * Supports joining voice channels, recording audio with user consent, and managing permissions.
+ * Uses the State pattern to handle different operational phases.
+ */
+@Component
+@BotIdentifier(category = BotIdentifier.BotCategory.SLASH_COMMAND,
+        slashCommand = SlashCommandBotType.TRANSCRIPTION)
+public class TranscribeBot extends AbstractSlashCommandJdaBot {
+
+    /** logger */
+<span class="fc" id="L40">    private static final Logger logger = LoggerFactory.getLogger(TranscribeBot.class);</span>
+
+    /** Current operational state of the bot */
+    private BotState currentState;
+
+    /** State when bot is not connected to any voice channel */
+    private final DisconnectedState disconnectedState;
+
+    /** State when bot is connected but not recording */
+    private final ConnectedState connectedState;
+
+    /** State when waiting for user recording consent */
+    private final PendingApprovalState pendingApprovalState;
+
+    /** State when actively recording audio */
+    private final RecordingState recordingState;
+
+    /** Maps channel IDs to sets of user IDs awaiting recording consent */
+<span class="fc" id="L58">    private final Map&lt;String, Set&lt;String&gt;&gt; pendingAcceptances = new HashMap&lt;&gt;();</span>
+
+    /** Maps channel IDs to sets of user IDs who have given recording consent */
+<span class="fc" id="L61">    private final Map&lt;String, Set&lt;String&gt;&gt; acceptedUsers = new HashMap&lt;&gt;();</span>
+
+    /** Maps channel IDs to active recording sessions */
+<span class="fc" id="L64">    private final Map&lt;String, RecordingSession&gt; activeSessions = new HashMap&lt;&gt;();</span>
+
+    /** ID of the user who first used the bot, grants admin privileges */
+    private String botOwnerId;
+
+    /** Current audio manager for voice channel connection */
+    private AudioManager activeAudioManager;
+
+    /**
+     * Constructor for the TranscribeBot.
+     * Initializes the various states of the bot and sets the initial state to &quot;disconnected&quot;.
+     *
+     * @param jdaBean The JDA instance used for interacting with the Discord API.
+     * @param slashCommandService The service for registering and managing slash commands.
+     * @param slashCommandListener The listener for slash command events.
+     * @param applicationContext The Spring ApplicationContext used for initializing dependent beans.
+     */
+    @Autowired
+    public TranscribeBot(JDA jdaBean,
+                         JdaSlashCommandService slashCommandService,
+                         JdaEventListenerService slashCommandListener,
+                         ApplicationContext applicationContext) {
+<span class="fc" id="L86">        super(jdaBean, slashCommandService, slashCommandListener);</span>
+<span class="fc" id="L87">        setBotType(this.getClass().getAnnotation(BotIdentifier.class).slashCommand());</span>
+<span class="fc" id="L88">        this.disconnectedState = new DisconnectedState(this);</span>
+<span class="fc" id="L89">        this.connectedState = new ConnectedState(this);</span>
+<span class="fc" id="L90">        this.pendingApprovalState = new PendingApprovalState(this, applicationContext);</span>
+<span class="fc" id="L91">        this.recordingState = new RecordingState(this);</span>
+
+<span class="fc" id="L93">        this.currentState = disconnectedState;</span>
+<span class="fc" id="L94">        setDescription(&quot;Transcribe Bot&quot;);</span>
+<span class="fc" id="L95">    }</span>
+
+    /**
+     * setup all slash commands.
+     */
+    @Override
+    public void setupCommands() {
+<span class="fc" id="L102">        SlashCommandData createSubjectCommand = createCommand(&quot;join-channel&quot;, &quot;Bot mit deinem aktuellen Voice-Channel verbinden&quot;);</span>
+<span class="fc" id="L103">        registerCommand(</span>
+                &quot;join-channel&quot;, &quot;Bot mit deinem aktuellen Voice-Channel verbinden&quot;,
+                createSubjectCommand, this::handleJoinChannel);
+
+<span class="fc" id="L107">        createSubjectCommand = createCommand(&quot;leave-channel&quot;, &quot;Bot vom Voice-Channel trennen&quot;);</span>
+<span class="fc" id="L108">        registerCommand(</span>
+                &quot;leave-channel&quot;, &quot;Bot vom Voice-Channel trennen&quot;,
+                createSubjectCommand, this::handleLeaveChannel);
+
+<span class="fc" id="L112">        createSubjectCommand = createCommand(&quot;lock-channel&quot;, &quot;Channel sperren (notwendig vor der Aufnahme)&quot;);</span>
+<span class="fc" id="L113">        registerCommand(</span>
+                &quot;lock-channel&quot;, &quot;Channel sperren (notwendig vor der Aufnahme)&quot;,
+                createSubjectCommand, this::handleLockChannel);
+
+<span class="fc" id="L117">        createSubjectCommand = createCommand(&quot;unlock-channel&quot;, &quot;Channel entsperren&quot;);</span>
+<span class="fc" id="L118">        registerCommand(</span>
+                &quot;unlock-channel&quot;, &quot;Channel entsperren&quot;,
+                createSubjectCommand, this::handleUnlockChannel);
+
+<span class="fc" id="L122">        createSubjectCommand = createCommand(&quot;accept-recording&quot;, &quot;Der Aufnahme zustimmen&quot;);</span>
+<span class="fc" id="L123">        registerCommand(</span>
+                &quot;accept-recording&quot;, &quot;Der Aufnahme zustimmen&quot;,
+                createSubjectCommand, this::handleAcceptRecording);
+
+<span class="fc" id="L127">        createSubjectCommand = createCommand(&quot;start-recording&quot;, &quot;Aufnahme starten (Zustimmung aller Teilnehmer erforderlich)&quot;);</span>
+<span class="fc" id="L128">        registerCommand(</span>
+                &quot;start-recording&quot;, &quot;Aufnahme starten (Zustimmung aller Teilnehmer erforderlich)&quot;,
+                createSubjectCommand, this::handleStartRecording);
+
+<span class="fc" id="L132">        createSubjectCommand = createCommand(&quot;stop-recording&quot;, &quot;Aufnahme beenden und Dateien speichern&quot;);</span>
+<span class="fc" id="L133">        registerCommand(</span>
+                &quot;stop-recording&quot;, &quot;Aufnahme beenden und Dateien speichern&quot;,
+                createSubjectCommand, this::handleStopRecording);
+
+<span class="fc" id="L137">        createSubjectCommand = createCommand(&quot;help&quot;, &quot;Liste aller Befehle anzeigen&quot;);</span>
+<span class="fc" id="L138">        registerCommand(</span>
+                &quot;help&quot;, &quot;Liste aller Befehle anzeigen&quot;,
+                createSubjectCommand, this::handleHelp
+        );
+<span class="fc" id="L142">    }</span>
+
+    /**
+     * Registers handlers for button interactions.
+     * This method is overridden but currently does not handle any button interactions.
+     */
+    @Override
+    protected void registerButtonInteractionHandlers() {
+        // No button interactions to handle
+<span class="fc" id="L151">    }</span>
+
+    /**
+     * Registers handlers for string interactions.
+     * This method is overridden but currently does not handle any string interactions.
+     */
+    @Override
+    protected void registerStringInteractionHandlers() {
+        // No string interactions to handle
+<span class="fc" id="L160">    }</span>
+
+    /**
+     * Registers handlers for modal interactions.
+     * This method is overridden but currently does not handle any modal interactions.
+     */
+    @Override
+    protected void registerModalInteractionHandlers() {
+        // No modal interactions to handle
+<span class="fc" id="L169">    }</span>
+
+    /**
+     * Handles the join-channel command, connecting the bot to the user's current voice channel.
+     *
+     * @param event The slash command event
+     */
+    private void handleJoinChannel(SlashCommandInteractionEvent event) {
+<span class="nc" id="L177">        event.deferReply().queue();</span>
+        
+<span class="nc" id="L179">        CompletableFuture.runAsync(() -&gt; {</span>
+<span class="nc" id="L180">            Member member = event.getMember();</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">            if (botOwnerId == null) {</span>
+<span class="nc" id="L182">                botOwnerId = member.getId();</span>
+<span class="nc" id="L183">                logger.info(&quot;Bot owner set to: {} ({})&quot;, member.getEffectiveName(), botOwnerId);</span>
+            }
+
+<span class="nc bnc" id="L186" title="All 2 branches missed.">            if (checkPermission(event)) {</span>
+<span class="nc" id="L187">                currentState.joinVoiceChannel(event);</span>
+            }
+<span class="nc" id="L189">        });</span>
+<span class="nc" id="L190">    }</span>
+
+    /**
+     * Handles the leave-channel command, disconnecting the bot from the voice channel.
+     *
+     * @param event The slash command event
+     */
+    private void handleLeaveChannel(SlashCommandInteractionEvent event) {
+<span class="nc" id="L198">        event.deferReply().queue();</span>
+        
+<span class="nc" id="L200">        CompletableFuture.runAsync(() -&gt; {</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">            if (checkPermission(event)) {</span>
+<span class="nc" id="L202">                currentState.leaveVoiceChannel(event);</span>
+            }
+<span class="nc" id="L204">        });</span>
+<span class="nc" id="L205">    }</span>
+
+    /**
+     * Handles the lock-channel command, preventing other users from joining the voice channel.
+     *
+     * @param event The slash command event
+     */
+    private void handleLockChannel(SlashCommandInteractionEvent event) {
+<span class="nc" id="L213">        event.deferReply().queue();</span>
+        
+<span class="nc" id="L215">        CompletableFuture.runAsync(() -&gt; {</span>
+<span class="nc bnc" id="L216" title="All 2 branches missed.">            if (checkPermission(event)) {</span>
+<span class="nc" id="L217">                currentState.lockVoiceChannel(event);</span>
+            }
+<span class="nc" id="L219">        });</span>
+<span class="nc" id="L220">    }</span>
+
+    /**
+     * Handles the unlock-channel command, allowing other users to join the voice channel.
+     *
+     * @param event The slash command event
+     */
+    private void handleUnlockChannel(SlashCommandInteractionEvent event) {
+<span class="nc" id="L228">        event.deferReply().queue();</span>
+        
+<span class="nc" id="L230">        CompletableFuture.runAsync(() -&gt; {</span>
+<span class="nc bnc" id="L231" title="All 2 branches missed.">            if (checkPermission(event)) {</span>
+<span class="nc" id="L232">                currentState.unlockVoiceChannel(event);</span>
+            }
+<span class="nc" id="L234">        });</span>
+<span class="nc" id="L235">    }</span>
+
+    /**
+     * Handles the accept-recording command, allowing users to give consent for recording.
+     *
+     * @param event The slash command event
+     */
+    private void handleAcceptRecording(SlashCommandInteractionEvent event) {
+<span class="nc" id="L243">        event.deferReply().queue();</span>
+        
+<span class="nc" id="L245">        CompletableFuture.runAsync(() -&gt; currentState.handleAcceptRecording(event));</span>
+<span class="nc" id="L246">    }</span>
+
+    /**
+     * Handles the start-recording command, initiating the audio recording process.
+     *
+     * @param event The slash command event
+     */
+    private void handleStartRecording(SlashCommandInteractionEvent event) {
+<span class="nc" id="L254">        event.deferReply().queue();</span>
+        
+<span class="nc" id="L256">        CompletableFuture.runAsync(() -&gt; {</span>
+<span class="nc bnc" id="L257" title="All 2 branches missed.">            if (checkPermission(event)) {</span>
+<span class="nc" id="L258">                currentState.startRecording(event);</span>
+            }
+<span class="nc" id="L260">        });</span>
+<span class="nc" id="L261">    }</span>
+
+    /**
+     * Handles the stop-recording command, ending the recording and saving the files.
+     *
+     * @param event The slash command event
+     */
+    private void handleStopRecording(SlashCommandInteractionEvent event) {
+<span class="nc" id="L269">        event.deferReply().queue();</span>
+        
+<span class="nc" id="L271">        CompletableFuture.runAsync(() -&gt; {</span>
+<span class="nc bnc" id="L272" title="All 2 branches missed.">            if (checkPermission(event)) {</span>
+<span class="nc" id="L273">                currentState.stopRecording(event);</span>
+            }
+<span class="nc" id="L275">        });</span>
+<span class="nc" id="L276">    }</span>
+
+    /**
+     * Handles the help command, displaying available commands to the user.
+     *
+     * @param event The slash command event
+     */
+    private void handleHelp(SlashCommandInteractionEvent event) {
+<span class="nc" id="L284">        event.deferReply().queue();</span>
+        
+<span class="nc" id="L286">        CompletableFuture.runAsync(() -&gt; {</span>
+<span class="nc" id="L287">            sendHelpMessage(event);</span>
+<span class="nc" id="L288">        });</span>
+<span class="nc" id="L289">    }</span>
+
+    /**
+     * Verifies if the user has permission to execute the command.
+     * @param event The slash command event
+     * @return True if the user has permission, false otherwise
+     */
+    private boolean checkPermission(SlashCommandInteractionEvent event) {
+<span class="nc" id="L297">        Member member = event.getMember();</span>
+<span class="nc bnc" id="L298" title="All 4 branches missed.">        if (botOwnerId != null &amp;&amp; !member.getId().equals(botOwnerId)) {</span>
+<span class="nc" id="L299">            event.getHook().sendMessage(&quot;Nur der Bot-Owner kann diesen Befehl ausführen.&quot;)</span>
+<span class="nc" id="L300">                    .setEphemeral(true).queue();</span>
+<span class="nc" id="L301">            return false;</span>
+        }
+<span class="nc" id="L303">        return true;</span>
+    }
+
+    /**
+     * Sends a help message listing all available commands.
+     * @param event The slash command event
+     */
+    private void sendHelpMessage(SlashCommandInteractionEvent event) {
+<span class="nc" id="L311">        event.getHook().sendMessage(BotMessages.get(MessageKey.HELP_MESSAGE)).queue();</span>
+<span class="nc" id="L312">    }</span>
+
+    /**
+     * Changes the current state of the bot.
+     * @param state The new state to set
+     */
+    public void setState(BotState state) {
+<span class="nc" id="L319">        this.currentState = state;</span>
+<span class="nc" id="L320">        logger.info(&quot;TranscribeBot changed to state: {}&quot;, state.getClass().getSimpleName());</span>
+<span class="nc" id="L321">    }</span>
+
+    /**
+     * Returns the state when the bot is not connected to any voice channel.
+     * @return The disconnected state of the bot.
+     */
+    public DisconnectedState getDisconnectedState() {
+<span class="nc" id="L328">        return disconnectedState;</span>
+    }
+
+    /**
+     * Returns the state when the bot is connected to a voice channel but not recording.
+     * @return The connected state of the bot.
+     */
+    public ConnectedState getConnectedState() {
+<span class="nc" id="L336">        return connectedState;</span>
+    }
+
+    /**
+     * Returns the state when the bot is waiting for user consent to start recording.
+     * @return The pending approval state of the bot.
+     */
+    public PendingApprovalState getPendingApprovalState() {
+<span class="nc" id="L344">        return pendingApprovalState;</span>
+    }
+
+    /**
+     * Returns the state when the bot is actively recording audio.
+     * @return The recording state of the bot.
+     */
+    public RecordingState getRecordingState() {
+<span class="nc" id="L352">        return recordingState;</span>
+    }
+
+    /**
+     * Returns a map of channel IDs to sets of user IDs awaiting recording consent.
+     * @return A map of pending acceptances.
+     */
+    public Map&lt;String, Set&lt;String&gt;&gt; getPendingAcceptances() {
+<span class="nc" id="L360">        return pendingAcceptances;</span>
+    }
+
+    /**
+     * Returns a map of channel IDs to sets of user IDs who have given recording consent.
+     * @return A map of accepted users.
+     */
+    public Map&lt;String, Set&lt;String&gt;&gt; getAcceptedUsers() {
+<span class="nc" id="L368">        return acceptedUsers;</span>
+    }
+
+    /**
+     * Returns a map of channel IDs to active recording sessions.
+     * @return A map of active recording sessions.
+     */
+    public Map&lt;String, RecordingSession&gt; getActiveSessions() {
+<span class="nc" id="L376">        return activeSessions;</span>
+    }
+
+    /**
+     * Returns the current audio manager for the bot's voice channel connection.
+     * @return The active audio manager.
+     */
+    public AudioManager getActiveAudioManager() {
+<span class="nc" id="L384">        return activeAudioManager;</span>
+    }
+
+    /**
+     * Sets the current audio manager for the bot's voice channel connection.
+     * @param audioManager The audio manager to set.
+     */
+    public void setActiveAudioManager(AudioManager audioManager) {
+<span class="nc" id="L392">        this.activeAudioManager = audioManager;</span>
+<span class="nc" id="L393">    }</span>
+
+    /**
+     * Interface defining a recording session.
+     */
+    public interface RecordingSession {
+
+        /**
+         * Stops the recording and returns a result message.
+         *
+         * @param channel The message channel where results will be reported
+         */
+        void stopRecording(MessageChannel channel);
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

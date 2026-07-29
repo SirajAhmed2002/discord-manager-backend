@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmbedFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.grade.factory</a> &gt; <span class="el_source">EmbedFactory.java</span></div><h1>EmbedFactory.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.grade.factory;
+
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.Grade;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.Subject;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.*;
+import net.dv8tion.jda.api.EmbedBuilder;
+import org.springframework.stereotype.Component;
+
+import java.text.DecimalFormat;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import static ch.zhaw.it.pm4.discordmanagerbe.bots.grade.GradeBotConstants.*;
+
+/**
+ * Factory for creating Discord embeds for the grade calculator bot
+ */
+@Component
+<span class="fc" id="L21">public class EmbedFactory {</span>
+    /**
+     * Decimal format for displaying grades and averages
+     */
+<span class="fc" id="L25">    private static final DecimalFormat df = new DecimalFormat(&quot;#.##&quot;);</span>
+
+    /**
+     * Date formatter for displaying creation dates of grades
+     */
+<span class="fc" id="L30">    private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern(&quot;dd.MM.yyyy HH:mm&quot;);</span>
+
+    /**
+     * Creates an embed for successful subject creation
+     */
+    public EmbedBuilder createSubjectCreatedEmbed(Subject subject, String semester) {
+<span class="fc" id="L36">        EmbedBuilder embed = createSuccessEmbed(&quot;Fach erstellt&quot;)</span>
+<span class="fc" id="L37">                .addField(&quot;Fach&quot;, subject.getName(), true)</span>
+<span class="fc" id="L38">                .addField(&quot;Credits&quot;, String.valueOf(subject.getCredits()), true);</span>
+                
+<span class="pc bpc" id="L40" title="1 of 4 branches missed.">        if (semester != null &amp;&amp; !semester.trim().isEmpty()) {</span>
+<span class="fc" id="L41">            embed.addField(&quot;Semester&quot;, semester, true);</span>
+        }
+        
+<span class="fc" id="L44">        return embed;</span>
+    }
+
+    /**
+     * Creates an embed for successful grade addition
+     * @param grade the added grade
+     * @param request the request containing grade details
+     * @param average the current average after adding the grade
+     * @return an EmbedBuilder with the success message and grade details
+     */
+    public EmbedBuilder createGradeAddedEmbed(Grade grade, AddGradeRequest request, double average) {
+<span class="fc" id="L55">        EmbedBuilder embed = createSuccessEmbed(&quot;Note hinzugefügt&quot;)</span>
+<span class="fc" id="L56">            .addField(&quot;Fach&quot;, request.subjectName(), true)</span>
+<span class="fc" id="L57">            .addField(&quot;Note&quot;, df.format(grade.getValue()), true)</span>
+<span class="fc" id="L58">            .addField(&quot;Gewichtung&quot;, df.format(grade.getWeight() * 100) + &quot;%&quot;, true)</span>
+<span class="fc" id="L59">            .addField(&quot;Aktueller Durchschnitt&quot;, df.format(average), false);</span>
+            
+<span class="fc" id="L61">        addOptionalField(embed, &quot;Semester&quot;, request.semester());</span>
+<span class="fc" id="L62">        addOptionalField(embed, &quot;Beschreibung&quot;, request.description());</span>
+        
+<span class="fc" id="L64">        return embed;</span>
+    }
+
+    /**
+     * Creates an embed for displaying subjects
+     * @param displayData the data containing subjects and averages
+     * @return an EmbedBuilder with the subjects and their averages
+     */
+    public EmbedBuilder createSubjectsDisplayEmbed(SubjectDisplayData displayData) {
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">        String title = displayData.getSemester() != null </span>
+<span class="fc" id="L74">            ? &quot;Deine Fächer für &quot; + displayData.getSemester()</span>
+<span class="pc" id="L75">            : &quot;Deine Fächer&quot;;</span>
+            
+<span class="fc" id="L77">        EmbedBuilder embed = createInfoEmbed(title);</span>
+        
+<span class="fc" id="L79">        addSubjectsToEmbed(embed, displayData.getSubjects());</span>
+        
+<span class="pc bpc" id="L81" title="1 of 2 branches missed.">        if (displayData.getAverage() &gt; 0) {</span>
+<span class="fc" id="L82">            embed.addField(&quot;Gesamtdurchschnitt&quot;, df.format(displayData.getAverage()), false);</span>
+        }
+        
+<span class="fc" id="L85">        return embed;</span>
+    }
+
+    /**
+     * Creates an embed for displaying grades
+     * @param displayData the data containing grades and average for a subject
+     * @return an EmbedBuilder with the grades and their average
+     */
+    public EmbedBuilder createGradesDisplayEmbed(GradeDisplayData displayData) {
+<span class="fc" id="L94">        String title = buildGradesTitle(displayData.getSubjectName(), displayData.getSemester());</span>
+        
+<span class="fc" id="L96">        EmbedBuilder embed = createInfoEmbed(title)</span>
+<span class="fc" id="L97">                .setDescription(&quot;Aktueller Durchschnitt: &quot; + df.format(displayData.getAverage()));</span>
+
+<span class="fc" id="L99">        addGradesToEmbed(embed, displayData.getGrades());</span>
+        
+<span class="fc" id="L101">        return embed;</span>
+    }
+
+    /**
+     * Creates an embed for displaying semesters
+     * @param semesters the list of semesters to display
+     * @return an EmbedBuilder with the semesters
+     */
+    public EmbedBuilder createSemestersDisplayEmbed(List&lt;String&gt; semesters) {
+<span class="fc" id="L110">        return createInfoEmbed(&quot;Deine Semester&quot;)</span>
+<span class="fc" id="L111">                .setDescription(&quot;Folgende Semester sind verfügbar:\n\n&quot; +</span>
+<span class="fc" id="L112">                        semesters.stream().map(s -&gt; &quot;• &quot; + s).collect(Collectors.joining(&quot;\n&quot;)));</span>
+    }
+
+    /**
+     * Creates an embed for successful subject removal
+     * @param subjectName the name of the subject that was removed
+     * @param semester the semester of the subject, can be null or empty
+     * @return an EmbedBuilder with the success or error message
+     */
+    public EmbedBuilder createSubjectRemovedEmbed(String subjectName, String semester, boolean removed) {
+<span class="fc bfc" id="L122" title="All 2 branches covered.">        if (removed) {</span>
+<span class="fc" id="L123">            EmbedBuilder embed = createSuccessEmbed(&quot;Fach gelöscht&quot;)</span>
+<span class="fc" id="L124">                    .addField(&quot;Fach&quot;, subjectName, true);</span>
+            
+<span class="pc bpc" id="L126" title="2 of 4 branches missed.">            if (semester != null &amp;&amp; !semester.trim().isEmpty()) {</span>
+<span class="fc" id="L127">                embed.addField(&quot;Semester&quot;, semester, true);</span>
+            }
+            
+<span class="fc" id="L130">            embed.setDescription(&quot;Das Fach und alle zugehörigen Noten wurden erfolgreich gelöscht.&quot;);</span>
+<span class="fc" id="L131">            return embed;</span>
+        } else {
+<span class="fc" id="L133">            return createErrorEmbed(&quot;Fach nicht gefunden&quot;)</span>
+<span class="fc" id="L134">                    .setDescription(String.format(MSG_SUBJECT_NOT_FOUND, subjectName));</span>
+        }
+    }
+
+    /**
+     * Creates an embed for successful grades removal
+     * @param subjectName the name of the subject from which grades were removed
+     * @param semester the semester of the subject, can be null or empty
+     * @param removedCount the number of grades removed
+     * @return an EmbedBuilder with the success message or info if no grades were removed
+     */
+    public EmbedBuilder createGradesRemovedEmbed(String subjectName, String semester, int removedCount) {
+<span class="fc bfc" id="L146" title="All 2 branches covered.">        if (removedCount &gt; 0) {</span>
+<span class="fc" id="L147">            EmbedBuilder embed = createSuccessEmbed(&quot;Noten gelöscht&quot;)</span>
+<span class="fc" id="L148">                    .addField(&quot;Fach&quot;, subjectName, true)</span>
+<span class="fc" id="L149">                    .addField(&quot;Gelöschte Noten&quot;, String.valueOf(removedCount), true);</span>
+            
+<span class="pc bpc" id="L151" title="2 of 4 branches missed.">            if (semester != null &amp;&amp; !semester.trim().isEmpty()) {</span>
+<span class="fc" id="L152">                embed.addField(&quot;Semester&quot;, semester, true);</span>
+            }
+            
+<span class="fc" id="L155">            embed.setDescription(&quot;Alle Noten wurden erfolgreich aus dem Fach gelöscht.&quot;);</span>
+<span class="fc" id="L156">            return embed;</span>
+        } else {
+<span class="fc" id="L158">            return createInfoEmbed(&quot;Keine Noten vorhanden&quot;)</span>
+<span class="fc" id="L159">                    .setDescription(String.format(MSG_NO_GRADES_TO_REMOVE, subjectName));</span>
+        }
+    }
+
+    /**
+     * Creates an embed for successful semester removal
+     * @param semester the name of the semester that was removed
+     * @param removedCount the number of subjects removed from the semester
+     * @return an EmbedBuilder with the success message or error if the semester was not found
+     */
+    public EmbedBuilder createSemesterRemovedEmbed(String semester, int removedCount) {
+<span class="pc bpc" id="L170" title="1 of 2 branches missed.">        if (removedCount &gt; 0) {</span>
+<span class="fc" id="L171">            return createSuccessEmbed(&quot;Semester gelöscht&quot;)</span>
+<span class="fc" id="L172">                    .addField(&quot;Semester&quot;, semester, true)</span>
+<span class="fc" id="L173">                    .addField(&quot;Gelöschte Fächer&quot;, String.valueOf(removedCount), true)</span>
+<span class="fc" id="L174">                    .setDescription(&quot;Das Semester und alle zugehörigen Fächer wurden erfolgreich gelöscht.&quot;);</span>
+        } else {
+<span class="nc" id="L176">            return createErrorEmbed(&quot;Semester nicht gefunden&quot;)</span>
+<span class="nc" id="L177">                    .setDescription(String.format(MSG_SEMESTER_NOT_FOUND, semester));</span>
+        }
+    }
+
+    /**
+     * Create an embed for displaying semester average and subjects.
+     * @param semesterSummary the semester summary containing average and subjects
+     * @return an EmbedBuilder with semester average and subject details
+     */
+    public EmbedBuilder createSemesterAverageEmbed(SemesterSummary semesterSummary) {
+<span class="fc" id="L187">        EmbedBuilder embed = createWarningEmbed(&quot;Durchschnitt für &quot; + semesterSummary.getName())</span>
+<span class="fc" id="L188">                .addField(&quot;Semesterdurchschnitt&quot;, df.format(semesterSummary.getAverage()), false)</span>
+<span class="fc" id="L189">                .setDescription(&quot;Fächer im Detail:&quot;);</span>
+
+<span class="fc" id="L191">        addSubjectSummariesToEmbed(embed, semesterSummary.getSubjects());</span>
+        
+<span class="fc" id="L193">        return embed;</span>
+    }
+
+    /**
+     * Creates an embed for displaying overall averages.
+     * @param displayData the data containing overall averages and semester summaries
+     * @return an EmbedBuilder with overall averages and semester details
+     */
+    public EmbedBuilder createOverallAverageEmbed(AverageDisplayData displayData) {
+<span class="fc" id="L202">        EmbedBuilder embed = createWarningEmbed(&quot;Deine Notendurchschnitte&quot;)</span>
+<span class="fc" id="L203">                .addField(&quot;Gesamtdurchschnitt&quot;, df.format(displayData.getOverallAverage()), false);</span>
+
+<span class="fc bfc" id="L205" title="All 2 branches covered.">        for (SemesterSummary semester : displayData.getSemesters()) {</span>
+<span class="fc" id="L206">            addSemesterDetailsToEmbed(embed, semester);</span>
+<span class="fc" id="L207">        }</span>
+
+<span class="fc" id="L209">        return embed;</span>
+    }
+
+    /**
+     * Creates a success embed with the given title.
+     * @param title the title of the success embed
+     * @return an EmbedBuilder configured for success messages
+     */
+    private EmbedBuilder createSuccessEmbed(String title) {
+<span class="fc" id="L218">        return new EmbedBuilder()</span>
+<span class="fc" id="L219">            .setColor(SUCCESS_COLOR)</span>
+<span class="fc" id="L220">            .setTitle(title);</span>
+    }
+
+    /**
+     * Creates an embed for informational messages.
+     * @param title the title of the info embed
+     * @return an EmbedBuilder configured for informational messages
+     */
+    private EmbedBuilder createInfoEmbed(String title) {
+<span class="fc" id="L229">        return new EmbedBuilder()</span>
+<span class="fc" id="L230">            .setColor(INFO_COLOR)</span>
+<span class="fc" id="L231">            .setTitle(title);</span>
+    }
+
+    /**
+     * Creates an embed for warning messages.
+     * @param title the title of the warning embed
+     * @return an EmbedBuilder configured for warning messages
+     */
+    private EmbedBuilder createWarningEmbed(String title) {
+<span class="fc" id="L240">        return new EmbedBuilder()</span>
+<span class="fc" id="L241">            .setColor(TAHITI_GOLD)</span>
+<span class="fc" id="L242">            .setTitle(title);</span>
+    }
+
+    /**
+     * Creates an embed for error messages.
+     * @param title the title of the error embed
+     * @return an EmbedBuilder configured for error messages
+     */
+    private EmbedBuilder createErrorEmbed(String title) {
+<span class="fc" id="L251">        return new EmbedBuilder()</span>
+<span class="fc" id="L252">            .setColor(ERROR_COLOR)</span>
+<span class="fc" id="L253">            .setTitle(title);</span>
+    }
+
+    /**
+     * Adds an optional field to the embed if the value is not null or empty.
+     * @param embed the embed to add the field to
+     * @param name the name of the field
+     * @param value the value of the field, can be null or empty
+     */
+    private void addOptionalField(EmbedBuilder embed, String name, String value) {
+<span class="pc bpc" id="L263" title="2 of 4 branches missed.">        if (value != null &amp;&amp; !value.trim().isEmpty()) {</span>
+<span class="fc" id="L264">            embed.addField(name, value, name.equals(&quot;Semester&quot;));</span>
+        }
+<span class="fc" id="L266">    }</span>
+
+    /**
+     * Adds subjects to the embed for display.
+     * @param embed the embed to add subjects to
+     * @param subjects the list of subjects to add
+     */
+    private void addSubjectsToEmbed(EmbedBuilder embed, List&lt;Subject&gt; subjects) {
+<span class="fc" id="L274">        Map&lt;String, List&lt;Subject&gt;&gt; subjectsBySemester = subjects.stream()</span>
+<span class="fc" id="L275">            .collect(Collectors.groupingBy(subject -&gt; </span>
+<span class="pc bpc" id="L276" title="1 of 2 branches missed.">                subject.getSemester() != null ? subject.getSemester() : NO_SEMESTER));</span>
+
+<span class="fc bfc" id="L278" title="All 2 branches covered.">        for (Map.Entry&lt;String, List&lt;Subject&gt;&gt; entry : subjectsBySemester.entrySet()) {</span>
+<span class="fc" id="L279">            String semesterTitle = entry.getKey();</span>
+<span class="fc" id="L280">            List&lt;Subject&gt; semesterSubjects = entry.getValue();</span>
+
+<span class="fc" id="L282">            StringBuilder content = new StringBuilder();</span>
+<span class="fc bfc" id="L283" title="All 2 branches covered.">            for (Subject subject : semesterSubjects) {</span>
+<span class="fc" id="L284">                double subjectAverage = subject.calculateAverage();</span>
+<span class="pc bpc" id="L285" title="1 of 2 branches missed.">                String averageText = subjectAverage &gt; 0 ? df.format(subjectAverage) : NO_GRADES;</span>
+
+<span class="fc" id="L287">                content.append(&quot;**&quot;).append(subject.getName()).append(&quot;** (&quot;)</span>
+<span class="fc" id="L288">                        .append(subject.getCredits()).append(&quot; Credits): &quot;)</span>
+<span class="fc" id="L289">                        .append(&quot;Durchschnitt: &quot;).append(averageText)</span>
+<span class="fc" id="L290">                        .append(&quot;, Anzahl Noten: &quot;).append(subject.getGrades().size())</span>
+<span class="fc" id="L291">                        .append(&quot;\n&quot;);</span>
+<span class="fc" id="L292">            }</span>
+
+<span class="fc" id="L294">            embed.addField(semesterTitle, content.toString(), false);</span>
+<span class="fc" id="L295">        }</span>
+<span class="fc" id="L296">    }</span>
+
+    /**
+     * Adds grades to the embed for display.
+     * @param embed the embed to add grades to
+     * @param grades the list of grades to add
+     */
+    private void addGradesToEmbed(EmbedBuilder embed, List&lt;Grade&gt; grades) {
+<span class="fc bfc" id="L304" title="All 2 branches covered.">        for (int i = 0; i &lt; grades.size(); i++) {</span>
+<span class="fc" id="L305">            Grade grade = grades.get(i);</span>
+<span class="fc" id="L306">            int gradeNumber = i + 1; // 1-based numbering for user display</span>
+            
+<span class="fc" id="L308">            String gradeTitle = String.format(&quot;#%d - Note: %s (Gewichtung: %s%%)&quot;, </span>
+<span class="fc" id="L309">                gradeNumber,</span>
+<span class="fc" id="L310">                df.format(grade.getValue()), </span>
+<span class="fc" id="L311">                df.format(grade.getWeight() * 100)</span>
+            );
+            
+<span class="pc bpc" id="L314" title="1 of 2 branches missed.">            String description = grade.getDescription().isEmpty() ? </span>
+<span class="pc" id="L315">                NO_DESCRIPTION : grade.getDescription();</span>
+                
+            // Add creation date for better identification
+<span class="pc bpc" id="L318" title="1 of 2 branches missed.">            if (grade.getCreatedAt() != null) {</span>
+<span class="fc" id="L319">                description += &quot;\n*Erstellt: &quot; + grade.getCreatedAt().format(dateFormatter) + &quot;*&quot;;</span>
+            }
+                
+<span class="fc" id="L322">            embed.addField(gradeTitle, description, false);</span>
+        }
+<span class="fc" id="L324">    }</span>
+
+    /**
+     * Builds the title for the grades embed.
+     * @param subjectName the name of the subject
+     * @param semester the semester, can be null or empty
+     * @return the formatted title string
+     */
+    private String buildGradesTitle(String subjectName, String semester) {
+<span class="fc" id="L333">        StringBuilder title = new StringBuilder(&quot;Noten für &quot;).append(subjectName);</span>
+        
+<span class="pc bpc" id="L335" title="2 of 4 branches missed.">        if (semester != null &amp;&amp; !semester.isEmpty()) {</span>
+<span class="fc" id="L336">            title.append(&quot; (&quot;).append(semester).append(&quot;)&quot;);</span>
+        }
+        
+<span class="fc" id="L339">        return title.toString();</span>
+    }
+
+    /**
+     * Adds subject summaries to the embed.
+     * @param embed the embed to add subjects to
+     * @param subjects the list of subject summaries to add
+     */
+    private void addSubjectSummariesToEmbed(EmbedBuilder embed, List&lt;SubjectSummary&gt; subjects) {
+<span class="fc bfc" id="L348" title="All 2 branches covered.">        for (SubjectSummary subject : subjects) {</span>
+<span class="pc bpc" id="L349" title="1 of 2 branches missed.">            if (subject.getAverage() &gt; 0) {</span>
+<span class="fc" id="L350">                embed.addField(</span>
+<span class="fc" id="L351">                        subject.getName() + &quot; (&quot; + subject.getCredits() + &quot; Credits)&quot;,</span>
+<span class="fc" id="L352">                        &quot;Durchschnitt: &quot; + df.format(subject.getAverage()) + </span>
+<span class="fc" id="L353">                        &quot;\nAnzahl Noten: &quot; + subject.getGradeCount(),</span>
+                        false
+                );
+            }
+<span class="fc" id="L357">        }</span>
+<span class="fc" id="L358">    }</span>
+
+    /**
+     * Adds detailed semester information to the embed.
+     * @param embed the embed to add details to
+     * @param semester the semester summary containing details
+     */
+    private void addSemesterDetailsToEmbed(EmbedBuilder embed, SemesterSummary semester) {
+<span class="fc" id="L366">        StringBuilder semesterDetails = new StringBuilder();</span>
+<span class="fc" id="L367">        semesterDetails.append(&quot;Durchschnitt: **&quot;).append(df.format(semester.getAverage())).append(&quot;**\n\n&quot;);</span>
+
+<span class="fc bfc" id="L369" title="All 2 branches covered.">        for (SubjectSummary subject : semester.getSubjects()) {</span>
+<span class="pc bpc" id="L370" title="1 of 2 branches missed.">            if (subject.getAverage() &gt; 0) {</span>
+<span class="fc" id="L371">                semesterDetails.append(&quot;• **&quot;).append(subject.getName()).append(&quot;** (&quot;)</span>
+<span class="fc" id="L372">                        .append(subject.getCredits()).append(&quot; Credits): &quot;)</span>
+<span class="fc" id="L373">                        .append(df.format(subject.getAverage())).append(&quot;\n&quot;);</span>
+            }
+<span class="fc" id="L375">        }</span>
+
+<span class="fc" id="L377">        embed.addField(semester.getName(), semesterDetails.toString(), false);</span>
+<span class="fc" id="L378">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

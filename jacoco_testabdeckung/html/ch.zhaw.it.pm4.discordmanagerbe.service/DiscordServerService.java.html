@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DiscordServerService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.service</a> &gt; <span class="el_source">DiscordServerService.java</span></div><h1>DiscordServerService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.service;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.SlashCommandBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.DiscordServer;
+import ch.zhaw.it.pm4.discordmanagerbe.data.repositories.DiscordServerRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+/**
+ * Service class for managing Discord servers.
+ * Provides methods to retrieve, enable, and disable bots for servers.
+ */
+@Service
+public class DiscordServerService {
+
+    /** Logger instance for logging events and debugging information. */
+<span class="fc" id="L25">    private static final Logger log = LoggerFactory.getLogger(DiscordServerService.class);</span>
+
+    /** Repository for accessing and managing Discord server data. */
+    private final DiscordServerRepository serverRepository;
+
+    /**
+     * Constructor for DiscordServerService.
+     *
+     * @param serverRepository The repository for managing Discord server data
+     */
+    @Autowired
+<span class="fc" id="L36">    public DiscordServerService(DiscordServerRepository serverRepository) {</span>
+<span class="fc" id="L37">        this.serverRepository = serverRepository;</span>
+<span class="fc" id="L38">    }</span>
+    
+    /**
+     * Gets a server by its ID.
+     * 
+     * @param serverId The Discord server ID
+     * @return Optional containing the server if found
+     */
+    @Transactional(readOnly = true)
+    public Optional&lt;DiscordServer&gt; getServerById(String serverId) {
+<span class="nc" id="L48">        return serverRepository.findById(serverId);</span>
+    }
+    
+    /**
+     * Internal method to enable a bot for a server without notifying the slash command service.
+     * Used by the coordinator service to avoid circular dependencies.
+     * 
+     * @param serverId The Discord server ID
+     * @param botType The type of bot to enable
+     * @return true if the bot was enabled, false if the server wasn't found
+     */
+    @Transactional
+    public boolean enableBotInternal(String serverId, SlashCommandBotType botType) {
+<span class="nc" id="L61">        Optional&lt;DiscordServer&gt; server = serverRepository.findById(serverId);</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">        if (server.isPresent()) {</span>
+<span class="nc" id="L63">            boolean changed = server.get().enableBot(botType);</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">            if (changed) {</span>
+<span class="nc" id="L65">                serverRepository.save(server.get());</span>
+<span class="nc" id="L66">                log.info(&quot;Enabled {} for server ID: {}&quot;, botType, serverId);</span>
+            }
+<span class="nc" id="L68">            return true;</span>
+        }
+<span class="nc" id="L70">        log.warn(&quot;Cannot enable bot: Server with ID {} not found&quot;, serverId);</span>
+<span class="nc" id="L71">        return false;</span>
+    }
+    
+    /**
+     * Internal method to disable a bot for a server without notifying the slash command service.
+     * Used by the coordinator service to avoid circular dependencies.
+     * 
+     * @param serverId The Discord server ID
+     * @param botType The type of bot to disable
+     * @return true if the bot was disabled, false if the server wasn't found
+     */
+    @Transactional
+    public boolean disableBotInternal(String serverId, SlashCommandBotType botType) {
+<span class="nc" id="L84">        Optional&lt;DiscordServer&gt; server = serverRepository.findById(serverId);</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">        if (server.isPresent()) {</span>
+<span class="nc" id="L86">            boolean changed = server.get().disableBot(botType);</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">            if (changed) {</span>
+<span class="nc" id="L88">                serverRepository.save(server.get());</span>
+<span class="nc" id="L89">                log.info(&quot;Disabled {} for server ID: {}&quot;, botType, serverId);</span>
+            }
+<span class="nc" id="L91">            return true;</span>
+        }
+<span class="nc" id="L93">        log.warn(&quot;Cannot disable bot: Server with ID {} not found&quot;, serverId);</span>
+<span class="nc" id="L94">        return false;</span>
+    }
+    
+    /**
+     * Gets all servers.
+     * 
+     * @return List of all servers
+     */
+    @Transactional(readOnly = true)
+    public List&lt;DiscordServer&gt; getAllServers() {
+<span class="fc" id="L104">        return serverRepository.findAll();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

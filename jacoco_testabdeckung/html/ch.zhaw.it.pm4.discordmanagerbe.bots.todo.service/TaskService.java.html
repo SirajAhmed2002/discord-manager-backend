@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TaskService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.todo.service</a> &gt; <span class="el_source">TaskService.java</span></div><h1>TaskService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.todo.service;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.todo.model.Task;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.TaskEntity;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.TaskReminderEntity;
+import ch.zhaw.it.pm4.discordmanagerbe.data.repositories.TaskReminderRepository;
+import ch.zhaw.it.pm4.discordmanagerbe.data.repositories.TaskRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Clean service for task management operations.
+ */
+@Service
+public class TaskService {
+
+    /**
+     * Logger for TaskService operations.
+     */
+<span class="fc" id="L25">    private static final Logger logger = LoggerFactory.getLogger(TaskService.class);</span>
+
+    /**
+     * Repositories for task and reminder management.
+     */
+    private final TaskRepository taskRepository;
+
+    /**
+     * Repository for task reminders.
+     */
+    private final TaskReminderRepository taskReminderRepository;
+
+    /**
+     * Constructor for TaskService.
+     * @param taskRepository taskRepository
+     * @param taskReminderRepository taskReminderRepository
+     */
+<span class="fc" id="L42">    public TaskService(TaskRepository taskRepository, TaskReminderRepository taskReminderRepository) {</span>
+<span class="fc" id="L43">        this.taskRepository = taskRepository;</span>
+<span class="fc" id="L44">        this.taskReminderRepository = taskReminderRepository;</span>
+<span class="fc" id="L45">    }</span>
+
+    /**
+     * Creates a new task for a user.
+     * @param taskData the task data to be saved
+     * @param userId the ID of the user creating the task
+     * @return the saved TaskEntity
+     */
+    @Transactional
+    public TaskEntity createTask(Task taskData, String userId) {
+<span class="fc" id="L55">        validateTaskCreationParameters(taskData, userId);</span>
+        
+<span class="fc" id="L57">        TaskEntity taskEntity = buildTaskEntity(taskData, userId);</span>
+<span class="fc" id="L58">        TaskEntity savedTask = taskRepository.save(taskEntity);</span>
+        
+<span class="fc" id="L60">        logTaskCreation(savedTask, userId);</span>
+<span class="fc" id="L61">        return savedTask;</span>
+    }
+
+    /**
+     * Creates task reminders for a specific task.
+     * @param taskId the ID of the task to create reminders for
+     * @param reminderTimes list of reminder times in milliseconds
+     */
+    @Transactional
+    public void createTaskReminders(Long taskId, List&lt;Long&gt; reminderTimes) {
+<span class="fc" id="L71">        validateReminderCreationParameters(taskId, reminderTimes);</span>
+        
+<span class="fc" id="L73">        TaskEntity task = findExistingTask(taskId);</span>
+<span class="fc" id="L74">        int createdCount = createIndividualReminders(task, reminderTimes);</span>
+        
+<span class="fc" id="L76">        logReminderCreation(taskId, createdCount);</span>
+<span class="fc" id="L77">    }</span>
+
+    /**
+     * Finds the newest task for a specific user.
+     * @param userId the ID of the user to find the newest task for
+     * @return Optional containing the newest TaskEntity if found, otherwise empty
+     */
+    public Optional&lt;TaskEntity&gt; findNewestTaskForUser(String userId) {
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        if (isInvalidUserId(userId)) {</span>
+<span class="fc" id="L86">            return Optional.empty();</span>
+        }
+        
+<span class="fc" id="L89">        TaskEntity newestTask = taskRepository.findNewestTaskByUserId(userId);</span>
+<span class="fc" id="L90">        return Optional.ofNullable(newestTask);</span>
+    }
+
+    /**
+     * Finds all tasks for a specific user.
+     * Clean code: early return for invalid user ID, consistent return type.
+     * @param userId the ID of the user to find tasks for
+     * @return List of TaskEntity objects for the user, or empty list if no tasks found
+     */
+    public List&lt;TaskEntity&gt; findAllTasksForUser(String userId) {
+<span class="fc bfc" id="L100" title="All 2 branches covered.">        if (isInvalidUserId(userId)) {</span>
+<span class="fc" id="L101">            return List.of();</span>
+        }
+        
+<span class="fc" id="L104">        return taskRepository.findAllTaskByUserId(userId);</span>
+    }
+
+    /**
+     * Finds a task by its ID.
+     * @param taskId the ID of the task to find
+     * @return Optional containing the TaskEntity if found, otherwise empty
+     */
+    public Optional&lt;TaskEntity&gt; findTaskById(Long taskId) {
+<span class="fc bfc" id="L113" title="All 2 branches covered.">        if (taskId == null) {</span>
+<span class="fc" id="L114">            return Optional.empty();</span>
+        }
+        
+<span class="fc" id="L117">        return taskRepository.findById(taskId);</span>
+    }
+
+
+    /**
+     * Removes a specific task by its ID.
+     * @param taskId the ID of the task to remove
+     */
+    @Transactional
+    public void removeTask(Long taskId) {
+<span class="fc" id="L127">        TaskEntity task = findExistingTask(taskId);</span>
+<span class="fc" id="L128">        taskRepository.delete(task);</span>
+        
+<span class="fc" id="L130">        logTaskDeletion(taskId);</span>
+<span class="fc" id="L131">    }</span>
+
+    /**
+     * Removes a specific task reminder by its ID.
+     * @param taskReminderId the ID of the task reminder to remove
+     */
+    @Transactional
+    public void removeTaskReminder(Long taskReminderId) {
+<span class="fc" id="L139">        validateReminderId(taskReminderId);</span>
+        
+<span class="fc" id="L141">        taskReminderRepository.deleteTaskReminderById(taskReminderId);</span>
+<span class="fc" id="L142">        logReminderDeletion(taskReminderId);</span>
+<span class="fc" id="L143">    }</span>
+
+    /**
+     * Finds all task reminders that are due.
+     * @param currentTime the current time in milliseconds to check for due reminders
+     * @return List of TaskReminderEntity objects that are due
+     */
+    public List&lt;TaskReminderEntity&gt; findDueReminders(long currentTime) {
+<span class="fc" id="L151">        return taskReminderRepository.findAllDueReminder(currentTime);</span>
+    }
+
+    /**
+     * Finds all tasks that are due or expired.
+     * @param currentTime the current time in milliseconds to check for due tasks
+     * @return List of TaskEntity objects that are due or expired
+     */
+    public List&lt;TaskEntity&gt; findExpiredTasks(long currentTime) {
+<span class="fc" id="L160">        return taskRepository.findAllDueTasks(currentTime);</span>
+    }
+
+    /**
+     * Validates parameters for task creation.
+     * @param taskData the task data to validate
+     * @param userId the ID of the user creating the task
+     */
+    private void validateTaskCreationParameters(Task taskData, String userId) {
+<span class="fc bfc" id="L169" title="All 2 branches covered.">        if (taskData == null) {</span>
+<span class="fc" id="L170">            throw new IllegalArgumentException(&quot;Task data cannot be null&quot;);</span>
+        }
+<span class="fc bfc" id="L172" title="All 2 branches covered.">        if (isInvalidUserId(userId)) {</span>
+<span class="fc" id="L173">            throw new IllegalArgumentException(&quot;User ID cannot be null or empty&quot;);</span>
+        }
+<span class="fc bfc" id="L175" title="All 2 branches covered.">        if (isInvalidTitle(taskData.getTitle())) {</span>
+<span class="fc" id="L176">            throw new IllegalArgumentException(&quot;Task title cannot be null or empty&quot;);</span>
+        }
+<span class="fc" id="L178">    }</span>
+
+    /**
+     * Validates parameters for task reminder creation.
+     * @param taskId the ID of the task to create reminders for
+     * @param reminderTimes list of reminder times in milliseconds
+     */
+    private void validateReminderCreationParameters(Long taskId, List&lt;Long&gt; reminderTimes) {
+<span class="fc bfc" id="L186" title="All 2 branches covered.">        if (taskId == null) {</span>
+<span class="fc" id="L187">            throw new IllegalArgumentException(&quot;Task ID cannot be null&quot;);</span>
+        }
+<span class="pc bpc" id="L189" title="1 of 4 branches missed.">        if (reminderTimes == null || reminderTimes.isEmpty()) {</span>
+<span class="fc" id="L190">            throw new IllegalArgumentException(&quot;Reminder times cannot be null or empty&quot;);</span>
+        }
+<span class="fc" id="L192">    }</span>
+
+    /**
+     * Validates the task reminder ID.
+     * @param taskReminderId the ID of the task reminder to validate
+     */
+    private void validateReminderId(Long taskReminderId) {
+<span class="fc bfc" id="L199" title="All 2 branches covered.">        if (taskReminderId == null) {</span>
+<span class="fc" id="L200">            throw new IllegalArgumentException(&quot;Task reminder ID cannot be null&quot;);</span>
+        }
+<span class="fc" id="L202">    }</span>
+
+    /**
+     * Checks if the user ID is invalid.
+     * @param userId the ID of the user to check
+     * @return true if the user ID is null or empty, false otherwise
+     */
+    private boolean isInvalidUserId(String userId) {
+<span class="fc bfc" id="L210" title="All 4 branches covered.">        return userId == null || userId.trim().isEmpty();</span>
+    }
+
+    /**
+     * Checks if the task title is invalid.
+     * @param title the title of the task to check
+     * @return true if the title is null or empty, false otherwise
+     */
+    private boolean isInvalidTitle(String title) {
+<span class="pc bpc" id="L219" title="1 of 4 branches missed.">        return title == null || title.trim().isEmpty();</span>
+    }
+
+    /**
+     * Builds a TaskEntity from the provided task data.
+     * @param taskData the task data to convert
+     * @param userId the ID of the user creating the task
+     * @return TaskEntity with sanitized fields
+     */
+    private TaskEntity buildTaskEntity(Task taskData, String userId) {
+<span class="fc" id="L229">        TaskEntity entity = new TaskEntity();</span>
+<span class="fc" id="L230">        entity.setUserId(userId);</span>
+<span class="fc" id="L231">        entity.setTitle(sanitizeText(taskData.getTitle()));</span>
+<span class="fc" id="L232">        entity.setDescription(sanitizeText(taskData.getDescription()));</span>
+<span class="fc" id="L233">        entity.setTimeToBeDone(taskData.getTimeToBeDone());</span>
+<span class="fc" id="L234">        return entity;</span>
+    }
+
+    /**
+     * Sanitizes text input by trimming whitespace.
+     * @param text the text to sanitize
+     * @return trimmed text or empty string if null
+     */
+    private String sanitizeText(String text) {
+<span class="pc bpc" id="L243" title="1 of 2 branches missed.">        return text != null ? text.trim() : &quot;&quot;;</span>
+    }
+
+    /**
+     * Finds an existing task by its ID.
+     * @param taskId the ID of the task to find
+     * @return TaskEntity if found
+     */
+    private TaskEntity findExistingTask(Long taskId) {
+<span class="fc bfc" id="L252" title="All 2 branches covered.">        if (taskId == null) {</span>
+<span class="fc" id="L253">            throw new IllegalArgumentException(&quot;Task ID cannot be null&quot;);</span>
+        }
+        
+<span class="fc" id="L256">        return taskRepository.findById(taskId)</span>
+<span class="fc" id="L257">                .orElseThrow(() -&gt; new TaskNotFoundException(&quot;Task not found with ID: &quot; + taskId));</span>
+    }
+
+    /**
+     * Creates individual reminders for a task based on provided reminder times.
+     * @param task the TaskEntity for which reminders are created
+     * @param reminderTimes list of reminder times in milliseconds
+     * @return the number of reminders created
+     */
+    private int createIndividualReminders(TaskEntity task, List&lt;Long&gt; reminderTimes) {
+<span class="fc" id="L267">        int createdCount = 0;</span>
+        
+<span class="fc bfc" id="L269" title="All 2 branches covered.">        for (Long reminderTime : reminderTimes) {</span>
+<span class="fc bfc" id="L270" title="All 2 branches covered.">            if (isValidReminderTime(reminderTime)) {</span>
+<span class="fc" id="L271">                TaskReminderEntity reminder = buildReminderEntity(task, reminderTime);</span>
+<span class="fc" id="L272">                taskReminderRepository.save(reminder);</span>
+<span class="fc" id="L273">                createdCount++;</span>
+            }
+<span class="fc" id="L275">        }</span>
+        
+<span class="fc" id="L277">        return createdCount;</span>
+    }
+
+    /**
+     * Validates if the reminder time is valid.
+     * @param reminderTime the reminder time in milliseconds to validate
+     * @return true if the reminder time is valid, false otherwise
+     */
+    private boolean isValidReminderTime(Long reminderTime) {
+<span class="fc bfc" id="L286" title="All 4 branches covered.">        return reminderTime != null &amp;&amp; reminderTime &gt; 0;</span>
+    }
+
+    /**
+     * Builds a TaskReminderEntity for a specific task and reminder time.
+     * @param task the TaskEntity for which the reminder is created
+     * @param reminderTime the reminder time in milliseconds
+     * @return TaskReminderEntity with task and reminder time set
+     */
+    private TaskReminderEntity buildReminderEntity(TaskEntity task, Long reminderTime) {
+<span class="fc" id="L296">        TaskReminderEntity reminder = new TaskReminderEntity();</span>
+<span class="fc" id="L297">        reminder.setTask(task);</span>
+<span class="fc" id="L298">        reminder.setReminderTime(reminderTime);</span>
+<span class="fc" id="L299">        return reminder;</span>
+    }
+
+    /**
+     * Logs the creation of a task for a user.
+     * @param savedTask the saved TaskEntity
+     * @param userId the ID of the user who created the task
+     */
+    private void logTaskCreation(TaskEntity savedTask, String userId) {
+<span class="fc" id="L308">        logger.debug(&quot;Created task with ID {} for user {}&quot;, savedTask.getTaskId(), userId);</span>
+<span class="fc" id="L309">    }</span>
+
+    /**
+     * Logs the creation of task reminders.
+     * @param taskId the ID of the task for which reminders were created
+     * @param createdCount the number of reminders created
+     */
+    private void logReminderCreation(Long taskId, int createdCount) {
+<span class="fc" id="L317">        logger.debug(&quot;Created {} reminders for task ID {}&quot;, createdCount, taskId);</span>
+<span class="fc" id="L318">    }</span>
+
+    /**
+     * Logs the deletion of a task.
+     * @param taskId the ID of the task that was deleted
+     */
+    private void logTaskDeletion(Long taskId) {
+<span class="fc" id="L325">        logger.debug(&quot;Deleted task with ID {}&quot;, taskId);</span>
+<span class="fc" id="L326">    }</span>
+
+    /**
+     * Logs the deletion of a task reminder.
+     * @param taskReminderId the ID of the task reminder that was deleted
+     */
+    private void logReminderDeletion(Long taskReminderId) {
+<span class="fc" id="L333">        logger.debug(&quot;Deleted task reminder with ID {}&quot;, taskReminderId);</span>
+<span class="fc" id="L334">    }</span>
+
+    /**
+     * Exception thrown when a task is not found.
+     */
+    public static class TaskNotFoundException extends RuntimeException {
+        public TaskNotFoundException(String message) {
+<span class="fc" id="L341">            super(message);</span>
+<span class="fc" id="L342">        }</span>
+        
+        public TaskNotFoundException(String message, Throwable cause) {
+<span class="nc" id="L345">            super(message, cause);</span>
+<span class="nc" id="L346">        }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

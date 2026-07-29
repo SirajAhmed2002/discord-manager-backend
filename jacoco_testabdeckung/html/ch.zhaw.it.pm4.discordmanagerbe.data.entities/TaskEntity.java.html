@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TaskEntity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.data.entities</a> &gt; <span class="el_source">TaskEntity.java</span></div><h1>TaskEntity.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.data.entities;
+
+import jakarta.persistence.*;
+
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Entity representing a task with title, description, due date, and reminders.
+ * Provides formatted string representation for Discord display.
+ */
+@Entity
+@Table(name = &quot;tasks&quot;)
+<span class="fc" id="L19">public class TaskEntity {</span>
+
+    /** Unique identifier for the task */
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long taskId;
+
+    /** Discord user ID who owns this task */
+    @Column(nullable = false)
+    private String userId;
+
+    /** Title of the task */
+    @Column(nullable = false)
+    private String title;
+
+    /** Optional description of the task */
+    @Column
+    private String description;
+
+    /** Due date timestamp in milliseconds */
+    @Column(name = &quot;time_to_be_done&quot;)
+    private long timeToBeDone;
+
+    /** List of reminders associated with this task */
+<span class="fc" id="L43">    @OneToMany(mappedBy = &quot;task&quot;, cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)</span>
+    private List&lt;TaskReminderEntity&gt; reminders = new ArrayList&lt;&gt;();
+
+    /**
+     * Sets the Discord user ID.
+     *
+     * @param userId the user ID
+     */
+    public void setUserId(String userId){
+<span class="fc" id="L52">        this.userId = userId;</span>
+<span class="fc" id="L53">    }</span>
+
+    /**
+     * Sets the task title.
+     *
+     * @param title the task title
+     */
+    public void setTitle(String title){
+<span class="fc" id="L61">        this.title = title;</span>
+<span class="fc" id="L62">    }</span>
+
+    /**
+     * Sets the task description.
+     *
+     * @param description the task description
+     */
+    public void setDescription(String description){
+<span class="fc" id="L70">        this.description = description;</span>
+<span class="fc" id="L71">    }</span>
+
+    /**
+     * Sets the due date timestamp.
+     *
+     * @param timeToBeDone due date in milliseconds
+     */
+    public void setTimeToBeDone(long timeToBeDone){
+<span class="fc" id="L79">        this.timeToBeDone = timeToBeDone;</span>
+<span class="fc" id="L80">    }</span>
+
+    /**
+     * Gets the task ID.
+     *
+     * @return the task ID
+     */
+    public Long getTaskId(){
+<span class="fc" id="L88">        return taskId;</span>
+    }
+
+    /**
+     * Gets the Discord user ID.
+     *
+     * @return the user ID
+     */
+    public String getUserId(){
+<span class="fc" id="L97">        return userId;</span>
+    }
+
+    /**
+     * Gets the task title.
+     *
+     * @return the task title
+     */
+    public String getTitle(){
+<span class="fc" id="L106">        return title;</span>
+    }
+
+    /**
+     * Gets the task description.
+     *
+     * @return the task description
+     */
+    public String getDescription(){
+<span class="fc" id="L115">        return description;</span>
+    }
+
+    /**
+     * Gets the due date timestamp.
+     *
+     * @return due date in milliseconds
+     */
+    public long getTimeToBeDone(){
+<span class="nc" id="L124">        return timeToBeDone;</span>
+    }
+
+    /**
+     * Gets the list of reminders.
+     *
+     * @return the reminders list
+     */
+    public List&lt;TaskReminderEntity&gt; getReminders(){
+<span class="nc" id="L133">        return reminders;</span>
+    }
+
+    /**
+     * Formats a timestamp to readable date-time string.
+     * Returns empty string for Long.MAX_VALUE.
+     *
+     * @param dateTime timestamp in milliseconds
+     * @return formatted date-time string
+     */
+    private String getFormatedDateTime(long dateTime){
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">        return (dateTime == Long.MAX_VALUE) ? &quot;&quot; : LocalDateTime.ofInstant(Instant.ofEpochMilli(dateTime), ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(&quot;dd.MM.yyyy HH:mm&quot;));</span>
+    }
+
+    /**
+     * Returns a formatted string representation for Discord display.
+     * Includes title, description, due date, and reminder times.
+     *
+     * @return formatted task information
+     */
+    @Override
+    public String toString() {
+<span class="fc" id="L155">        StringBuilder sb = new StringBuilder();</span>
+<span class="fc" id="L156">        sb.append(&quot;**Titel:** &quot;).append(title).append(&quot;\n&quot;);</span>
+<span class="fc" id="L157">        sb.append(&quot;**Beschreibung:** &quot;).append(description).append(&quot;\n&quot;);</span>
+<span class="fc" id="L158">        sb.append(&quot;**Fälligkeitsdatum:** &quot;).append(getFormatedDateTime(timeToBeDone)).append(&quot;\n&quot;);</span>
+<span class="fc" id="L159">        sb.append(&quot;**Reminder:**\n&quot;)</span>
+<span class="fc" id="L160">                .append(reminders.stream()</span>
+<span class="pc" id="L161">                        .map(reminder -&gt; getFormatedDateTime(reminder.getReminderTime()))</span>
+<span class="fc" id="L162">                        .collect(Collectors.joining(&quot;,\n&quot;)));</span>
+
+<span class="fc" id="L164">        return sb.toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

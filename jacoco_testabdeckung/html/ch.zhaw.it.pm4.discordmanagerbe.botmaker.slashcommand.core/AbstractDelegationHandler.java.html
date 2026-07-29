@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractDelegationHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.core</a> &gt; <span class="el_source">AbstractDelegationHandler.java</span></div><h1>AbstractDelegationHandler.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.core;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.error.InteractionErrorHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+
+/**
+ * Abstract base class providing common functionality for all Discord interaction delegation handlers.
+ * Implements thread-safe handler registration, removal, and execution with centralized error handling.
+ *
+ * @param &lt;T&gt; the type of Discord interaction event this handler processes
+ */
+public abstract class AbstractDelegationHandler&lt;T&gt; implements DelegationHandler&lt;T&gt; {
+
+    /**
+     * Logger instance for this handler class.
+     */
+<span class="fc" id="L22">    protected final Logger log = LoggerFactory.getLogger(this.getClass());</span>
+
+    /**
+     * Thread-safe map storing registered handlers by their identifiers.
+     */
+<span class="fc" id="L27">    protected final Map&lt;String, Consumer&lt;T&gt;&gt; handlers = new ConcurrentHashMap&lt;&gt;();</span>
+
+    /**
+     * Centralized error handler for managing interaction failures.
+     */
+    protected final InteractionErrorHandler errorHandler;
+
+    /**
+     * Constructs a new AbstractDelegationHandler with error handling capabilities.
+     *
+     * @param errorHandler the error handler for managing interaction failures
+     */
+<span class="fc" id="L39">    protected AbstractDelegationHandler(InteractionErrorHandler errorHandler) {</span>
+<span class="fc" id="L40">        this.errorHandler = errorHandler;</span>
+<span class="fc" id="L41">    }</span>
+
+    /**
+     * Registers a single handler for a specific identifier in a thread-safe manner.
+     *
+     * @param identifier the unique identifier for the handler
+     * @param handler the consumer function to handle the interaction
+     */
+    @Override
+    public synchronized void registerHandler(String identifier, Consumer&lt;T&gt; handler) {
+<span class="fc" id="L51">        handlers.put(identifier, handler);</span>
+<span class="fc" id="L52">        log.debug(&quot;Registered {} handler for identifier: {}&quot;, getHandlerTypeName(), identifier);</span>
+<span class="fc" id="L53">    }</span>
+
+    /**
+     * Registers multiple handlers at once in a thread-safe manner.
+     *
+     * @param newHandlers map of identifiers to their respective handlers
+     */
+    @Override
+    public synchronized void registerHandlers(Map&lt;String, Consumer&lt;T&gt;&gt; newHandlers) {
+<span class="fc" id="L62">        handlers.putAll(newHandlers);</span>
+<span class="fc" id="L63">        log.info(&quot;Registered {} {} handlers&quot;, newHandlers.size(), getHandlerTypeName());</span>
+<span class="fc" id="L64">    }</span>
+
+    /**
+     * Removes a handler by identifier in a thread-safe manner.
+     *
+     * @param identifier the identifier of the handler to remove
+     * @return true if the handler was successfully removed, false otherwise
+     */
+    @Override
+    public synchronized boolean removeHandler(String identifier) {
+<span class="fc bfc" id="L74" title="All 2 branches covered.">        boolean removed = handlers.remove(identifier) != null;</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        if (removed) {</span>
+<span class="fc" id="L76">            log.info(&quot;Removed {} handler for identifier: {}&quot;, getHandlerTypeName(), identifier);</span>
+        }
+<span class="fc" id="L78">        return removed;</span>
+    }
+
+    /**
+     * Gets the total number of registered handlers.
+     *
+     * @return the count of registered handlers
+     */
+    @Override
+    public int getHandlerCount() {
+<span class="fc" id="L88">        return handlers.size();</span>
+    }
+
+    /**
+     * Handles an incoming interaction by finding and executing the appropriate handler.
+     * Includes comprehensive error handling and logging.
+     *
+     * @param event the interaction event to handle
+     */
+    @Override
+    public void handleInteraction(T event) {
+<span class="fc" id="L99">        String identifier = extractIdentifier(event);</span>
+<span class="fc" id="L100">        Consumer&lt;T&gt; handler = findHandler(identifier);</span>
+
+<span class="fc" id="L102">        log.debug(&quot;Received {} interaction: {} (Handler count: {})&quot;,</span>
+<span class="fc" id="L103">                getHandlerTypeName(), identifier, handlers.size());</span>
+
+<span class="fc bfc" id="L105" title="All 2 branches covered.">        if (handler != null) {</span>
+            try {
+<span class="fc" id="L107">                log.info(&quot;Handling {} interaction: {}&quot;, getHandlerTypeName(), identifier);</span>
+<span class="fc" id="L108">                handler.accept(event);</span>
+<span class="fc" id="L109">            } catch (Exception e) {</span>
+<span class="fc" id="L110">                handleError(event, identifier, e);</span>
+<span class="fc" id="L111">            }</span>
+        } else {
+<span class="fc" id="L113">            handleNoHandlerFound(event, identifier);</span>
+        }
+<span class="fc" id="L115">    }</span>
+
+    /**
+     * Checks if this handler can process the given identifier.
+     *
+     * @param identifier the identifier to check
+     * @return true if a handler exists for the identifier, false otherwise
+     */
+    @Override
+    public boolean canHandle(String identifier) {
+<span class="fc bfc" id="L125" title="All 2 branches covered.">        return findHandler(identifier) != null;</span>
+    }
+
+    /**
+     * Extracts the unique identifier from the interaction event.
+     * Implementation varies by interaction type (e.g., command name, custom ID).
+     *
+     * @param event the interaction event
+     * @return the extracted identifier
+     */
+    protected abstract String extractIdentifier(T event);
+
+    /**
+     * Provides the handler type name for logging and debugging purposes.
+     *
+     * @return a descriptive name for this handler type
+     */
+    protected abstract String getHandlerTypeName();
+
+    /**
+     * Handles errors that occur during interaction event processing.
+     *
+     * @param event the interaction event that caused the error
+     * @param identifier the identifier where the error occurred
+     * @param e the exception that was thrown
+     */
+    protected abstract void handleError(T event, String identifier, Exception e);
+
+    /**
+     * Handles cases where no handler is found for an interaction.
+     *
+     * @param event the interaction event with no registered handler
+     * @param identifier the identifier that has no handler
+     */
+    protected abstract void handleNoHandlerFound(T event, String identifier);
+
+    /**
+     * Finds a handler for the given identifier.
+     * Can be overridden for custom logic such as prefix matching.
+     *
+     * @param identifier the identifier to find a handler for
+     * @return the matching handler, or null if no handler is found
+     */
+    protected Consumer&lt;T&gt; findHandler(String identifier) {
+<span class="fc" id="L169">        return handlers.get(identifier);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

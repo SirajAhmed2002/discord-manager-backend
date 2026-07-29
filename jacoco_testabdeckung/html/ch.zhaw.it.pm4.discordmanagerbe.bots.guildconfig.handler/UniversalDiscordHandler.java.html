@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UniversalDiscordHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildconfig.handler</a> &gt; <span class="el_source">UniversalDiscordHandler.java</span></div><h1>UniversalDiscordHandler.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildconfig.handler;
+
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.channel.concrete.Category;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import net.dv8tion.jda.api.managers.channel.concrete.CategoryManager;
+import net.dv8tion.jda.api.managers.channel.concrete.TextChannelManager;
+import net.dv8tion.jda.api.managers.channel.concrete.VoiceChannelManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+
+/**
+ * Universal handler for Discord entities providing unified CRUD operations.
+ * Supports Categories, TextChannels, and VoiceChannels through a functional approach.
+ */
+@Component
+<span class="fc" id="L28">public class UniversalDiscordHandler {</span>
+
+    /** Logger for this class. */
+<span class="fc" id="L31">    private static final Logger log = LoggerFactory.getLogger(UniversalDiscordHandler.class);</span>
+
+    /** Entity type configuration for Discord categories. */
+<span class="fc" id="L34">    public static final EntityType&lt;Category&gt; CATEGORY = new EntityType&lt;&gt;(</span>
+            &quot;Category&quot;,
+<span class="fc" id="L36">            (guild, dto, idResolver) -&gt; guild.createCategory(Objects.requireNonNull(getProperty(dto, &quot;getName&quot;))).complete(),</span>
+            Guild::getCategoryById,
+<span class="fc" id="L38">            (category, changes, idResolver) -&gt; updateCategory(category, changes),</span>
+<span class="nc" id="L39">            category -&gt; category.delete().complete(),</span>
+<span class="fc" id="L40">            (category, pos) -&gt; category.getManager().setPosition(pos).complete()</span>
+    );
+
+    /** Entity type configuration for Discord text channels. */
+<span class="fc" id="L44">    public static final EntityType&lt;TextChannel&gt; TEXT_CHANNEL = new EntityType&lt;&gt;(</span>
+            &quot;TextChannel&quot;,
+            UniversalDiscordHandler::createTextChannel,
+            Guild::getTextChannelById,
+            UniversalDiscordHandler::updateTextChannel,
+<span class="nc" id="L49">            channel -&gt; channel.delete().complete(),</span>
+<span class="nc" id="L50">            (channel, pos) -&gt; channel.getManager().setPosition(pos).complete()</span>
+    );
+
+    /** Entity type configuration for Discord voice channels. */
+<span class="fc" id="L54">    public static final EntityType&lt;VoiceChannel&gt; VOICE_CHANNEL = new EntityType&lt;&gt;(</span>
+            &quot;VoiceChannel&quot;,
+            UniversalDiscordHandler::createVoiceChannel,
+            Guild::getVoiceChannelById,
+            UniversalDiscordHandler::updateVoiceChannel,
+<span class="nc" id="L59">            channel -&gt; channel.delete().complete(),</span>
+<span class="nc" id="L60">            (channel, pos) -&gt; channel.getManager().setPosition(pos).complete()</span>
+    );
+
+    /**
+     * Creates a Discord entity of the specified type.
+     *
+     * @param guild the Discord guild
+     * @param dto the data transfer object containing entity properties
+     * @param type the entity type configuration
+     * @param idResolver function to resolve entity IDs
+     * @param &lt;T&gt; the entity type
+     * @return the created entity
+     */
+    public &lt;T&gt; T create(Guild guild, Object dto, EntityType&lt;T&gt; type, Function&lt;String, String&gt; idResolver) {
+<span class="fc" id="L74">        return executeWithLogging(&quot;create &quot; + type.name(), () -&gt;</span>
+<span class="fc" id="L75">                type.creator().apply(guild, dto, idResolver));</span>
+    }
+
+    /**
+     * Updates a Discord entity with the provided changes.
+     *
+     * @param guild the Discord guild
+     * @param entityId the entity ID to update
+     * @param changes map of property changes
+     * @param type the entity type configuration
+     * @param idResolver function to resolve entity IDs
+     * @param &lt;T&gt; the entity type
+     */
+    public &lt;T&gt; void update(Guild guild, String entityId, Map&lt;String, Object&gt; changes,
+                           EntityType&lt;T&gt; type, Function&lt;String, String&gt; idResolver) {
+<span class="fc" id="L90">        executeWithLogging(&quot;update &quot; + type.name(), () -&gt; {</span>
+<span class="fc" id="L91">            T entity = type.finder().apply(guild, entityId);</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">            if (entity != null) {</span>
+<span class="fc" id="L93">                type.updater().accept(entity, changes, idResolver);</span>
+            } else {
+<span class="fc" id="L95">                log.warn(&quot;{} not found: {}&quot;, type.name(), entityId);</span>
+            }
+<span class="fc" id="L97">        });</span>
+<span class="fc" id="L98">    }</span>
+
+    /**
+     * Deletes a Discord entity.
+     *
+     * @param guild the Discord guild
+     * @param entityId the entity ID to delete
+     * @param type the entity type configuration
+     * @param &lt;T&gt; the entity type
+     */
+    public &lt;T&gt; void delete(Guild guild, String entityId, EntityType&lt;T&gt; type) {
+<span class="nc" id="L109">        executeWithLogging(&quot;delete &quot; + type.name(), () -&gt; {</span>
+<span class="nc" id="L110">            T entity = type.finder().apply(guild, entityId);</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">            if (entity != null) {</span>
+<span class="nc" id="L112">                type.deleter().accept(entity);</span>
+            } else {
+<span class="nc" id="L114">                log.warn(&quot;{} not found: {}&quot;, type.name(), entityId);</span>
+            }
+<span class="nc" id="L116">        });</span>
+<span class="nc" id="L117">    }</span>
+
+    /**
+     * Updates the position of a Discord entity.
+     *
+     * @param guild the Discord guild
+     * @param entityId the entity ID
+     * @param position the new position
+     * @param type the entity type configuration
+     * @param idResolver function to resolve entity IDs
+     * @param &lt;T&gt; the entity type
+     */
+    public &lt;T&gt; void updatePosition(Guild guild, String entityId, int position,
+                                   EntityType&lt;T&gt; type, Function&lt;String, String&gt; idResolver) {
+<span class="fc" id="L131">        executeWithLogging(&quot;update position for &quot; + type.name(), () -&gt; {</span>
+<span class="fc" id="L132">            String resolvedId = idResolver.apply(entityId);</span>
+<span class="fc" id="L133">            T entity = type.finder().apply(guild, resolvedId);</span>
+<span class="pc bpc" id="L134" title="1 of 2 branches missed.">            if (entity != null) {</span>
+<span class="fc" id="L135">                type.positionUpdater().accept(entity, position);</span>
+            } else {
+<span class="nc" id="L137">                log.warn(&quot;{} not found: {}&quot;, type.name(), entityId);</span>
+            }
+<span class="fc" id="L139">        });</span>
+<span class="fc" id="L140">    }</span>
+
+    /**
+     * Updates a Discord category with the provided changes.
+     *
+     * @param category the category to update
+     * @param changes map of property changes
+     */
+    private static void updateCategory(Category category, Map&lt;String, Object&gt; changes) {
+<span class="fc" id="L149">        CategoryManager manager = category.getManager();</span>
+
+<span class="fc bfc" id="L151" title="All 2 branches covered.">        for (Map.Entry&lt;String, Object&gt; entry : changes.entrySet()) {</span>
+            try {
+<span class="fc" id="L153">                Object value = extractDesired(entry.getValue());</span>
+<span class="fc bfc" id="L154" title="All 2 branches covered.">                if (&quot;name&quot;.equals(entry.getKey())) {</span>
+<span class="fc" id="L155">                    manager = manager.setName((String) value);</span>
+                }
+<span class="nc" id="L157">            } catch (Exception e) {</span>
+<span class="nc" id="L158">                log.error(&quot;Failed to apply change {}: {}&quot;, entry.getKey(), e.getMessage());</span>
+<span class="fc" id="L159">            }</span>
+<span class="fc" id="L160">        }</span>
+
+<span class="fc" id="L162">        manager.complete();</span>
+<span class="fc" id="L163">    }</span>
+
+    /**
+     * Creates a new text channel in Discord.
+     *
+     * @param guild the Discord guild
+     * @param dto the data transfer object containing channel properties
+     * @param idResolver function to resolve entity IDs
+     * @return the created text channel
+     */
+    private static TextChannel createTextChannel(Guild guild, Object dto, Function&lt;String, String&gt; idResolver) {
+<span class="fc" id="L174">        String name = Objects.requireNonNull(getProperty(dto, &quot;getName&quot;));</span>
+<span class="fc" id="L175">        String parentId = getProperty(dto, &quot;getParentCategoryId&quot;);</span>
+<span class="fc bfc" id="L176" title="All 2 branches covered.">        Category parent = parentId != null ? guild.getCategoryById(idResolver.apply(parentId)) : null;</span>
+
+<span class="fc bfc" id="L178" title="All 2 branches covered.">        TextChannel channel = parent != null ?</span>
+<span class="fc" id="L179">                parent.createTextChannel(name).complete() :</span>
+<span class="fc" id="L180">                guild.createTextChannel(name).complete();</span>
+
+        // Apply additional properties using method chaining
+<span class="fc" id="L183">        TextChannelManager manager = channel.getManager();</span>
+
+<span class="fc" id="L185">        String topic = getProperty(dto, &quot;getTopic&quot;);</span>
+<span class="pc bpc" id="L186" title="1 of 2 branches missed.">        if (topic != null) {</span>
+<span class="fc" id="L187">            manager = manager.setTopic(topic);</span>
+        }
+
+<span class="fc" id="L190">        Boolean nsfw = getProperty(dto, &quot;isNsfw&quot;);</span>
+<span class="pc bpc" id="L191" title="1 of 4 branches missed.">        if (nsfw != null &amp;&amp; channel.isNSFW() != nsfw) {</span>
+<span class="fc" id="L192">            manager = manager.setNSFW(nsfw);</span>
+        }
+
+<span class="fc" id="L195">        manager.complete();</span>
+<span class="fc" id="L196">        return channel;</span>
+    }
+
+    /**
+     * Updates a Discord text channel with the provided changes.
+     *
+     * @param channel the text channel to update
+     * @param changes map of property changes
+     * @param idResolver function to resolve entity IDs
+     */
+    private static void updateTextChannel(TextChannel channel, Map&lt;String, Object&gt; changes, Function&lt;String, String&gt; idResolver) {
+<span class="fc" id="L207">        TextChannelManager manager = channel.getManager();</span>
+
+<span class="fc bfc" id="L209" title="All 2 branches covered.">        for (Map.Entry&lt;String, Object&gt; entry : changes.entrySet()) {</span>
+            try {
+<span class="fc" id="L211">                Object value = extractDesired(entry.getValue());</span>
+<span class="pc bpc" id="L212" title="1 of 5 branches missed.">                manager = switch (entry.getKey()) {</span>
+<span class="fc" id="L213">                    case &quot;name&quot; -&gt; manager.setName((String) value);</span>
+<span class="fc" id="L214">                    case &quot;topic&quot; -&gt; manager.setTopic((String) value);</span>
+<span class="fc" id="L215">                    case &quot;nsfw&quot; -&gt; manager.setNSFW((Boolean) value);</span>
+                    case &quot;parentCategoryId&quot; -&gt; {
+<span class="fc" id="L217">                        String parentId = (String) value;</span>
+<span class="pc bpc" id="L218" title="1 of 4 branches missed.">                        Category parent = parentId != null &amp;&amp; !parentId.isEmpty() ?</span>
+<span class="fc" id="L219">                                channel.getGuild().getCategoryById(idResolver.apply(parentId)) : null;</span>
+<span class="fc" id="L220">                        yield manager.setParent(parent);</span>
+                    }
+<span class="pc" id="L222">                    default -&gt; manager;</span>
+                };
+<span class="nc" id="L224">            } catch (Exception e) {</span>
+<span class="nc" id="L225">                log.error(&quot;Failed to apply change {}: {}&quot;, entry.getKey(), e.getMessage());</span>
+<span class="fc" id="L226">            }</span>
+<span class="fc" id="L227">        }</span>
+
+<span class="fc" id="L229">        manager.complete();</span>
+<span class="fc" id="L230">    }</span>
+
+    /**
+     * Creates a new voice channel in Discord.
+     *
+     * @param guild the Discord guild
+     * @param dto the data transfer object containing channel properties
+     * @param idResolver function to resolve entity IDs
+     * @return the created voice channel
+     */
+    private static VoiceChannel createVoiceChannel(Guild guild, Object dto, Function&lt;String, String&gt; idResolver) {
+<span class="fc" id="L241">        String name = Objects.requireNonNull(getProperty(dto, &quot;getName&quot;));</span>
+<span class="fc" id="L242">        String parentId = getProperty(dto, &quot;getParentCategoryId&quot;);</span>
+<span class="fc bfc" id="L243" title="All 2 branches covered.">        Category parent = parentId != null ? guild.getCategoryById(idResolver.apply(parentId)) : null;</span>
+
+<span class="fc bfc" id="L245" title="All 2 branches covered.">        VoiceChannel channel = parent != null ?</span>
+<span class="fc" id="L246">                parent.createVoiceChannel(name).complete() :</span>
+<span class="fc" id="L247">                guild.createVoiceChannel(name).complete();</span>
+
+        // Apply additional properties using method chaining
+<span class="fc" id="L250">        VoiceChannelManager manager = channel.getManager();</span>
+
+<span class="fc" id="L252">        Integer userLimit = getProperty(dto, &quot;getUserLimit&quot;);</span>
+<span class="pc bpc" id="L253" title="2 of 6 branches missed.">        if (userLimit != null &amp;&amp; userLimit &gt; 0 &amp;&amp; channel.getUserLimit() != userLimit) {</span>
+<span class="fc" id="L254">            manager = manager.setUserLimit(userLimit);</span>
+        }
+
+<span class="fc" id="L257">        Integer bitrate = getProperty(dto, &quot;getBitrate&quot;);</span>
+<span class="pc bpc" id="L258" title="2 of 6 branches missed.">        if (bitrate != null &amp;&amp; bitrate &gt; 0 &amp;&amp; channel.getBitrate() != bitrate) {</span>
+<span class="fc" id="L259">            manager = manager.setBitrate(bitrate);</span>
+        }
+
+<span class="fc" id="L262">        manager.complete();</span>
+<span class="fc" id="L263">        return channel;</span>
+    }
+
+    /**
+     * Updates a Discord voice channel with the provided changes.
+     *
+     * @param channel the voice channel to update
+     * @param changes map of property changes
+     * @param idResolver function to resolve entity IDs
+     */
+    private static void updateVoiceChannel(VoiceChannel channel, Map&lt;String, Object&gt; changes, Function&lt;String, String&gt; idResolver) {
+<span class="fc" id="L274">        VoiceChannelManager manager = channel.getManager();</span>
+
+<span class="fc bfc" id="L276" title="All 2 branches covered.">        for (Map.Entry&lt;String, Object&gt; entry : changes.entrySet()) {</span>
+            try {
+<span class="fc" id="L278">                Object value = extractDesired(entry.getValue());</span>
+<span class="pc bpc" id="L279" title="1 of 5 branches missed.">                manager = switch (entry.getKey()) {</span>
+<span class="fc" id="L280">                    case &quot;name&quot; -&gt; manager.setName((String) value);</span>
+<span class="fc" id="L281">                    case &quot;userLimit&quot; -&gt; manager.setUserLimit(((Number) value).intValue());</span>
+<span class="fc" id="L282">                    case &quot;bitrate&quot; -&gt; manager.setBitrate(((Number) value).intValue());</span>
+                    case &quot;parentCategoryId&quot; -&gt; {
+<span class="fc" id="L284">                        String parentId = (String) value;</span>
+<span class="pc bpc" id="L285" title="2 of 4 branches missed.">                        Category parent = parentId != null &amp;&amp; !parentId.isEmpty() ?</span>
+<span class="pc" id="L286">                                channel.getGuild().getCategoryById(idResolver.apply(parentId)) : null;</span>
+<span class="fc" id="L287">                        yield manager.setParent(parent);</span>
+                    }
+<span class="pc" id="L289">                    default -&gt; manager;</span>
+                };
+<span class="nc" id="L291">            } catch (Exception e) {</span>
+<span class="nc" id="L292">                log.error(&quot;Failed to apply change {}: {}&quot;, entry.getKey(), e.getMessage());</span>
+<span class="fc" id="L293">            }</span>
+<span class="fc" id="L294">        }</span>
+
+<span class="fc" id="L296">        manager.complete();</span>
+<span class="fc" id="L297">    }</span>
+
+    /**
+     * Executes an action with logging and error handling.
+     *
+     * @param operation the operation description for logging
+     * @param action the action to execute
+     * @param &lt;T&gt; the return type
+     * @return the result of the action
+     */
+    private &lt;T&gt; T executeWithLogging(String operation, java.util.concurrent.Callable&lt;T&gt; action) {
+        try {
+<span class="fc" id="L309">            log.debug(&quot;Executing: {}&quot;, operation);</span>
+<span class="fc" id="L310">            T result = action.call();</span>
+<span class="fc" id="L311">            log.debug(&quot;Completed: {}&quot;, operation);</span>
+<span class="fc" id="L312">            return result;</span>
+<span class="fc" id="L313">        } catch (Exception e) {</span>
+<span class="fc" id="L314">            log.error(&quot;Failed to {}: {}&quot;, operation, e.getMessage(), e);</span>
+<span class="fc" id="L315">            throw new RuntimeException(&quot;Failed to &quot; + operation, e);</span>
+        }
+    }
+
+    /**
+     * Executes a runnable action with logging and error handling.
+     *
+     * @param operation the operation description for logging
+     * @param action the action to execute
+     */
+    private void executeWithLogging(String operation, Runnable action) {
+<span class="fc" id="L326">        executeWithLogging(operation, () -&gt; {</span>
+<span class="fc" id="L327">            action.run();</span>
+<span class="fc" id="L328">            return null;</span>
+        });
+<span class="fc" id="L330">    }</span>
+
+    /**
+     * Extracts the desired value from a change object.
+     *
+     * @param changeValue the change value, possibly a map with &quot;desired&quot; key
+     * @return the extracted desired value or the original value
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    private static Object extractDesired(Object changeValue) {
+<span class="fc" id="L340">        return Optional.ofNullable(changeValue)</span>
+<span class="fc" id="L341">                .filter(Map.class::isInstance)</span>
+<span class="fc" id="L342">                .map(Map.class::cast)</span>
+<span class="fc" id="L343">                .map(map -&gt; map.get(&quot;desired&quot;))</span>
+<span class="fc" id="L344">                .orElse(changeValue);</span>
+    }
+
+    /**
+     * Generic property extraction using reflection.
+     *
+     * @param dto the data transfer object
+     * @param methodName the method name to invoke
+     * @param &lt;T&gt; the return type
+     * @return the property value or null if extraction fails
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    private static &lt;T&gt; T getProperty(Object dto, String methodName) {
+        try {
+<span class="fc" id="L358">            Method method = dto.getClass().getMethod(methodName);</span>
+<span class="fc" id="L359">            return (T) method.invoke(dto);</span>
+<span class="nc" id="L360">        } catch (Exception e) {</span>
+<span class="nc" id="L361">            return null;</span>
+        }
+    }
+
+    /**
+     * Functional interface for operations requiring three parameters.
+     *
+     * @param &lt;T&gt; first parameter type
+     * @param &lt;U&gt; second parameter type
+     * @param &lt;V&gt; third parameter type
+     * @param &lt;R&gt; return type
+     */
+    @FunctionalInterface
+    public interface TriFunction&lt;T, U, V, R&gt; {
+
+        /**
+         * Applies this function to the given arguments.
+         *
+         * @param t the first argument
+         * @param u the second argument
+         * @param v the third argument
+         * @return the function result
+         */
+        R apply(T t, U u, V v);
+    }
+
+    /**
+     * Functional interface for consumers requiring three parameters.
+     *
+     * @param &lt;T&gt; first parameter type
+     * @param &lt;U&gt; second parameter type
+     * @param &lt;V&gt; third parameter type
+     */
+    @FunctionalInterface
+    public interface TriConsumer&lt;T, U, V&gt; {
+
+        /**
+         * Performs this operation on the given arguments.
+         *
+         * @param t the first argument
+         * @param u the second argument
+         * @param v the third argument
+         */
+        void accept(T t, U u, V v);
+    }
+
+    /**
+     * Configuration record for Discord entity types containing all necessary operations.
+     *
+     * @param name human-readable name of the entity type
+     * @param creator function to create new entities
+     * @param finder function to find entities by ID
+     * @param updater function to update entities
+     * @param deleter function to delete entities
+     * @param positionUpdater function to update entity positions
+     * @param &lt;T&gt; the Discord entity type
+     */
+<span class="fc" id="L418">    public record EntityType&lt;T&gt;(</span>
+            String name,
+            TriFunction&lt;Guild, Object, Function&lt;String, String&gt;, T&gt; creator,
+            BiFunction&lt;Guild, String, T&gt; finder,
+            TriConsumer&lt;T, Map&lt;String, Object&gt;, Function&lt;String, String&gt;&gt; updater,
+            Consumer&lt;T&gt; deleter,
+            BiConsumer&lt;T, Integer&gt; positionUpdater
+    ) {}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

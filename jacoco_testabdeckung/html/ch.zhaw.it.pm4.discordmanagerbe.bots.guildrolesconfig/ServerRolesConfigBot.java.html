@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServerRolesConfigBot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig</a> &gt; <span class="el_source">ServerRolesConfigBot.java</span></div><h1>ServerRolesConfigBot.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.AbstractJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.BotIdentifier;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.ServerBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.analyzer.RoleAnalyzer;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model.RoleSyncAnalysis;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model.RoleSyncResult;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.service.RoleOperationService;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.validator.RoleValidator;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model.ValidationResult;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ServerRoleListDTO;
+import net.dv8tion.jda.api.JDA;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+/**
+ * Bot for managing Discord guild role configurations.
+ * Syncs roles based on ServerRoleListDTO definitions.
+ */
+@BotIdentifier(category = BotIdentifier.BotCategory.SERVER,
+        server = ServerBotType.GUILD_ROLES_CONFIG)
+@Component
+public class ServerRolesConfigBot extends AbstractJdaBot {
+<span class="fc" id="L26">    private static final Logger logger = LoggerFactory.getLogger(ServerRolesConfigBot.class);</span>
+    
+    private final RoleAnalyzer roleAnalyzer;
+    private final RoleOperationService roleOperationService;
+    private final RoleValidator roleValidator;
+
+    public ServerRolesConfigBot(JDA jdaBean, 
+                               RoleAnalyzer roleAnalyzer,
+                               RoleOperationService roleOperationService,
+                               RoleValidator roleValidator) {
+<span class="fc" id="L36">        super(jdaBean);</span>
+<span class="fc" id="L37">        this.roleAnalyzer = roleAnalyzer;</span>
+<span class="fc" id="L38">        this.roleOperationService = roleOperationService;</span>
+<span class="fc" id="L39">        this.roleValidator = roleValidator;</span>
+<span class="fc" id="L40">    }</span>
+
+    /**
+     * Syncs the guild's roles with the provided configuration.
+     */
+    public RoleSyncResult syncGuildRoles(String guildId,
+                                         ServerRoleListDTO roleListDTO,
+                                         boolean deleteUnlistedRoles) {
+<span class="fc" id="L48">        return performRoleSync(guildId, roleListDTO, deleteUnlistedRoles);</span>
+    }
+
+    /**
+     * Performs the role synchronization process.
+     * @param guildId the ID of the guild to sync roles for
+     * @param roleListDTO the role list DTO containing the roles to sync
+     * @param deleteUnlistedRoles whether to delete roles not listed in the DTO
+     * @return RoleSyncResult containing the result of the sync operation
+     */
+    private RoleSyncResult performRoleSync(String guildId, ServerRoleListDTO roleListDTO, boolean deleteUnlistedRoles) {
+        try {
+<span class="fc" id="L60">            ValidationResult validation = roleValidator.validateSyncRequest(guildId, roleListDTO, jdaBean);</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">            if (!validation.isValid()) {</span>
+<span class="fc" id="L62">                return RoleSyncResult.failure(validation.getErrorMessage());</span>
+            }
+
+<span class="fc" id="L65">            RoleSyncAnalysis analysis = roleAnalyzer.analyzeRoleChanges(validation.getGuild(), roleListDTO);</span>
+<span class="fc" id="L66">            return roleOperationService.applyRoleChanges(validation.getGuild(), analysis, deleteUnlistedRoles);</span>
+            
+<span class="fc" id="L68">        } catch (Exception e) {</span>
+<span class="fc" id="L69">            logger.error(&quot;Unexpected error during role sync for guild: {}&quot;, guildId, e);</span>
+<span class="fc" id="L70">            return RoleSyncResult.failure(&quot;Unexpected error: &quot; + e.getMessage());</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

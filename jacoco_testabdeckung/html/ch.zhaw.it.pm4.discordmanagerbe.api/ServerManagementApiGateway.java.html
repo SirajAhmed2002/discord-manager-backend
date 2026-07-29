@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServerManagementApiGateway.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.api</a> &gt; <span class="el_source">ServerManagementApiGateway.java</span></div><h1>ServerManagementApiGateway.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.api;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.AbstractSlashCommandJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.JdaBotEntry;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.JdaBotService;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.ServerBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.SlashCommandBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.model.JdaSlashCommand;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildchannelrolepermission.PermissionOverrideJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildmemberroleconfig.MemberRoleSyncResult;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildmemberroleconfig.MemberRolesConfigBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildmembers.MemberRolesBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildconfig.ServerConfigJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildinfo.ServerInfoJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildinvite.CreateInviteLinkBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildlist.ServerListJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildpermissionlist.ServerPermissionListBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model.RoleSyncResult;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.ServerRolesConfigBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildroleslist.ServerRolesListBot;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.DiscordServer;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.*;
+import ch.zhaw.it.pm4.discordmanagerbe.service.JdaBotStatusCoordinatorService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * REST controller managing Discord server operations including configuration,
+ * bot management, member roles, permissions, and invite link generation.
+ */
+@RestController
+@RequestMapping(&quot;/servers&quot;)
+public class ServerManagementApiGateway {
+
+    /** Server invite link from configuration. */
+    @Value(&quot;${server.invite.link}&quot;)
+    private String serverInviteLink;
+
+    /** Service for managing JDA bot instances. */
+    private final JdaBotService jdaBotService;
+
+    /** Service coordinating bot status across servers. */
+    private final JdaBotStatusCoordinatorService jdaBotStatusCoordinator;
+
+    /** Default maximum users for invite links (0 = unlimited). */
+    private static final int DEFAULT_INVITE_LINK_MAX_USERS = 0;
+
+    /** Default maximum age for invite links in hours. */
+    private static final int DEFAULT_INVITE_LINK_MAX_AGE = 24;
+
+    /**
+     * Constructs ServerManagementApiGateway with required services.
+     *
+     * @param jdaBotService service for bot management
+     * @param jdaBotStatusCoordinator service for bot status coordination
+     */
+    @Autowired
+    public ServerManagementApiGateway(JdaBotService jdaBotService,
+<span class="fc" id="L66">                                      JdaBotStatusCoordinatorService jdaBotStatusCoordinator) {</span>
+<span class="fc" id="L67">        this.jdaBotStatusCoordinator = jdaBotStatusCoordinator;</span>
+<span class="fc" id="L68">        this.jdaBotService = jdaBotService;</span>
+<span class="fc" id="L69">    }</span>
+
+    /**
+     * Retrieves all available Discord permissions.
+     *
+     * @return response containing all permission types
+     */
+    @GetMapping(&quot;/permissions&quot;)
+    public ResponseEntity&lt;AllPermissionsDTO&gt; getChannelPermissions() {
+<span class="nc" id="L78">        ServerPermissionListBot bot = (ServerPermissionListBot) getBot(ServerBotType.GUILD_PERMISSION_LIST).getBotInstance();</span>
+<span class="nc" id="L79">        return ResponseEntity.ok(bot.getAllPermissions());</span>
+    }
+
+    /**
+     * This endpoint returns a list of all servers with their IDs and names.
+     * @param authentication Automatically injected by Spring Security
+     * @return A JSON response containing server IDs and names.
+     */
+    @GetMapping(&quot;/&quot;)
+    public ResponseEntity&lt;ServerListDTO&gt; getServers(Authentication authentication) {
+<span class="nc" id="L89">        String discordId = getDiscordIdFromAuth(authentication);</span>
+<span class="nc" id="L90">        ServerListJdaBot bot = (ServerListJdaBot) getBot(ServerBotType.GUILD_LIST).getBotInstance();</span>
+<span class="nc" id="L91">        return ResponseEntity.ok(bot.getAdminServersDTO(discordId));</span>
+    }
+
+    /**
+     * This endpoint adds a new server.
+     * @return A string indicating the result of the addition.
+     */
+    @GetMapping(&quot;/add-server-link&quot;)
+    public ResponseEntity&lt;ServerInviteLinkDTO&gt; addServer(){
+<span class="nc" id="L100">        ServerInviteLinkDTO serverInviteLinkDTO = new ServerInviteLinkDTO(serverInviteLink);</span>
+<span class="nc" id="L101">        return ResponseEntity.ok(serverInviteLinkDTO);</span>
+    }
+
+    /**
+     * This endpoint gets the details of a specific server.
+     * @param serverId The ID of the server to retrieve.
+     * @return A string containing the server details.
+     */
+    @GetMapping(&quot;/{serverId}&quot;)
+    public ResponseEntity&lt;ServerConfigDTO&gt; getServerById(@PathVariable String serverId){
+        try {
+<span class="nc" id="L112">            ServerInfoJdaBot bot = (ServerInfoJdaBot) getBot(ServerBotType.GUILD_INFO).getBotInstance();</span>
+<span class="nc" id="L113">            ServerConfigDTO serverInfo = bot.getServerInfo(serverId);</span>
+<span class="nc" id="L114">            return ResponseEntity.ok(serverInfo);</span>
+<span class="nc" id="L115">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L116">            return ResponseEntity.badRequest().build();</span>
+<span class="nc" id="L117">        } catch (Exception e) {</span>
+<span class="nc" id="L118">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();</span>
+        }
+    }
+
+    /**
+     * This endpoint updates the configuration of a specific server.
+     * @param serverId The ID of the server to update.
+     * @param config The configuration JSON to update.
+     * @return A string indicating the result of the update.
+     */
+    @PutMapping(&quot;/{serverId}/config&quot;)
+    public ResponseEntity&lt;Boolean&gt; updateServerConfig(@PathVariable String serverId, @RequestBody ServerConfigDTO config) {
+<span class="nc" id="L130">        ServerConfigJdaBot bot = (ServerConfigJdaBot) getBot(ServerBotType.GUILD_CONFIG).getBotInstance();</span>
+<span class="nc" id="L131">        bot.syncWithDiscordServer(serverId, config);</span>
+<span class="nc" id="L132">        return ResponseEntity.ok(true);</span>
+    }
+
+    /**
+     * This endpoint gets the status of all available bots for a server.
+     * @param serverId The ID of the server
+     * @return A JSON response containing bot status
+     */
+    @GetMapping(&quot;/{serverId}/bots&quot;)
+    public ResponseEntity&lt;Object&gt; getServerBots(@PathVariable String serverId) {
+<span class="nc" id="L142">        Optional&lt;DiscordServer&gt; server = jdaBotStatusCoordinator.getServerById(serverId);</span>
+
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        if (server.isEmpty()) {</span>
+<span class="nc" id="L145">            return ResponseEntity.status(HttpStatus.NOT_FOUND)</span>
+<span class="nc" id="L146">                    .body(&quot;{\&quot;error\&quot;: \&quot;Server not found\&quot;}&quot;);</span>
+        }
+
+        // Create a map of all bots with their enabled/disabled status
+<span class="nc" id="L150">        Map&lt;String, Boolean&gt; botStatusMap = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">        for (SlashCommandBotType botType : SlashCommandBotType.values()) {</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">            if(botType != SlashCommandBotType.NONE){</span>
+<span class="nc" id="L153">                botStatusMap.put(botType.name(), server.get().isBotEnabled(botType));</span>
+            }
+        }
+
+<span class="nc" id="L157">        return ResponseEntity.ok(Map.of(&quot;bots&quot;, botStatusMap));</span>
+    }
+
+    /**
+     * Retrieves description for a specific bot type.
+     *
+     * @param botType bot type identifier
+     * @return bot description information
+     */
+    @GetMapping(&quot;/bots/{botType}/description&quot;)
+    public ResponseEntity&lt;BotDescriptionDTO&gt; getBotDescription(@PathVariable String botType) {
+<span class="nc" id="L168">        SlashCommandBotType bot = SlashCommandBotType.valueOf(botType.toUpperCase());</span>
+<span class="nc" id="L169">        Optional&lt;JdaBotEntry&gt; botEntry = jdaBotService.getBot(bot);</span>
+<span class="nc bnc" id="L170" title="All 2 branches missed.">        if (botEntry.isEmpty()) {</span>
+<span class="nc" id="L171">            return ResponseEntity.status(HttpStatus.NOT_FOUND)</span>
+<span class="nc" id="L172">                    .body(new BotDescriptionDTO(&quot;&quot;,&quot;&quot;));</span>
+        }
+<span class="nc" id="L174">        JdaBotEntry jdaBotEntry = botEntry.get();</span>
+<span class="nc" id="L175">        AbstractSlashCommandJdaBot slashCommandBot = (AbstractSlashCommandJdaBot) jdaBotEntry.getBotInstance();</span>
+<span class="nc" id="L176">        BotDescriptionDTO botDescription = new BotDescriptionDTO(botType, slashCommandBot.getDescription());</span>
+
+<span class="nc" id="L178">        return ResponseEntity.ok(botDescription);</span>
+    }
+
+    /**
+     * This endpoint enables a specific bot for a server.
+     * @param serverId The ID of the server
+     * @param botType The type of bot to enable
+     * @return A JSON response indicating success or failure
+     */
+    @PostMapping(&quot;/{serverId}/bots/{botType}/enable&quot;)
+    public ResponseEntity&lt;Object&gt; enableBot(@PathVariable String serverId, @PathVariable String botType) {
+        try {
+<span class="nc" id="L190">            SlashCommandBotType bot = SlashCommandBotType.valueOf(botType.toUpperCase());</span>
+<span class="nc" id="L191">            boolean success = jdaBotStatusCoordinator.enableBot(serverId, bot);</span>
+
+<span class="nc bnc" id="L193" title="All 2 branches missed.">            if (success) {</span>
+<span class="nc" id="L194">                return ResponseEntity.ok(Map.of(</span>
+                        &quot;status&quot;, &quot;success&quot;,
+                        &quot;message&quot;, bot + &quot; has been enabled for server &quot; + serverId
+                ));
+            } else {
+<span class="nc" id="L199">                return ResponseEntity.status(HttpStatus.NOT_FOUND)</span>
+<span class="nc" id="L200">                        .body(Map.of(</span>
+                                &quot;status&quot;, &quot;error&quot;,
+                                &quot;message&quot;, &quot;Server not found&quot;
+                        ));
+            }
+<span class="nc" id="L205">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L206">            return ResponseEntity.status(HttpStatus.BAD_REQUEST)</span>
+<span class="nc" id="L207">                    .body(Map.of(</span>
+                            &quot;status&quot;, &quot;error&quot;,
+                            &quot;message&quot;, &quot;Invalid bot type: &quot; + botType
+                    ));
+        }
+    }
+
+    /**
+     * This endpoint disables a specific bot for a server.
+     * @param serverId The ID of the server
+     * @param botType The type of bot to disable
+     * @return A JSON response indicating success or failure
+     */
+    @PostMapping(&quot;/{serverId}/bots/{botType}/disable&quot;)
+    public ResponseEntity&lt;Object&gt; disableBot(@PathVariable String serverId, @PathVariable String botType) {
+        try {
+<span class="nc" id="L223">            SlashCommandBotType bot = SlashCommandBotType.valueOf(botType.toUpperCase());</span>
+<span class="nc" id="L224">            boolean success = jdaBotStatusCoordinator.disableBot(serverId, bot);</span>
+
+<span class="nc bnc" id="L226" title="All 2 branches missed.">            if (success) {</span>
+<span class="nc" id="L227">                return ResponseEntity.ok(Map.of(</span>
+                        &quot;status&quot;, &quot;success&quot;,
+                        &quot;message&quot;, bot + &quot; has been disabled for server &quot; + serverId
+                ));
+            } else {
+<span class="nc" id="L232">                return ResponseEntity.status(HttpStatus.NOT_FOUND)</span>
+<span class="nc" id="L233">                        .body(Map.of(</span>
+                                &quot;status&quot;, &quot;error&quot;,
+                                &quot;message&quot;, &quot;Server not found&quot;
+                        ));
+            }
+<span class="nc" id="L238">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L239">            return ResponseEntity.status(HttpStatus.BAD_REQUEST)</span>
+<span class="nc" id="L240">                    .body(Map.of(</span>
+                            &quot;status&quot;, &quot;error&quot;,
+                            &quot;message&quot;, &quot;Invalid bot type: &quot; + botType
+                    ));
+        }
+    }
+
+    /**
+     * This endpoint gets all slash commands registered for a server, grouped by bot.
+     * @param serverId The ID of the server
+     * @return A JSON response containing the commands
+     */
+    @GetMapping(&quot;/{serverId}/commands&quot;)
+    public ResponseEntity&lt;ServerCommandsDTO&gt; getServerCommands(@PathVariable String serverId) {
+        // Get all commands for the server from JDA
+<span class="nc" id="L255">        Map&lt;String, List&lt;JdaSlashCommand&gt;&gt; jdaCommands = jdaBotStatusCoordinator.getServerCommands(serverId);</span>
+
+        // Convert to a simpler structure for JSON
+<span class="nc" id="L258">        Map&lt;String, List&lt;Map&lt;String, String&gt;&gt;&gt; result = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L259">        ServerCommandsDTO serverCommandsDTO = new ServerCommandsDTO();</span>
+<span class="nc" id="L260">        List&lt;BotCommandsDTO&gt; botCommandsList = new ArrayList&lt;&gt;();</span>
+
+        // Add JDA commands
+<span class="nc" id="L263">        jdaCommands.forEach((botType, commands) -&gt; {</span>
+<span class="nc" id="L264">            BotCommandsDTO botCommandsDTO = new BotCommandsDTO();</span>
+<span class="nc" id="L265">            botCommandsDTO.setBotName(botType);</span>
+<span class="nc" id="L266">            List&lt;CommandDTO&gt; commandInfoList = commands.stream()</span>
+<span class="nc" id="L267">                    .map(cmd -&gt; {</span>
+<span class="nc" id="L268">                        CommandDTO commandDTO = new CommandDTO();</span>
+<span class="nc" id="L269">                        commandDTO.setName(cmd.getName());</span>
+<span class="nc" id="L270">                        commandDTO.setDescription(cmd.getDescription());</span>
+<span class="nc" id="L271">                        return commandDTO;</span>
+                    })
+<span class="nc" id="L273">                    .collect(Collectors.toList());</span>
+<span class="nc" id="L274">            botCommandsDTO.setCommands(commandInfoList);</span>
+<span class="nc" id="L275">            botCommandsList.add(botCommandsDTO);</span>
+<span class="nc" id="L276">        });</span>
+<span class="nc" id="L277">        serverCommandsDTO.setBotCommands(botCommandsList);</span>
+
+<span class="nc" id="L279">        return ResponseEntity.ok(serverCommandsDTO);</span>
+    }
+
+    /**
+     * This endpoint retrieves all members of a specified guild (server) and their roles.
+     * @param guildId the ID of the target guild
+     * @return a JSON response containing the member data
+     */
+    @GetMapping(&quot;/{guildId}/members&quot;)
+    public ResponseEntity&lt;MemberListDTO&gt; getMemberRoles(@PathVariable String guildId) {
+<span class="nc" id="L289">        MemberRolesBot bot = (MemberRolesBot) getBot(ServerBotType.GUILD_MEMBER_LIST).getBotInstance();</span>
+
+        try {
+<span class="nc" id="L292">            return ResponseEntity.ok(bot.fetchGuildMembers(guildId));</span>
+<span class="nc" id="L293">        } catch (Exception e) {</span>
+<span class="nc" id="L294">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L295">                    .body(new MemberListDTO(&quot;&quot;, new ArrayList&lt;&gt;()));</span>
+        }
+    }
+
+    /**
+     * Synchronizes member roles for a server.
+     *
+     * @param serverId Discord server ID
+     * @param members member list with role assignments
+     * @return synchronization result
+     */
+    @PostMapping(&quot;/{serverId}/members&quot;)
+    public ResponseEntity&lt;MemberRoleSyncResult&gt; addMemberRoles(@PathVariable String serverId, @RequestBody MemberListDTO members) {
+<span class="nc" id="L308">        MemberRolesConfigBot bot = (MemberRolesConfigBot) getBot(ServerBotType.GUILD_MEMBER_ROLES_CONFIG).getBotInstance();</span>
+<span class="nc" id="L309">        return ResponseEntity.ok(bot.syncMemberRoles(serverId, members, true));</span>
+    }
+
+    /**
+     * Generates invite link for a server with optional parameters.
+     *
+     * @param serverId Discord server ID
+     * @param invite invite configuration (optional)
+     * @return generated invite link
+     */
+    @PostMapping(&quot;/{serverId}/invite&quot;)
+    public ResponseEntity&lt;String&gt; getInviteLink(@PathVariable String serverId, @RequestBody(required = false) InviteDTO invite) {
+<span class="nc" id="L321">        int maxAge = DEFAULT_INVITE_LINK_MAX_AGE;</span>
+<span class="nc" id="L322">        int maxUsers = DEFAULT_INVITE_LINK_MAX_USERS;</span>
+<span class="nc bnc" id="L323" title="All 2 branches missed.">        if (invite != null) {</span>
+<span class="nc" id="L324">            maxAge = invite.getMaxAge();</span>
+<span class="nc" id="L325">            maxUsers = invite.getMaxUsers();</span>
+        }
+
+<span class="nc" id="L328">        CreateInviteLinkBot bot = (CreateInviteLinkBot) getBot(ServerBotType.GUILD_INVITE_CREATE).getBotInstance();</span>
+
+<span class="nc bnc" id="L330" title="All 4 branches missed.">        if(maxUsers &gt; 100 || maxUsers &lt; 0){</span>
+<span class="nc" id="L331">            return ResponseEntity.status(HttpStatus.BAD_REQUEST)</span>
+<span class="nc" id="L332">                    .body(&quot;{\&quot;error\&quot;: \&quot;maxUsers must be between 0 and 100\&quot;}&quot;);</span>
+        }
+
+<span class="nc bnc" id="L335" title="All 4 branches missed.">        if(maxAge &gt; 168 || maxAge &lt; 0){</span>
+<span class="nc" id="L336">            return ResponseEntity.status(HttpStatus.BAD_REQUEST)</span>
+<span class="nc" id="L337">                    .body(&quot;{\&quot;error\&quot;: \&quot;maxAge must be between 0 and 168\&quot;}&quot;);</span>
+        }
+
+        try{
+<span class="nc" id="L341">            String inviteLink = bot.createInviteLink(serverId, maxUsers, maxAge);</span>
+<span class="nc bnc" id="L342" title="All 4 branches missed.">            if (inviteLink == null || inviteLink.isEmpty()) {</span>
+<span class="nc" id="L343">                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L344">                        .body(&quot;{\&quot;error\&quot;: \&quot;Failed to create invite link\&quot;}&quot;);</span>
+            }
+
+<span class="nc" id="L347">            return ResponseEntity.ok(inviteLink);</span>
+<span class="nc" id="L348">        } catch (Exception e) {</span>
+<span class="nc" id="L349">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L350">                    .body(&quot;{\&quot;error\&quot;: \&quot;&quot; + e.getMessage() + &quot;\&quot;}&quot;);</span>
+        }
+    }
+
+    /**
+     * Retrieves all roles available in a server.
+     *
+     * @param serverId Discord server ID
+     * @return server role list
+     */
+    @GetMapping(&quot;/{serverId}/roles&quot;)
+    public ResponseEntity&lt;ServerRoleListDTO&gt; getRoles(@PathVariable String serverId){
+<span class="nc" id="L362">        ServerRolesListBot bot = (ServerRolesListBot) getBot(ServerBotType.GUILD_ROLES_LIST).getBotInstance();</span>
+<span class="nc" id="L363">        return ResponseEntity.ok(bot.fetchGuildRoles(serverId));</span>
+    }
+
+    /**
+     * Synchronizes roles for a server.
+     *
+     * @param serverId Discord server ID
+     * @param roles role configuration to sync
+     * @return synchronization result
+     */
+    @PostMapping(&quot;/{serverId}/roles&quot;)
+    public ResponseEntity&lt;RoleSyncResult&gt; addRole(@PathVariable String serverId, @RequestBody ServerRoleListDTO roles) {
+<span class="nc" id="L375">        ServerRolesConfigBot bot = (ServerRolesConfigBot) getBot(ServerBotType.GUILD_ROLES_CONFIG).getBotInstance();</span>
+<span class="nc" id="L376">        return ResponseEntity.ok(bot.syncGuildRoles(serverId, roles, true));</span>
+    }
+
+    /**
+     * Retrieves role permissions for a specific channel.
+     *
+     * @param serverId Discord server ID
+     * @param channelId Discord channel ID
+     * @return channel role permissions
+     */
+    @GetMapping(&quot;/{serverId}/{channelId}/role-permissions&quot;)
+    public ResponseEntity&lt;ChannelRolePermissionsDTO&gt; getChannelRolePermissions(@PathVariable String serverId, @PathVariable String channelId) {
+<span class="nc" id="L388">        PermissionOverrideJdaBot bot = (PermissionOverrideJdaBot) getBot(ServerBotType.GUILD_CHANNEL_ROLE_PERMISSION).getBotInstance();</span>
+
+<span class="nc" id="L390">        ChannelRolePermissionsDTO overview = bot.getAllChannelPermissionOverrides(serverId, channelId);</span>
+<span class="nc" id="L391">        return ResponseEntity.ok(overview);</span>
+    }
+
+    /**
+     * Updates role permissions for a specific channel.
+     *
+     * @param serverId Discord server ID
+     * @param channelId Discord channel ID
+     * @param permissions new permission configuration
+     * @return operation success status
+     */
+    @PostMapping(&quot;/{serverId}/{channelId}/role-permissions&quot;)
+    public ResponseEntity&lt;Boolean&gt; setChannelRolePermissions(@PathVariable String serverId, @PathVariable String channelId,
+                                                             @RequestBody ChannelRolePermissionsDTO permissions) {
+
+<span class="nc" id="L406">        PermissionOverrideJdaBot bot = (PermissionOverrideJdaBot) getBot(ServerBotType.GUILD_CHANNEL_ROLE_PERMISSION).getBotInstance();</span>
+
+<span class="nc" id="L408">        boolean success = bot.setRolePermissionOverride(serverId, channelId, permissions);</span>
+<span class="nc" id="L409">        return ResponseEntity.ok(success);</span>
+    }
+
+    /**
+     * Extracts Discord ID from Spring Security authentication object.
+     *
+     * @param auth authentication object
+     * @return Discord ID or empty string if not found
+     */
+    private String getDiscordIdFromAuth(Authentication auth) {
+<span class="nc bnc" id="L419" title="All 2 branches missed.">        if (auth == null) {</span>
+<span class="nc" id="L420">            return &quot;&quot;;</span>
+        }
+
+<span class="nc" id="L423">        Object details = auth.getDetails();</span>
+<span class="nc bnc" id="L424" title="All 2 branches missed.">        if (details instanceof Map) {</span>
+<span class="nc" id="L425">            Object discordId = ((Map&lt;?, ?&gt;) details).get(&quot;discordId&quot;);</span>
+<span class="nc bnc" id="L426" title="All 2 branches missed.">            return discordId != null ? discordId.toString() : &quot;&quot;;</span>
+        }
+<span class="nc" id="L428">        return &quot;&quot;;</span>
+    }
+
+    /**
+     * Retrieves bot instance by server bot type.
+     *
+     * @param botType server bot type
+     * @return JDA bot entry
+     * @throws IllegalArgumentException if bot type not found
+     */
+    private JdaBotEntry getBot(ServerBotType botType) {
+<span class="nc" id="L439">        Optional&lt;JdaBotEntry&gt; botOpt = jdaBotService.getBot(botType);</span>
+<span class="nc bnc" id="L440" title="All 2 branches missed.">        if (botOpt.isPresent()) {</span>
+<span class="nc" id="L441">            return botOpt.get();</span>
+        } else {
+<span class="nc" id="L443">            throw new IllegalArgumentException(&quot;Bot not found: &quot; + botType);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

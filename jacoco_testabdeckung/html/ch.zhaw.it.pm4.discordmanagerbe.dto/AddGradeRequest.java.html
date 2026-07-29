@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AddGradeRequest.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.dto</a> &gt; <span class="el_source">AddGradeRequest.java</span></div><h1>AddGradeRequest.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.dto;
+
+/**
+ * Request DTO for adding a grade to a subject.
+ * Contains all necessary information to create a new grade entry.
+ */
+<span class="fc" id="L7">public record AddGradeRequest(</span>
+        String serverId,
+        String channelId,
+        String userId,
+        String subjectName,
+        double note,
+        double weight,
+        String semester,
+        String description
+) {
+
+    /**
+     * Creates a new builder instance for constructing AddGradeRequest objects.
+     * @return A new Builder instance
+     */
+    public static Builder builder() {
+<span class="fc" id="L23">        return new Builder();</span>
+    }
+
+    /**
+     * Builder class for constructing AddGradeRequest objects step by step.
+     */
+<span class="fc" id="L29">    public static class Builder {</span>
+        /** The Discord server ID */
+        private String serverId;
+        /** The Discord channel ID */
+        private String channelId;
+        /** The Discord user ID */
+        private String userId;
+        /** The subject name */
+        private String subjectName;
+        /** The grade value */
+        private double note;
+        /** The grade weight */
+        private double weight;
+        /** The semester */
+        private String semester;
+        /** The grade description */
+        private String description;
+
+        /**
+         * Sets the server ID.
+         * @param serverId The Discord server ID
+         * @return This builder instance
+         */
+        public Builder serverId(String serverId) {
+<span class="fc" id="L53">            this.serverId = serverId;</span>
+<span class="fc" id="L54">            return this;</span>
+        }
+
+        /**
+         * Sets the channel ID.
+         * @param channelId The Discord channel ID
+         * @return This builder instance
+         */
+        public Builder channelId(String channelId) {
+<span class="fc" id="L63">            this.channelId = channelId;</span>
+<span class="fc" id="L64">            return this;</span>
+        }
+
+        /**
+         * Sets the user ID.
+         * @param userId The Discord user ID
+         * @return This builder instance
+         */
+        public Builder userId(String userId) {
+<span class="fc" id="L73">            this.userId = userId;</span>
+<span class="fc" id="L74">            return this;</span>
+        }
+
+        /**
+         * Sets the subject name.
+         * @param subjectName The name of the subject
+         * @return This builder instance
+         */
+        public Builder subjectName(String subjectName) {
+<span class="fc" id="L83">            this.subjectName = subjectName;</span>
+<span class="fc" id="L84">            return this;</span>
+        }
+
+        /**
+         * Sets the grade value.
+         * @param note The grade value
+         * @return This builder instance
+         */
+        public Builder note(double note) {
+<span class="fc" id="L93">            this.note = note;</span>
+<span class="fc" id="L94">            return this;</span>
+        }
+
+        /**
+         * Sets the grade weight.
+         * @param weight The weight for grade calculation
+         * @return This builder instance
+         */
+        public Builder weight(double weight) {
+<span class="fc" id="L103">            this.weight = weight;</span>
+<span class="fc" id="L104">            return this;</span>
+        }
+
+        /**
+         * Sets the semester.
+         * @param semester The semester when the grade was achieved
+         * @return This builder instance
+         */
+        public Builder semester(String semester) {
+<span class="fc" id="L113">            this.semester = semester;</span>
+<span class="fc" id="L114">            return this;</span>
+        }
+
+        /**
+         * Sets the description.
+         * @param description Optional description of the grade
+         * @return This builder instance
+         */
+        public Builder description(String description) {
+<span class="fc" id="L123">            this.description = description;</span>
+<span class="fc" id="L124">            return this;</span>
+        }
+
+        /**
+         * Builds the AddGradeRequest object with the configured values.
+         * @return A new AddGradeRequest instance
+         */
+        public AddGradeRequest build() {
+<span class="fc" id="L132">            return new AddGradeRequest(</span>
+                    serverId, channelId, userId, subjectName,
+                    note, weight, semester, description
+            );
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

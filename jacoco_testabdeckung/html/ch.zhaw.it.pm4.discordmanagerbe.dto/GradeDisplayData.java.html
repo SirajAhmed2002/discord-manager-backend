@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GradeDisplayData.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.dto</a> &gt; <span class="el_source">GradeDisplayData.java</span></div><h1>GradeDisplayData.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.dto;
+
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.Grade;
+import java.util.List;
+import java.util.Collections;
+
+/**
+ * DTO for displaying grade data.
+ * Contains grades, average, subject, and semester information.
+ */
+public class GradeDisplayData {
+    /** List of grades for the subject */
+    private final List&lt;Grade&gt; grades;
+    /** The calculated average of all grades */
+    private final double average;
+    /** The name of the subject */
+    private final String subjectName;
+    /** The semester of the grades */
+    private final String semester;
+
+    /**
+     * Constructor for grade display data.
+     * @param grades List of grades
+     * @param average The calculated average
+     * @param subjectName The subject name
+     * @param semester The semester
+     */
+<span class="fc" id="L28">    public GradeDisplayData(List&lt;Grade&gt; grades, double average, String subjectName, String semester) {</span>
+<span class="fc" id="L29">        this.grades = grades;</span>
+<span class="fc" id="L30">        this.average = average;</span>
+<span class="fc" id="L31">        this.subjectName = subjectName;</span>
+<span class="fc" id="L32">        this.semester = semester;</span>
+<span class="fc" id="L33">    }</span>
+
+    /**
+     * Creates an empty grade display data instance.
+     * @return Empty GradeDisplayData with empty lists and zero values
+     */
+    public static GradeDisplayData empty() {
+<span class="fc" id="L40">        return new GradeDisplayData(Collections.emptyList(), 0.0, &quot;&quot;, &quot;&quot;);</span>
+    }
+
+    /**
+     * Checks if the data is empty (no grades available).
+     * @return true if grades list is empty
+     */
+    public boolean isEmpty() {
+<span class="fc" id="L48">        return grades.isEmpty();</span>
+    }
+
+    /**
+     * Gets the list of grades.
+     * @return List of grades
+     */
+    public List&lt;Grade&gt; getGrades() {
+<span class="fc" id="L56">        return grades;</span>
+    }
+
+    /**
+     * Gets the calculated average.
+     * @return The average grade value
+     */
+    public double getAverage() {
+<span class="fc" id="L64">        return average;</span>
+    }
+
+    /**
+     * Gets the subject name.
+     * @return The subject name
+     */
+    public String getSubjectName() {
+<span class="fc" id="L72">        return subjectName;</span>
+    }
+
+    /**
+     * Gets the semester.
+     * @return The semester
+     */
+    public String getSemester() {
+<span class="fc" id="L80">        return semester;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

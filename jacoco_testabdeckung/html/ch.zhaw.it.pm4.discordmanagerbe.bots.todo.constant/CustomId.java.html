@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomId.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.todo.constant</a> &gt; <span class="el_source">CustomId.java</span></div><h1>CustomId.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.todo.constant;
+
+/**
+ * Enum for custom IDs used in the ToDoTrackerJdaBot.
+ * This enum is used to define the custom IDs for buttons, modals, and select menus in the bot.
+ * The IDs are used to identify the components when they are interacted with.
+ */
+<span class="fc" id="L8">public enum CustomId {</span>
+    /**
+     * Button Add_task
+     */
+<span class="fc" id="L12">    ADD_TASK(&quot;ADD_TASK_BUTTON&quot;),</span>
+
+    /**
+     * Button Remove_task
+     */
+<span class="fc" id="L17">    REMOVE_TASK(&quot;REMOVE_TASK_BUTTON&quot;),</span>
+
+    /**
+     * Button List_tasks
+     */
+<span class="fc" id="L22">    LIST_TASKS(&quot;LIST_TASKS_BUTTON&quot;),</span>
+
+    /**
+     * Button Clear_tasks
+     */
+<span class="fc" id="L27">    NO_REMINDER(&quot;NO_REMINDER_BUTTON&quot;),</span>
+
+    /**
+     * Button Add reminder
+     */
+<span class="fc" id="L32">    REMINDER_ADD(&quot;REMINDER_ADD_BUTTON&quot;),</span>
+
+    /**
+     * Button reminder done
+     */
+<span class="fc" id="L37">    REMINDER_DONE(&quot;REMINDER_DONE_BUTTON&quot;),</span>
+
+    /**
+     * Button Remove reminder
+     */
+<span class="fc" id="L42">    TASK_TO_REMOVE(&quot;TASK_TO_REMOVE_&quot;),</span>
+
+    /**
+     * Modal for adding or editing a task.
+     */
+<span class="fc" id="L47">    TASK_MODAL(&quot;TASK_MODAL&quot;),</span>
+
+    /**
+     * Text input fields for the task modal.
+     */
+<span class="fc" id="L52">    TASK_TITLE(&quot;TASK_TITLE_TEXT_INPUT&quot;),</span>
+
+    /**
+     * Text input fields for the task modal.
+     */
+<span class="fc" id="L57">    TASK_DESCRIPTION(&quot;TASK_DESCRIPTION_TEXT_INPUT&quot;),</span>
+
+    /**
+     * Text input fields for the task modal.
+     */
+<span class="fc" id="L62">    TASK_DUE_DATE(&quot;TASK_DUE_DATE_TEXT_INPUT&quot;),</span>
+
+    /**
+     * Text input fields for the task modal.
+     */
+<span class="fc" id="L67">    TASK_DUE_TIME(&quot;TASK_DUE_TIME_TEXT_INPUT&quot;),</span>
+
+    /**
+     * Select menu for choosing a reminder time.
+     */
+<span class="fc" id="L72">    REMINDER_VALUE(&quot;REMINDER_VALUE_SELECT&quot;),</span>
+
+    /**
+     * Select menu for choosing a reminder unit.
+     */
+<span class="fc" id="L77">    REMINDER_UNIT(&quot;REMINDER_UNIT_SELECT&quot;);</span>
+
+    /**
+     * The custom ID string associated with this enum constant.
+     */
+    private final String customId;
+
+    /**
+     * Constructor for CustomId enum.
+     * @param customId the custom ID string associated with the enum constant
+     */
+<span class="fc" id="L88">    CustomId(String customId) {</span>
+<span class="fc" id="L89">        this.customId = customId;</span>
+<span class="fc" id="L90">    }</span>
+
+    /**
+     * Returns the custom ID string associated with this enum constant.
+     * @return the custom ID string
+     */
+    public String getId() {
+<span class="fc" id="L97">        return customId;</span>
+    }
+
+    /**
+     * Converts a string representation of a custom ID to its corresponding CustomId enum.
+     * @param customId the string representation of the custom ID
+     * @return the corresponding CustomId enum
+     */
+    public static CustomId fromString(String customId) {
+<span class="nc bnc" id="L106" title="All 2 branches missed.">        if (customId.startsWith(TASK_TO_REMOVE.getId())) {</span>
+<span class="nc" id="L107">            return TASK_TO_REMOVE;</span>
+        }
+
+<span class="nc bnc" id="L110" title="All 2 branches missed.">        for (CustomId s : CustomId.values()) {</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">            if (s.customId.equals(customId)) {</span>
+<span class="nc" id="L112">                return s;</span>
+            }
+        }
+<span class="nc" id="L115">        throw new IllegalArgumentException(&quot;Unknown custom ID: &quot; + customId);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,709 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MusicBot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.music</a> &gt; <span class="el_source">MusicBot.java</span></div><h1>MusicBot.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.music;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.AbstractSlashCommandJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.BotIdentifier;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.SlashCommandBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.service.JdaEventListenerService;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.service.JdaSlashCommandService;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.GuildVoiceState;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+import net.dv8tion.jda.api.managers.AudioManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.awt.Color;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * MusicBot is a Discord bot that provides music playback functionality.
+ * It allows users to play, pause, resume, skip tracks, manage queues, and control volume.
+ * The bot uses Lavaplayer for audio handling and JDA for Discord interactions.
+ */
+@BotIdentifier(category = BotIdentifier.BotCategory.SLASH_COMMAND,
+        slashCommand = SlashCommandBotType.MUSIC)
+@Component
+public class MusicBot extends AbstractSlashCommandJdaBot{
+
+<span class="fc" id="L40">    private static final Logger logger = LoggerFactory.getLogger(MusicBot.class);</span>
+
+    // Slash Commands
+    private static final String COMMAND_PLAY = &quot;play&quot;;
+    private static final String COMMAND_PAUSE = &quot;pause&quot;;
+    private static final String COMMAND_RESUME = &quot;resume&quot;;
+    private static final String COMMAND_SKIP = &quot;skip&quot;;
+    private static final String COMMAND_QUEUE = &quot;queue&quot;;
+    private static final String COMMAND_CLEAR = &quot;clear&quot;;
+    private static final String COMMAND_LEAVE = &quot;leave&quot;;
+    private static final String COMMAND_VOLUME = &quot;volume&quot;;
+    private static final String COMMAND_NOW_PLAYING = &quot;nowplaying&quot;;
+
+    // Colors
+<span class="fc" id="L54">    private static final Color COLOR_SUCCESS = Color.GREEN;</span>
+<span class="fc" id="L55">    private static final Color COLOR_ERROR = Color.RED;</span>
+<span class="fc" id="L56">    private static final Color COLOR_WARNING = Color.YELLOW;</span>
+<span class="fc" id="L57">    private static final Color COLOR_INFO = Color.BLUE;</span>
+<span class="fc" id="L58">    private static final Color COLOR_LOADING = Color.GRAY;</span>
+
+    private final MusicManager musicManager;
+<span class="fc" id="L61">    private final ExecutorService executorService = Executors.newCachedThreadPool();</span>
+
+    /**
+     * Constructs a MusicBot instance with the provided JDA and command services.
+     * @param jdaBean              the JDA instance for Discord API operations
+     * @param slashCommandService  the service for handling slash commands
+     * @param slashCommandListener the service for listening to slash command events
+     */
+    @Autowired
+    public MusicBot(JDA jdaBean, JdaSlashCommandService slashCommandService,
+                    JdaEventListenerService slashCommandListener){
+<span class="fc" id="L72">        super(jdaBean, slashCommandService, slashCommandListener);</span>
+<span class="fc" id="L73">        this.musicManager = new MusicManager();</span>
+<span class="fc" id="L74">        setBotType(this.getClass().getAnnotation(BotIdentifier.class).slashCommand());</span>
+<span class="fc" id="L75">        setDescription(&quot;Musik Bot, der Musik von YouTube und anderen Quellen abspielen kann.&quot;);</span>
+<span class="fc" id="L76">    }</span>
+
+    /**
+     * Initializes the bot by setting up commands and interaction handlers.
+     */
+    @Override
+    protected void setupCommands(){
+        // Play command
+<span class="fc" id="L84">        SlashCommandData playCommand = createCommand(COMMAND_PLAY, &quot;Spielt Musik von einer URL&quot;)</span>
+<span class="fc" id="L85">                .addOption(OptionType.STRING, &quot;url&quot;, &quot;URL des Videos oder der Playlist&quot;, true);</span>
+<span class="fc" id="L86">        registerCommand(COMMAND_PLAY, &quot;Spielt Musik&quot;, playCommand, this::handlePlay);</span>
+
+        // Pause command
+<span class="fc" id="L89">        SlashCommandData pauseCommand = createCommand(COMMAND_PAUSE, &quot;Pausiert die aktuelle Wiedergabe&quot;);</span>
+<span class="fc" id="L90">        registerCommand(COMMAND_PAUSE, &quot;Pausiert Musik&quot;, pauseCommand, this::handlePause);</span>
+
+        // Resume command
+<span class="fc" id="L93">        SlashCommandData resumeCommand = createCommand(COMMAND_RESUME, &quot;Setzt die pausierte Wiedergabe fort&quot;);</span>
+<span class="fc" id="L94">        registerCommand(COMMAND_RESUME, &quot;Setzt Musik fort&quot;, resumeCommand, this::handleResume);</span>
+
+        // Skip command
+<span class="fc" id="L97">        SlashCommandData skipCommand = createCommand(COMMAND_SKIP, &quot;Überspringt den aktuellen Song&quot;);</span>
+<span class="fc" id="L98">        registerCommand(COMMAND_SKIP, &quot;Überspringt Song&quot;, skipCommand, this::handleSkip);</span>
+
+        // Queue command
+<span class="fc" id="L101">        SlashCommandData queueCommand = createCommand(COMMAND_QUEUE, &quot;Zeigt die aktuelle Warteschlange an&quot;);</span>
+<span class="fc" id="L102">        registerCommand(COMMAND_QUEUE, &quot;Zeigt Warteschlange&quot;, queueCommand, this::handleQueue);</span>
+
+        // Clear command
+<span class="fc" id="L105">        SlashCommandData clearCommand = createCommand(COMMAND_CLEAR, &quot;Leert die Warteschlange&quot;);</span>
+<span class="fc" id="L106">        registerCommand(COMMAND_CLEAR, &quot;Leert Warteschlange&quot;, clearCommand, this::handleClear);</span>
+
+        // Leave command
+<span class="fc" id="L109">        SlashCommandData leaveCommand = createCommand(COMMAND_LEAVE, &quot;Bot verlässt den Sprachkanal&quot;);</span>
+<span class="fc" id="L110">        registerCommand(COMMAND_LEAVE, &quot;Verlässt Kanal&quot;, leaveCommand, this::handleLeave);</span>
+
+        // Volume command
+<span class="fc" id="L113">        SlashCommandData volumeCommand = createCommand(COMMAND_VOLUME, &quot;Stellt die Lautstärke ein&quot;)</span>
+<span class="fc" id="L114">                .addOption(OptionType.INTEGER, &quot;level&quot;, &quot;Lautstärke (0-100)&quot;, true);</span>
+<span class="fc" id="L115">        registerCommand(COMMAND_VOLUME, &quot;Stellt Lautstärke ein&quot;, volumeCommand, this::handleVolume);</span>
+
+        // Now Playing command
+<span class="fc" id="L118">        SlashCommandData nowPlayingCommand = createCommand(COMMAND_NOW_PLAYING, &quot;Zeigt den aktuell spielenden Song&quot;);</span>
+<span class="fc" id="L119">        registerCommand(COMMAND_NOW_PLAYING, &quot;Zeigt aktuellen Song&quot;, nowPlayingCommand, this::handleNowPlaying);</span>
+<span class="fc" id="L120">    }</span>
+
+    /**
+     * Registers button interaction handlers.
+     */
+    @Override
+    protected void registerButtonInteractionHandlers(){
+        // No button interactions for music bot currently
+        // Could add controls like play/pause/skip buttons in embeds
+<span class="fc" id="L129">    }</span>
+
+    /**
+     * Registers string select interaction handlers.
+     * Currently not used, but can be extended for playlist selection or volume presets.
+     */
+    @Override
+    protected void registerStringInteractionHandlers(){
+        // No string select interactions for music bot currently
+        // Could add playlist selection or volume presets
+<span class="fc" id="L139">    }</span>
+
+    /**
+     * Registers modal interaction handlers.
+     * Currently not used, but can be extended for user input forms.
+     */
+    @Override
+    protected void registerModalInteractionHandlers(){
+        // No modal interactions for music bot currently
+<span class="fc" id="L148">    }</span>
+
+    /**
+     * Handles the play command interaction.
+     * Validates the URL, checks voice state, connects to voice channel, and plays the track.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    private void handlePlay(SlashCommandInteractionEvent event){
+<span class="fc" id="L156">        event.deferReply().queue();</span>
+
+<span class="fc" id="L158">        String url = event.getOption(&quot;url&quot;).getAsString();</span>
+
+<span class="fc bfc" id="L160" title="All 2 branches covered.">        if(! url.startsWith(&quot;http&quot;)){</span>
+<span class="fc" id="L161">            MessageEmbed embed = createEmbed(&quot;🌐 Ungültige URL&quot;,</span>
+                    &quot;Bitte gib eine gültige HTTP/HTTPS URL ein.&quot;, COLOR_ERROR);
+<span class="fc" id="L163">            event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L164">            return;</span>
+        }
+
+<span class="fc" id="L167">        Member member = event.getMember();</span>
+<span class="fc bfc" id="L168" title="All 2 branches covered.">        if(member==null){</span>
+<span class="fc" id="L169">            MessageEmbed embed = createEmbed(&quot;❌ Fehler&quot;,</span>
+                    &quot;Konnte Mitglied nicht identifizieren.&quot;, COLOR_ERROR);
+<span class="fc" id="L171">            event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L172">            return;</span>
+        }
+
+<span class="fc" id="L175">        GuildVoiceState voiceState = member.getVoiceState();</span>
+<span class="pc bpc" id="L176" title="1 of 4 branches missed.">        if(voiceState==null || ! voiceState.inAudioChannel()){</span>
+<span class="fc" id="L177">            MessageEmbed embed = createEmbed(&quot;❌ Fehler&quot;,</span>
+                    &quot;Du musst in einem Sprachkanal sein!&quot;, COLOR_ERROR);
+<span class="fc" id="L179">            event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L180">            return;</span>
+        }
+
+<span class="fc" id="L183">        Guild guild = event.getGuild();</span>
+<span class="fc bfc" id="L184" title="All 2 branches covered.">        if(guild==null){</span>
+<span class="fc" id="L185">            MessageEmbed embed = createEmbed(&quot;❌ Fehler&quot;,</span>
+                    &quot;Dieser Befehl funktioniert nur auf Servern.&quot;, COLOR_ERROR);
+<span class="fc" id="L187">            event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L188">            return;</span>
+        }
+
+<span class="fc" id="L191">        long guildId = guild.getIdLong();</span>
+<span class="fc" id="L192">        AudioManager audioManager = guild.getAudioManager();</span>
+
+        // Connect to voice channel
+<span class="fc" id="L195">        audioManager.openAudioConnection(voiceState.getChannel());</span>
+<span class="fc" id="L196">        audioManager.setSendingHandler(musicManager.getSendHandler(guildId));</span>
+
+        // Show loading message
+<span class="fc" id="L199">        MessageEmbed loadingEmbed = createEmbed(&quot;⏳ Lade Musik&quot;,</span>
+                &quot;Versuche URL zu laden: &quot; + url, COLOR_LOADING);
+<span class="fc" id="L201">        event.getHook().sendMessageEmbeds(loadingEmbed).queue();</span>
+
+        // Load and play asynchronously
+<span class="fc" id="L204">        CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L205">            musicManager.loadAndPlay(guildId, url);</span>
+<span class="fc" id="L206">        }, executorService).thenRun(() -&gt; {</span>
+<span class="fc" id="L207">            MessageEmbed successEmbed = createEmbed(&quot;🎵 Musik wird abgespielt&quot;,</span>
+                    &quot;Erfolgreich geladen: &quot; + url, COLOR_SUCCESS);
+<span class="fc" id="L209">            event.getHook().editOriginalEmbeds(successEmbed).queue();</span>
+<span class="fc" id="L210">        }).exceptionally(throwable -&gt; {</span>
+<span class="nc" id="L211">            logger.error(&quot;Error loading music&quot;, throwable);</span>
+<span class="nc" id="L212">            MessageEmbed errorEmbed = createEmbed(&quot;❌ Fehler beim Laden&quot;,</span>
+<span class="nc" id="L213">                    &quot;Konnte die URL nicht laden: &quot; + throwable.getMessage(), COLOR_ERROR);</span>
+<span class="nc" id="L214">            event.getHook().editOriginalEmbeds(errorEmbed).queue();</span>
+<span class="nc" id="L215">            return null;</span>
+        });
+<span class="fc" id="L217">    }</span>
+
+    /**
+     * Handles the pause command interaction.
+     * Pauses the currently playing track if it is not already paused.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    private void handlePause(SlashCommandInteractionEvent event){
+<span class="fc" id="L225">        event.deferReply().queue();</span>
+
+<span class="pc bpc" id="L227" title="1 of 2 branches missed.">        if(! checkGuildAndHook(event)) return;</span>
+
+<span class="fc" id="L229">        long guildId = event.getGuild().getIdLong();</span>
+<span class="fc" id="L230">        boolean wasPaused = musicManager.getPlayer(guildId).isPaused();</span>
+
+<span class="fc bfc" id="L232" title="All 2 branches covered.">        if(wasPaused){</span>
+<span class="fc" id="L233">            MessageEmbed embed = createEmbed(&quot;⏸️ Bereits pausiert&quot;,</span>
+                    &quot;Die Musik ist bereits pausiert.&quot;, COLOR_WARNING);
+<span class="fc" id="L235">            event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L236">            return;</span>
+        }
+
+<span class="fc" id="L239">        musicManager.getPlayer(guildId).setPaused(true);</span>
+
+<span class="fc" id="L241">        MessageEmbed embed = createEmbed(&quot;⏸️ Musik pausiert&quot;,</span>
+                &quot;Die Musik wurde pausiert.&quot;, COLOR_WARNING);
+<span class="fc" id="L243">        event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L244">    }</span>
+
+    /**
+     * Handles the resume command interaction.
+     * Resumes the currently paused track if it is paused.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    private void handleResume(SlashCommandInteractionEvent event){
+<span class="fc" id="L252">        event.deferReply().queue();</span>
+
+<span class="pc bpc" id="L254" title="1 of 2 branches missed.">        if(! checkGuildAndHook(event)) return;</span>
+
+<span class="fc" id="L256">        long guildId = event.getGuild().getIdLong();</span>
+<span class="fc" id="L257">        boolean wasPaused = musicManager.getPlayer(guildId).isPaused();</span>
+
+<span class="fc bfc" id="L259" title="All 2 branches covered.">        if(! wasPaused){</span>
+<span class="fc" id="L260">            MessageEmbed embed = createEmbed(&quot;▶️ Bereits am Spielen&quot;,</span>
+                    &quot;Die Musik spielt bereits.&quot;, COLOR_SUCCESS);
+<span class="fc" id="L262">            event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L263">            return;</span>
+        }
+
+<span class="fc" id="L266">        musicManager.getPlayer(guildId).setPaused(false);</span>
+
+<span class="fc" id="L268">        MessageEmbed embed = createEmbed(&quot;▶️ Musik fortgesetzt&quot;,</span>
+                &quot;Die Musik wird fortgesetzt.&quot;, COLOR_SUCCESS);
+<span class="fc" id="L270">        event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L271">    }</span>
+
+    /**
+     * Handles the skip command interaction.
+     * Skips the currently playing track and plays the next one in the queue if available.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    private void handleSkip(SlashCommandInteractionEvent event){
+<span class="fc" id="L279">        event.deferReply().queue();</span>
+
+<span class="pc bpc" id="L281" title="1 of 2 branches missed.">        if(! checkGuildAndHook(event)) return;</span>
+
+<span class="fc" id="L283">        long guildId = event.getGuild().getIdLong();</span>
+<span class="fc" id="L284">        AudioTrack currentTrack = musicManager.getPlayer(guildId).getPlayingTrack();</span>
+
+<span class="fc bfc" id="L286" title="All 2 branches covered.">        if(currentTrack==null){</span>
+<span class="fc" id="L287">            MessageEmbed embed = createEmbed(&quot;❌ Nichts zu überspringen&quot;,</span>
+                    &quot;Es wird gerade keine Musik abgespielt.&quot;, COLOR_ERROR);
+<span class="fc" id="L289">            event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L290">            return;</span>
+        }
+
+<span class="fc" id="L293">        String trackTitle = currentTrack.getInfo().title;</span>
+
+        // Check if there's a next track
+<span class="fc bfc" id="L296" title="All 2 branches covered.">        boolean hasNext = ! musicManager.getTrackScheduler(guildId).getQueue().isEmpty();</span>
+
+<span class="fc" id="L298">        musicManager.getTrackScheduler(guildId).nextTrack();</span>
+
+<span class="fc bfc" id="L300" title="All 2 branches covered.">        String description = hasNext</span>
+<span class="fc" id="L301">                ? &quot;Übersprungen: &quot; + truncateString(trackTitle, 50)</span>
+<span class="fc" id="L302">                : &quot;Letzter Song übersprungen: &quot; + truncateString(trackTitle, 50);</span>
+
+<span class="fc" id="L304">        MessageEmbed embed = createEmbed(&quot;⏭️ Song übersprungen&quot;, description, COLOR_INFO);</span>
+<span class="fc" id="L305">        event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L306">    }</span>
+
+    /**
+     * Handles the queue command interaction.
+     * Displays the current track and the next 10 tracks in the queue.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    private void handleQueue(SlashCommandInteractionEvent event){
+<span class="fc" id="L314">        event.deferReply().queue();</span>
+
+<span class="pc bpc" id="L316" title="1 of 2 branches missed.">        if(! checkGuildAndHook(event)) return;</span>
+
+<span class="fc" id="L318">        long guildId = event.getGuild().getIdLong();</span>
+<span class="fc" id="L319">        StringBuilder queueString = new StringBuilder();</span>
+
+<span class="fc" id="L321">        AudioTrack currentTrack = musicManager.getPlayer(guildId).getPlayingTrack();</span>
+<span class="fc bfc" id="L322" title="All 2 branches covered.">        if(currentTrack!=null){</span>
+<span class="fc" id="L323">            queueString.append(&quot;**🎵 Aktuell:** &quot;)</span>
+<span class="fc" id="L324">                    .append(truncateString(currentTrack.getInfo().title, 50))</span>
+<span class="fc" id="L325">                    .append(&quot; [&quot;)</span>
+<span class="fc" id="L326">                    .append(formatDuration(currentTrack.getDuration()))</span>
+<span class="fc" id="L327">                    .append(&quot;]\n\n&quot;);</span>
+        }
+
+<span class="fc" id="L330">        queueString.append(&quot;**📋 Warteschlange:**\n&quot;);</span>
+
+<span class="fc" id="L332">        int trackNumber = 1;</span>
+<span class="fc" id="L333">        int totalDuration = 0;</span>
+<span class="fc bfc" id="L334" title="All 2 branches covered.">        for(AudioTrack track : musicManager.getTrackScheduler(guildId).getQueue()){</span>
+<span class="fc bfc" id="L335" title="All 2 branches covered.">            if(trackNumber &gt; 10){</span>
+<span class="fc" id="L336">                int remaining = musicManager.getTrackScheduler(guildId).getQueue().size() - 10;</span>
+<span class="fc" id="L337">                queueString.append(&quot;\n*... und &quot;).append(remaining).append(&quot; weitere Tracks*&quot;);</span>
+<span class="fc" id="L338">                break;</span>
+            }
+
+<span class="fc" id="L341">            queueString.append(trackNumber).append(&quot;. &quot;)</span>
+<span class="fc" id="L342">                    .append(truncateString(track.getInfo().title, 40))</span>
+<span class="fc" id="L343">                    .append(&quot; [&quot;)</span>
+<span class="fc" id="L344">                    .append(formatDuration(track.getDuration()))</span>
+<span class="fc" id="L345">                    .append(&quot;]\n&quot;);</span>
+
+<span class="fc" id="L347">            totalDuration += track.getDuration();</span>
+<span class="fc" id="L348">            trackNumber++;</span>
+<span class="fc" id="L349">        }</span>
+
+<span class="fc bfc" id="L351" title="All 2 branches covered.">        if(trackNumber==1){</span>
+<span class="fc" id="L352">            queueString.append(&quot;*Die Warteschlange ist leer.*&quot;);</span>
+        } else{
+<span class="fc" id="L354">            queueString.append(&quot;\n**⏱️ Gesamtdauer:** &quot;).append(formatDuration(totalDuration));</span>
+        }
+
+<span class="fc" id="L357">        MessageEmbed embed = createEmbed(&quot;📋 Musikwarteschlange&quot;,</span>
+<span class="fc" id="L358">                queueString.toString(), COLOR_INFO);</span>
+<span class="fc" id="L359">        event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L360">    }</span>
+
+    /**
+     * Handles the clear command interaction.
+     * Stops the current track and clears the queue.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    private void handleClear(SlashCommandInteractionEvent event){
+<span class="fc" id="L368">        event.deferReply().queue();</span>
+
+<span class="pc bpc" id="L370" title="1 of 2 branches missed.">        if(! checkGuildAndHook(event)) return;</span>
+
+<span class="fc" id="L372">        long guildId = event.getGuild().getIdLong();</span>
+<span class="fc" id="L373">        int queueSize = musicManager.getTrackScheduler(guildId).getQueue().size();</span>
+<span class="fc" id="L374">        AudioTrack currentTrack = musicManager.getPlayer(guildId).getPlayingTrack();</span>
+
+<span class="fc" id="L376">        musicManager.getPlayer(guildId).stopTrack();</span>
+<span class="fc" id="L377">        musicManager.getTrackScheduler(guildId).clearQueue();</span>
+
+<span class="fc bfc" id="L379" title="All 2 branches covered.">        String description = currentTrack!=null</span>
+<span class="fc" id="L380">                ? &quot;Aktueller Song gestoppt und &quot; + queueSize + &quot; Tracks aus der Warteschlange entfernt.&quot;</span>
+<span class="fc" id="L381">                : queueSize + &quot; Tracks wurden aus der Warteschlange entfernt.&quot;;</span>
+
+<span class="fc" id="L383">        MessageEmbed embed = createEmbed(&quot;🗑️ Warteschlange geleert&quot;, description, COLOR_INFO);</span>
+<span class="fc" id="L384">        event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L385">    }</span>
+
+    /**
+     * Handles the leave command interaction.
+     * Disconnects the bot from the voice channel and clears the queue.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    private void handleLeave(SlashCommandInteractionEvent event){
+<span class="fc" id="L393">        event.deferReply().queue();</span>
+
+<span class="pc bpc" id="L395" title="1 of 2 branches missed.">        if(! checkGuildAndHook(event)) return;</span>
+
+<span class="fc" id="L397">        Guild guild = event.getGuild();</span>
+<span class="fc" id="L398">        AudioManager audioManager = guild.getAudioManager();</span>
+
+<span class="fc bfc" id="L400" title="All 2 branches covered.">        if(audioManager.isConnected()){</span>
+            // Clear music for this guild
+<span class="fc" id="L402">            long guildId = guild.getIdLong();</span>
+<span class="fc" id="L403">            AudioTrack currentTrack = musicManager.getPlayer(guildId).getPlayingTrack();</span>
+<span class="fc" id="L404">            int queueSize = musicManager.getTrackScheduler(guildId).getQueue().size();</span>
+
+<span class="fc" id="L406">            musicManager.getPlayer(guildId).stopTrack();</span>
+<span class="fc" id="L407">            musicManager.getTrackScheduler(guildId).clearQueue();</span>
+
+<span class="fc" id="L409">            audioManager.closeAudioConnection();</span>
+
+<span class="fc" id="L411">            String description = &quot;Bot hat den Sprachkanal verlassen.&quot;;</span>
+<span class="pc bpc" id="L412" title="3 of 4 branches missed.">            if(currentTrack!=null || queueSize &gt; 0){</span>
+<span class="pc bpc" id="L413" title="1 of 2 branches missed.">                description += &quot;\n&quot; + (queueSize + (currentTrack!=null ? 1 : 0)) + &quot; Songs wurden entfernt.&quot;;</span>
+            }
+
+<span class="fc" id="L416">            MessageEmbed embed = createEmbed(&quot;👋 Bot verlässt den Kanal&quot;, description, COLOR_INFO);</span>
+<span class="fc" id="L417">            event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L418">        } else{</span>
+<span class="fc" id="L419">            MessageEmbed embed = createEmbed(&quot;❌ Fehler&quot;,</span>
+                    &quot;Bot ist in keinem Sprachkanal.&quot;, COLOR_ERROR);
+<span class="fc" id="L421">            event.getHook().sendMessageEmbeds(embed).queue();</span>
+        }
+<span class="fc" id="L423">    }</span>
+
+    /**
+     * Handles the volume command interaction.
+     * Sets the volume of the audio player to the specified level (0-100).
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    private void handleVolume(SlashCommandInteractionEvent event){
+<span class="fc" id="L431">        event.deferReply().queue();</span>
+
+<span class="pc bpc" id="L433" title="1 of 2 branches missed.">        if(! checkGuildAndHook(event)) return;</span>
+
+<span class="fc" id="L435">        int volume = event.getOption(&quot;level&quot;).getAsInt();</span>
+
+<span class="pc bpc" id="L437" title="1 of 4 branches missed.">        if(volume &lt; 0 || volume &gt; 100){</span>
+<span class="fc" id="L438">            MessageEmbed embed = createEmbed(&quot;❌ Ungültige Lautstärke&quot;,</span>
+                    &quot;Die Lautstärke muss zwischen 0 und 100 liegen.&quot;, COLOR_ERROR);
+<span class="fc" id="L440">            event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L441">            return;</span>
+        }
+
+<span class="fc" id="L444">        long guildId = event.getGuild().getIdLong();</span>
+<span class="fc" id="L445">        int oldVolume = musicManager.getPlayer(guildId).getVolume();</span>
+<span class="fc" id="L446">        musicManager.getPlayer(guildId).setVolume(volume);</span>
+
+<span class="fc" id="L448">        String volumeBar = createVolumeBar(volume);</span>
+<span class="fc" id="L449">        String change = &quot;&quot;;</span>
+<span class="pc bpc" id="L450" title="1 of 2 branches missed.">        if(oldVolume!=volume){</span>
+<span class="fc" id="L451">            change = &quot; (vorher: &quot; + oldVolume + &quot;%)&quot;;</span>
+        }
+
+<span class="fc" id="L454">        MessageEmbed embed = createEmbed(&quot;🔊 Lautstärke eingestellt&quot;,</span>
+                &quot;Lautstärke: &quot; + volume + &quot;%&quot; + change + &quot;\n&quot; + volumeBar, COLOR_SUCCESS);
+<span class="fc" id="L456">        event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L457">    }</span>
+
+    /**
+     * Handles the now playing command interaction.
+     * Displays the currently playing track, its status, and progress.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    private void handleNowPlaying(SlashCommandInteractionEvent event){
+<span class="fc" id="L465">        event.deferReply().queue();</span>
+
+<span class="pc bpc" id="L467" title="1 of 2 branches missed.">        if(! checkGuildAndHook(event)) return;</span>
+
+<span class="fc" id="L469">        long guildId = event.getGuild().getIdLong();</span>
+
+<span class="fc" id="L471">        CompletableFuture.supplyAsync(() -&gt; {</span>
+<span class="fc" id="L472">            AudioTrack currentTrack = musicManager.getPlayer(guildId).getPlayingTrack();</span>
+
+<span class="fc bfc" id="L474" title="All 2 branches covered.">            if(currentTrack==null){</span>
+<span class="fc" id="L475">                return null;</span>
+            }
+
+<span class="fc" id="L478">            boolean isPaused = musicManager.getPlayer(guildId).isPaused();</span>
+<span class="fc" id="L479">            long position = currentTrack.getPosition();</span>
+<span class="fc" id="L480">            long duration = currentTrack.getDuration();</span>
+
+<span class="fc" id="L482">            return new NowPlayingInfo(currentTrack, isPaused, position, duration);</span>
+<span class="fc" id="L483">        }, executorService).thenAccept(info -&gt; {</span>
+<span class="fc bfc" id="L484" title="All 2 branches covered.">            if(info==null){</span>
+<span class="fc" id="L485">                MessageEmbed embed = createEmbed(&quot;🎵 Nichts spielt&quot;,</span>
+                        &quot;Es wird gerade keine Musik abgespielt.&quot;, COLOR_INFO);
+<span class="fc" id="L487">                event.getHook().sendMessageEmbeds(embed).queue();</span>
+<span class="fc" id="L488">                return;</span>
+            }
+
+<span class="fc" id="L491">            String progressBar = createProgressBar(info.position, info.duration);</span>
+<span class="fc bfc" id="L492" title="All 2 branches covered.">            String status = info.isPaused ? &quot;⏸️ Pausiert&quot; : &quot;▶️ Spielt&quot;;</span>
+
+<span class="fc" id="L494">            EmbedBuilder embedBuilder = new EmbedBuilder()</span>
+<span class="fc" id="L495">                    .setTitle(&quot;🎵 Aktueller Song&quot;)</span>
+<span class="fc" id="L496">                    .setDescription(&quot;**&quot; + info.track.getInfo().title + &quot;**&quot;)</span>
+<span class="fc" id="L497">                    .addField(&quot;Künstler&quot;, info.track.getInfo().author, true)</span>
+<span class="fc" id="L498">                    .addField(&quot;Dauer&quot;, formatDuration(info.duration), true)</span>
+<span class="fc" id="L499">                    .addField(&quot;Status&quot;, status, true)</span>
+<span class="fc" id="L500">                    .addField(&quot;Fortschritt&quot;,</span>
+<span class="fc" id="L501">                            formatDuration(info.position) + &quot; / &quot; + formatDuration(info.duration) + &quot;\n&quot; + progressBar,</span>
+                            false)
+<span class="fc bfc" id="L503" title="All 2 branches covered.">                    .setColor(info.isPaused ? COLOR_WARNING : COLOR_SUCCESS);</span>
+
+<span class="pc bpc" id="L505" title="1 of 2 branches missed.">            if(info.track.getInfo().uri!=null){</span>
+<span class="fc" id="L506">                embedBuilder.addField(&quot;Link&quot;, &quot;[Zur Quelle](&quot; + info.track.getInfo().uri + &quot;)&quot;, false);</span>
+            }
+
+            // Add queue info
+<span class="fc" id="L510">            int queueSize = musicManager.getTrackScheduler(guildId).getQueue().size();</span>
+<span class="fc bfc" id="L511" title="All 2 branches covered.">            if(queueSize &gt; 0){</span>
+<span class="fc" id="L512">                embedBuilder.addField(&quot;Warteschlange&quot;, queueSize + &quot; Song(s) in der Warteschlange&quot;, false);</span>
+            }
+
+<span class="fc" id="L515">            event.getHook().sendMessageEmbeds(embedBuilder.build()).queue();</span>
+<span class="fc" id="L516">        }).exceptionally(throwable -&gt; {</span>
+<span class="fc" id="L517">            logger.error(&quot;Error getting now playing info&quot;, throwable);</span>
+<span class="fc" id="L518">            MessageEmbed errorEmbed = createEmbed(&quot;❌ Fehler&quot;,</span>
+                    &quot;Konnte aktuelle Wiedergabe nicht abrufen.&quot;, COLOR_ERROR);
+<span class="fc" id="L520">            event.getHook().sendMessageEmbeds(errorEmbed).queue();</span>
+<span class="fc" id="L521">            return null;</span>
+        });
+<span class="fc" id="L523">    }</span>
+
+    // Helper methods
+
+    /**
+     * Checks if the command is executed in a guild (server).
+     * Replies with an error message if not.
+     * @param event the SlashCommandInteractionEvent to check
+     * @return true if the command is from a guild, false otherwise
+     */
+    private boolean checkGuildAndReply(SlashCommandInteractionEvent event){
+<span class="nc bnc" id="L534" title="All 2 branches missed.">        if(! event.isFromGuild()){</span>
+<span class="nc" id="L535">            event.reply(&quot;Dieser Befehl funktioniert nur auf Servern.&quot;)</span>
+<span class="nc" id="L536">                    .setEphemeral(true)</span>
+<span class="nc" id="L537">                    .queue();</span>
+<span class="nc" id="L538">            return false;</span>
+        }
+<span class="nc" id="L540">        return true;</span>
+    }
+
+    /**
+     * Checks if the command is executed in a guild (server) and has a valid hook.
+     * Replies with an error message if not.
+     * @param event the SlashCommandInteractionEvent to check
+     * @return true if the command is from a guild and has a valid hook, false otherwise
+     */
+    private boolean checkGuildAndHook(SlashCommandInteractionEvent event){
+<span class="fc bfc" id="L550" title="All 2 branches covered.">        if(! event.isFromGuild()){</span>
+<span class="fc" id="L551">            event.getHook().sendMessage(&quot;Dieser Befehl funktioniert nur auf Servern.&quot;)</span>
+<span class="fc" id="L552">                    .setEphemeral(true)</span>
+<span class="fc" id="L553">                    .queue();</span>
+<span class="fc" id="L554">            return false;</span>
+        }
+<span class="fc" id="L556">        return true;</span>
+    }
+
+
+    /**
+     * Creates an embed message with the specified title, description, and color.
+     * This is a helper method to standardize embed creation across the bot.
+     * @param title       the title of the embed
+     * @param description the description of the embed
+     * @param color       the color of the embed
+     */
+    private MessageEmbed createEmbed(String title, String description, Color color){
+<span class="fc" id="L568">        return new EmbedBuilder()</span>
+<span class="fc" id="L569">                .setTitle(title)</span>
+<span class="fc" id="L570">                .setDescription(description)</span>
+<span class="fc" id="L571">                .setColor(color)</span>
+<span class="fc" id="L572">                .build();</span>
+    }
+
+    /**
+     * Formats a duration in milliseconds to a human-readable string.
+     * If the duration is Long.MAX_VALUE, it returns &quot;LIVE&quot;.
+     * @param milliseconds the duration in milliseconds
+     * @return formatted duration string
+     */
+    private String formatDuration(long milliseconds){
+<span class="pc bpc" id="L582" title="1 of 2 branches missed.">        if(milliseconds==Long.MAX_VALUE){</span>
+<span class="nc" id="L583">            return &quot;LIVE&quot;;</span>
+        }
+
+<span class="fc" id="L586">        long seconds = milliseconds / 1000;</span>
+<span class="fc" id="L587">        long minutes = seconds / 60;</span>
+<span class="fc" id="L588">        long hours = minutes / 60;</span>
+
+<span class="fc" id="L590">        seconds = seconds % 60;</span>
+<span class="fc" id="L591">        minutes = minutes % 60;</span>
+
+<span class="pc bpc" id="L593" title="1 of 2 branches missed.">        if(hours &gt; 0){</span>
+<span class="nc" id="L594">            return String.format(&quot;%d:%02d:%02d&quot;, hours, minutes, seconds);</span>
+        } else{
+<span class="fc" id="L596">            return String.format(&quot;%d:%02d&quot;, minutes, seconds);</span>
+        }
+    }
+
+    /**
+     * Truncates a string to a maximum length, adding &quot;...&quot; if it exceeds the limit.
+     * @param str        the string to truncate
+     * @param maxLength  the maximum length of the string
+     * @return truncated string
+     */
+    private String truncateString(String str, int maxLength){
+<span class="pc bpc" id="L607" title="1 of 2 branches missed.">        if(str.length() &lt;= maxLength){</span>
+<span class="fc" id="L608">            return str;</span>
+        }
+<span class="nc" id="L610">        return str.substring(0, maxLength - 3) + &quot;...&quot;;</span>
+    }
+
+    /**
+     * Creates a progress bar string based on the current position and total duration.
+     * The bar is 20 characters long, with filled, unfilled, and current position indicators.
+     * @param position the current position in milliseconds
+     * @param duration the total duration in milliseconds
+     * @return a string representation of the progress bar
+     */
+    private String createProgressBar(long position, long duration){
+<span class="fc" id="L621">        int barLength = 20;</span>
+<span class="fc" id="L622">        int filledLength = (int) ((position / (double) duration) * barLength);</span>
+
+<span class="fc" id="L624">        StringBuilder bar = new StringBuilder();</span>
+<span class="fc bfc" id="L625" title="All 2 branches covered.">        for(int i = 0; i &lt; barLength; i++){</span>
+<span class="fc bfc" id="L626" title="All 2 branches covered.">            if(i==filledLength){</span>
+<span class="fc" id="L627">                bar.append(&quot;🔘&quot;);</span>
+<span class="fc bfc" id="L628" title="All 2 branches covered.">            } else if(i &lt; filledLength){</span>
+<span class="fc" id="L629">                bar.append(&quot;▬&quot;);</span>
+            } else{
+<span class="fc" id="L631">                bar.append(&quot;—&quot;);</span>
+            }
+        }
+
+<span class="fc" id="L635">        return bar.toString();</span>
+    }
+
+    /**
+     * Creates a volume bar string based on the current volume level.
+     * The bar is 10 characters long, with filled and unfilled indicators.
+     * @param volume the current volume level (0-100)
+     * @return a string representation of the volume bar
+     */
+    private String createVolumeBar(int volume){
+<span class="fc" id="L645">        int barLength = 10;</span>
+<span class="fc" id="L646">        int filledLength = (volume / 10);</span>
+
+<span class="fc" id="L648">        StringBuilder bar = new StringBuilder();</span>
+<span class="fc bfc" id="L649" title="All 2 branches covered.">        for(int i = 0; i &lt; barLength; i++){</span>
+<span class="fc bfc" id="L650" title="All 2 branches covered.">            if(i &lt; filledLength){</span>
+<span class="fc" id="L651">                bar.append(&quot;🔊&quot;);</span>
+            } else{
+<span class="fc" id="L653">                bar.append(&quot;🔈&quot;);</span>
+            }
+        }
+
+<span class="fc" id="L657">        return bar.toString();</span>
+    }
+
+    /**
+     * Unregisters all commands and cleans up resources.
+     * This method is called when the bot is shutting down or being reloaded.
+     */
+    @Override
+    public void unregisterCommands(){
+        // Shutdown executor service
+<span class="fc" id="L667">        executorService.shutdown();</span>
+        try{
+<span class="pc bpc" id="L669" title="1 of 2 branches missed.">            if(! executorService.awaitTermination(5, TimeUnit.SECONDS)){</span>
+<span class="nc" id="L670">                executorService.shutdownNow();</span>
+            }
+<span class="nc" id="L672">        } catch(InterruptedException e){</span>
+<span class="nc" id="L673">            executorService.shutdownNow();</span>
+<span class="nc" id="L674">            Thread.currentThread().interrupt();</span>
+<span class="fc" id="L675">        }</span>
+
+        // Stop all audio players
+<span class="fc" id="L678">        musicManager.shutdown();</span>
+
+<span class="fc" id="L680">        super.unregisterCommands();</span>
+<span class="fc" id="L681">    }</span>
+
+    // Helper data classes
+    /**
+     * Holds information about the currently playing track.
+     * Contains the track, its paused state, current position, and duration.
+     */
+    private static class NowPlayingInfo{
+        final AudioTrack track;
+        final boolean isPaused;
+        final long position;
+        final long duration;
+
+        /**
+         * Constructs a NowPlayingInfo object with the given track, paused state, position, and duration.
+         * @param track     the currently playing audio track
+         * @param isPaused  whether the track is paused
+         * @param position  the current playback position in milliseconds
+         * @param duration  the total duration of the track in milliseconds
+         */
+<span class="fc" id="L701">        NowPlayingInfo(AudioTrack track, boolean isPaused, long position, long duration){</span>
+<span class="fc" id="L702">            this.track = track;</span>
+<span class="fc" id="L703">            this.isPaused = isPaused;</span>
+<span class="fc" id="L704">            this.position = position;</span>
+<span class="fc" id="L705">            this.duration = duration;</span>
+<span class="fc" id="L706">        }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

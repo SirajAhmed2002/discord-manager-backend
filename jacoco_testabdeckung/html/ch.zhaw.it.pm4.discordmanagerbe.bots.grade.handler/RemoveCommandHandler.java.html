@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RemoveCommandHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.grade.handler</a> &gt; <span class="el_source">RemoveCommandHandler.java</span></div><h1>RemoveCommandHandler.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.grade.handler;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.grade.factory.EmbedFactory;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.grade.service.NotenrechnerService;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.grade.util.DiscordEventUtils;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.DiscordIdsDTO;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import org.springframework.stereotype.Component;
+
+import static ch.zhaw.it.pm4.discordmanagerbe.bots.grade.GradeBotConstants.*;
+
+/**
+ * Handles remove/delete commands for the grade calculator bot
+ */
+@Component
+public class RemoveCommandHandler {
+
+    /**
+     * Logger for RemoveCommandHandler
+     */
+    private final NotenrechnerService notenrechnerService;
+
+    /**
+     * Factory for creating Discord embeds
+     */
+    private final EmbedFactory embedFactory;
+
+    /**
+     * Utility class for handling Discord events
+     */
+    private final DiscordEventUtils eventUtils;
+
+    /**
+     * Constructor for RemoveCommandHandler
+     * @param notenrechnerService service for grade calculations and data retrieval
+     * @param embedFactory factory for creating embeds
+     * @param eventUtils utility for Discord event handling
+     */
+    public RemoveCommandHandler(NotenrechnerService notenrechnerService, 
+                               EmbedFactory embedFactory,
+<span class="fc" id="L42">                               DiscordEventUtils eventUtils) {</span>
+<span class="fc" id="L43">        this.notenrechnerService = notenrechnerService;</span>
+<span class="fc" id="L44">        this.embedFactory = embedFactory;</span>
+<span class="fc" id="L45">        this.eventUtils = eventUtils;</span>
+<span class="fc" id="L46">    }</span>
+
+    /**
+     * Handles the remove subject command
+     * Removes a subject and all its associated grades
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    public void handleRemoveSubject(SlashCommandInteractionEvent event) {
+        try {
+<span class="fc" id="L55">            DiscordIdsDTO discordIds = eventUtils.extractDiscordIds(event);</span>
+<span class="fc" id="L56">            String subjectName = eventUtils.getRequiredString(event, OPT_FACH);</span>
+<span class="fc" id="L57">            String semester = eventUtils.getOptionalString(event, OPT_SEMESTER);</span>
+
+<span class="fc" id="L59">            boolean removed = notenrechnerService.removeSubject(</span>
+<span class="fc" id="L60">                discordIds.getServerId(), </span>
+<span class="fc" id="L61">                discordIds.getChannelId(), </span>
+<span class="fc" id="L62">                discordIds.getUserId(),</span>
+                subjectName, 
+                semester
+            );
+
+<span class="fc" id="L67">            EmbedBuilder embed = embedFactory.createSubjectRemovedEmbed(subjectName, semester, removed);</span>
+<span class="nc" id="L68">            event.getHook().sendMessageEmbeds(embed.build()).setEphemeral(true).queue();</span>
+            
+<span class="fc" id="L70">        } catch (Exception e) {</span>
+<span class="fc" id="L71">            eventUtils.sendErrorMessage(event, &quot;Löschen des Fachs&quot;, e);</span>
+<span class="nc" id="L72">        }</span>
+<span class="fc" id="L73">    }</span>
+
+    /**
+     * Handles the remove grades command
+     * Removes all grades from a specific subject
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    public void handleRemoveGrades(SlashCommandInteractionEvent event) {
+        try {
+<span class="fc" id="L82">            DiscordIdsDTO discordIds = eventUtils.extractDiscordIds(event);</span>
+<span class="fc" id="L83">            String subjectName = eventUtils.getRequiredString(event, OPT_FACH);</span>
+<span class="fc" id="L84">            String semester = eventUtils.getOptionalString(event, OPT_SEMESTER);</span>
+
+<span class="fc" id="L86">            int removedCount = notenrechnerService.removeAllGradesFromSubject(</span>
+<span class="fc" id="L87">                discordIds.getServerId(), </span>
+<span class="fc" id="L88">                discordIds.getChannelId(), </span>
+<span class="fc" id="L89">                discordIds.getUserId(),</span>
+                subjectName, 
+                semester
+            );
+
+<span class="fc" id="L94">            EmbedBuilder embed = embedFactory.createGradesRemovedEmbed(</span>
+                subjectName, semester, removedCount);
+<span class="nc" id="L96">            event.getHook().sendMessageEmbeds(embed.build()).setEphemeral(true).queue();</span>
+            
+<span class="fc" id="L98">        } catch (Exception e) {</span>
+<span class="fc" id="L99">            eventUtils.sendErrorMessage(event, &quot;Löschen der Noten&quot;, e);</span>
+<span class="nc" id="L100">        }</span>
+<span class="fc" id="L101">    }</span>
+
+    /**
+     * Handles the remove semester command
+     * Removes all subjects and grades in the specified semester
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    public void handleRemoveSemester(SlashCommandInteractionEvent event) {
+        try {
+<span class="fc" id="L110">            DiscordIdsDTO discordIds = eventUtils.extractDiscordIds(event);</span>
+<span class="fc" id="L111">            String semester = eventUtils.getRequiredString(event, OPT_SEMESTER);</span>
+
+
+            // Validate semester name
+<span class="fc bfc" id="L115" title="All 2 branches covered.">            if (semester.trim().isEmpty()) {</span>
+<span class="fc" id="L116">                event.getHook().sendMessage(&quot;❌ Semestername darf nicht leer sein!&quot;)</span>
+<span class="nc" id="L117">                      .setEphemeral(true).queue();</span>
+<span class="nc" id="L118">                return;</span>
+            }
+
+<span class="fc" id="L121">            int removedCount = notenrechnerService.removeSemester(</span>
+<span class="fc" id="L122">                discordIds.getServerId(), </span>
+<span class="fc" id="L123">                discordIds.getChannelId(), </span>
+<span class="fc" id="L124">                discordIds.getUserId(),</span>
+                semester
+            );
+
+<span class="fc" id="L128">            EmbedBuilder embed = embedFactory.createSemesterRemovedEmbed(semester, removedCount);</span>
+<span class="nc" id="L129">            event.getHook().sendMessageEmbeds(embed.build()).setEphemeral(true).queue();</span>
+            
+<span class="fc" id="L131">        } catch (Exception e) {</span>
+<span class="fc" id="L132">            eventUtils.sendErrorMessage(event, &quot;Löschen des Semesters&quot;, e);</span>
+<span class="nc" id="L133">        }</span>
+<span class="fc" id="L134">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

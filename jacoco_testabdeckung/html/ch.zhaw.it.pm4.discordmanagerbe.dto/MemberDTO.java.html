@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MemberDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.dto</a> &gt; <span class="el_source">MemberDTO.java</span></div><h1>MemberDTO.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.dto;
+
+import java.util.List;
+
+/**
+ * DTO representing a Discord server member.
+ * Contains member information including name, ID, and assigned roles.
+ */
+public class MemberDTO {
+    /** The display name of the member */
+    private String name;
+    /** The unique ID of the member */
+    private String id;
+    /** List of roles assigned to this member */
+    private List&lt;RoleDTO&gt; roles;
+
+    /**
+     * Default constructor.
+     */
+<span class="fc" id="L20">    public MemberDTO() {</span>
+        // Default constructor
+<span class="fc" id="L22">    }</span>
+
+    /**
+     * Gets the member name.
+     * @return The member display name
+     */
+    public String getName() {
+<span class="fc" id="L29">        return name;</span>
+    }
+
+    /**
+     * Sets the member name.
+     * @param name The member display name to set
+     */
+    public void setName(String name) {
+<span class="fc" id="L37">        this.name = name;</span>
+<span class="fc" id="L38">    }</span>
+
+    /**
+     * Gets the member ID.
+     * @return The unique member ID
+     */
+    public String getId() {
+<span class="fc" id="L45">        return id;</span>
+    }
+
+    /**
+     * Sets the member ID.
+     * @param id The unique member ID to set
+     */
+    public void setId(String id) {
+<span class="fc" id="L53">        this.id = id;</span>
+<span class="fc" id="L54">    }</span>
+
+    /**
+     * Gets the list of roles assigned to this member.
+     * @return List of roles
+     */
+    public List&lt;RoleDTO&gt; getRoles() {
+<span class="fc" id="L61">        return roles;</span>
+    }
+
+    /**
+     * Sets the list of roles for this member.
+     * @param roles List of roles to set
+     */
+    public void setRoles(List&lt;RoleDTO&gt; roles) {
+<span class="fc" id="L69">        this.roles = roles;</span>
+<span class="fc" id="L70">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

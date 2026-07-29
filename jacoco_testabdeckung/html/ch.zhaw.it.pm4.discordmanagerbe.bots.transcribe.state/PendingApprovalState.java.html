@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PendingApprovalState.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.state</a> &gt; <span class="el_source">PendingApprovalState.java</span></div><h1>PendingApprovalState.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.state;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.recordingsession.MultiUserRecordingSession;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.TranscribeBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility.BotMessages;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility.MessageKey;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.GuildVoiceState;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.managers.AudioManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationContext;
+import org.springframework.stereotype.Component;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+/**
+ * Represents the state when the bot is waiting for users to accept the recording.
+ * Handles user acceptances and transitions to RecordingState when all users have accepted.
+ */
+@Component
+public class PendingApprovalState extends AbstractBotState {
+<span class="fc" id="L31">    private static final Logger logger = LoggerFactory.getLogger(PendingApprovalState.class);</span>
+
+    private final ApplicationContext applicationContext;
+
+    /**
+     * Constructs a new PendingApprovalState with the specified bot.
+     * @param bot The TranscribeBot instance
+     */
+    public PendingApprovalState(TranscribeBot bot,
+                                ApplicationContext applicationContext) {
+<span class="fc" id="L41">        super(bot);</span>
+<span class="fc" id="L42">        this.applicationContext = applicationContext;</span>
+<span class="fc" id="L43">    }</span>
+
+    /**
+     * Handles leaving the voice channel, cleans up pending requests, and transitions to DisconnectedState.
+     * @param event The slash command event
+     */
+    @Override
+    public void leaveVoiceChannel(SlashCommandInteractionEvent event) {
+<span class="fc" id="L51">        AudioManager audioManager = bot.getActiveAudioManager();</span>
+<span class="fc bfc" id="L52" title="All 4 branches covered.">        if (audioManager != null &amp;&amp; audioManager.isConnected()) {</span>
+<span class="fc" id="L53">            logger.info(&quot;Leaving voice channel&quot;);</span>
+<span class="fc" id="L54">            unlockVoiceChannel(event);</span>
+<span class="fc" id="L55">            disconnectFromVoiceChannel(audioManager);</span>
+<span class="fc" id="L56">            cleanupChannelRequests(event);</span>
+<span class="fc" id="L57">            updateStateAndNotify(event);</span>
+        }
+<span class="fc" id="L59">    }</span>
+
+    /**
+     * Disconnects from the voice channel and cleans up audio resources.
+     * @param audioManager The audio manager to disconnect
+     */
+    private void disconnectFromVoiceChannel(AudioManager audioManager) {
+<span class="fc" id="L66">        audioManager.closeAudioConnection();</span>
+<span class="fc" id="L67">        bot.setActiveAudioManager(null);</span>
+<span class="fc" id="L68">    }</span>
+
+    /**
+     * Cleans up channel-specific request data when leaving a channel.
+     * @param event The slash command event
+     */
+    private void cleanupChannelRequests(SlashCommandInteractionEvent event) {
+<span class="fc" id="L75">        Member member = event.getMember();</span>
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">        if (member != null) {</span>
+<span class="fc" id="L77">            GuildVoiceState voiceState = member.getVoiceState();</span>
+<span class="pc bpc" id="L78" title="2 of 4 branches missed.">            if (voiceState != null &amp;&amp; voiceState.getChannel() != null) {</span>
+<span class="fc" id="L79">                String channelId = voiceState.getChannel().getId();</span>
+<span class="fc" id="L80">                removeChannelData(channelId);</span>
+            }
+        }
+<span class="fc" id="L83">    }</span>
+
+    /**
+     * Removes all data associated with a specific channel.
+     * @param channelId The ID of the channel to remove data for
+     */
+    private void removeChannelData(String channelId) {
+<span class="fc" id="L90">        bot.getPendingAcceptances().remove(channelId);</span>
+<span class="fc" id="L91">        bot.getAcceptedUsers().remove(channelId);</span>
+<span class="fc" id="L92">    }</span>
+
+    /**
+     * Updates the bot state and notifies the user of successful disconnection.
+     * @param event The slash command event
+     */
+    private void updateStateAndNotify(SlashCommandInteractionEvent event) {
+<span class="fc" id="L99">        bot.setState(bot.getDisconnectedState());</span>
+<span class="fc" id="L100">        event.getHook().sendMessage(BotMessages.get(MessageKey.LEAVE_SUCCESS)).queue();</span>
+<span class="fc" id="L101">        logger.info(&quot;Successfully left voice channel&quot;);</span>
+<span class="fc" id="L102">    }</span>
+
+    /**
+     * Unlocks the voice channel, clears all recording requests, and transitions to ConnectedState.
+     * @param event The slash command event
+     */
+    @Override
+    public void unlockVoiceChannel(SlashCommandInteractionEvent event) {
+<span class="fc" id="L110">        Member member = event.getMember();</span>
+<span class="fc" id="L111">        VoiceChannel voiceChannel = getAndValidateMemberVoiceChannel(member, event);</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        if (voiceChannel == null) {</span>
+<span class="fc" id="L113">            return;</span>
+        }
+
+<span class="fc" id="L116">        String channelId = voiceChannel.getId();</span>
+<span class="fc" id="L117">        bot.getPendingAcceptances().remove(channelId);</span>
+<span class="fc" id="L118">        bot.getAcceptedUsers().remove(channelId);</span>
+
+<span class="fc" id="L120">        unlockChannel(voiceChannel);</span>
+<span class="fc" id="L121">        event.getHook().sendMessage(BotMessages.get(MessageKey.CHANNEL_UNLOCK_WITH_CANCEL)).queue();</span>
+
+<span class="fc" id="L123">        bot.setState(bot.getConnectedState());</span>
+<span class="fc" id="L124">    }</span>
+
+    /**
+     * Processes a user's acceptance of recording and updates pending/accepted user lists.
+     * @param event The slash command event
+     */
+    @Override
+    public void handleAcceptRecording(SlashCommandInteractionEvent event) {
+<span class="fc" id="L132">        Member member = event.getMember();</span>
+<span class="fc" id="L133">        VoiceChannel channel = getAndValidateMemberVoiceChannel(member, event);</span>
+<span class="pc bpc" id="L134" title="1 of 2 branches missed.">        if (channel == null) {</span>
+<span class="nc" id="L135">            return;</span>
+        }
+
+<span class="fc" id="L138">        String channelId = channel.getId();</span>
+
+<span class="fc bfc" id="L140" title="All 2 branches covered.">        if (!validatePendingRequest(channelId, event)) {</span>
+<span class="fc" id="L141">            return;</span>
+        }
+
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">        assert member != null;</span>
+<span class="fc" id="L145">        processAcceptance(member, channelId);</span>
+<span class="fc" id="L146">        notifyAcceptanceStatus(member, event);</span>
+<span class="fc" id="L147">    }</span>
+
+    /**
+     * Validates that there is a pending recording request for the channel.
+     * @param channelId The ID of the channel to check
+     * @param event The slash command event
+     * @return True if there is a pending request, false otherwise
+     */
+    private boolean validatePendingRequest(String channelId, SlashCommandInteractionEvent event) {
+<span class="fc bfc" id="L156" title="All 2 branches covered.">        if (!bot.getPendingAcceptances().containsKey(channelId)) {</span>
+<span class="fc" id="L157">            event.getHook().sendMessage(BotMessages.get(MessageKey.NO_PENDING_REQUEST))</span>
+<span class="fc" id="L158">                    .setEphemeral(true).queue();</span>
+<span class="fc" id="L159">            return false;</span>
+        }
+<span class="fc" id="L161">        return true;</span>
+    }
+
+    /**
+     * Processes a user's acceptance of recording by updating the tracking collections.
+     * @param member The member who accepted
+     * @param channelId The ID of the channel
+     */
+    private void processAcceptance(Member member, String channelId) {
+<span class="fc" id="L170">        Set&lt;String&gt; accepted = bot.getAcceptedUsers().computeIfAbsent(channelId, k -&gt; new HashSet&lt;&gt;());</span>
+<span class="fc" id="L171">        accepted.add(member.getId());</span>
+
+<span class="fc" id="L173">        Set&lt;String&gt; pending = bot.getPendingAcceptances().get(channelId);</span>
+<span class="fc" id="L174">        pending.remove(member.getId());</span>
+<span class="fc" id="L175">    }</span>
+
+    /**
+     * Notifies the channel that a user has accepted the recording.
+     * @param acceptingMember The member who accepted
+     * @param event The slash command event
+     */
+    private void notifyAcceptanceStatus(Member acceptingMember, SlashCommandInteractionEvent event) {
+<span class="fc" id="L183">        event.getHook().sendMessage(BotMessages.get(MessageKey.RECORDING_ACCEPTED) + &quot; &quot; + acceptingMember.getEffectiveName()).queue();</span>
+<span class="fc" id="L184">    }</span>
+
+    /**
+     * Attempts to start recording if all users have accepted, otherwise shows pending users.
+     * @param event The slash command event
+     */
+    @Override
+    public void startRecording(SlashCommandInteractionEvent event) {
+<span class="nc" id="L192">        Member member = event.getMember();</span>
+<span class="nc" id="L193">        VoiceChannel channel = getAndValidateMemberVoiceChannel(member, event);</span>
+<span class="nc bnc" id="L194" title="All 2 branches missed.">        if (channel == null) {</span>
+<span class="nc" id="L195">            return;</span>
+        }
+
+<span class="nc bnc" id="L198" title="All 2 branches missed.">        if (!isChannelLocked(channel)) {</span>
+<span class="nc" id="L199">            event.getHook().sendMessage(BotMessages.get(MessageKey.LOCK_FIRST))</span>
+<span class="nc" id="L200">                    .setEphemeral(true).queue();</span>
+<span class="nc" id="L201">            return;</span>
+        }
+
+<span class="nc" id="L204">        String channelId = channel.getId();</span>
+
+<span class="nc bnc" id="L206" title="All 2 branches missed.">        if (hasPendingApprovals(channel, channelId, event)) {</span>
+<span class="nc" id="L207">            return;</span>
+        }
+
+<span class="nc" id="L210">        startRecordingSession(event, channel, channelId);</span>
+<span class="nc" id="L211">    }</span>
+
+    /**
+     * Checks if the voice channel is locked by verifying permission overrides.
+     * @param channel The voice channel to check
+     * @return True if the channel is locked, false otherwise
+     */
+    private boolean isChannelLocked(VoiceChannel channel) {
+<span class="nc" id="L219">        Role everyoneRole = channel.getGuild().getPublicRole();</span>
+<span class="nc bnc" id="L220" title="All 2 branches missed.">        return channel.getPermissionOverride(everyoneRole) != null &amp;&amp;</span>
+<span class="nc bnc" id="L221" title="All 2 branches missed.">                Objects.requireNonNull(channel.getPermissionOverride(everyoneRole)).getDenied().contains(Permission.VOICE_CONNECT);</span>
+    }
+
+    /**
+     * Checks if there are pending approvals for the channel and notifies the user if so.
+     * @param channel The voice channel
+     * @param channelId The ID of the channel
+     * @param event The slash command event
+     * @return True if there are pending approvals, false otherwise
+     */
+    private boolean hasPendingApprovals(VoiceChannel channel, String channelId, SlashCommandInteractionEvent event) {
+<span class="nc bnc" id="L232" title="All 2 branches missed.">        if (bot.getPendingAcceptances().containsKey(channelId) &amp;&amp;</span>
+<span class="nc bnc" id="L233" title="All 2 branches missed.">                !bot.getPendingAcceptances().get(channelId).isEmpty()) {</span>
+
+<span class="nc" id="L235">            notifyPendingApprovals(channel, channelId, event);</span>
+<span class="nc" id="L236">            return true;</span>
+        }
+<span class="nc" id="L238">        return false;</span>
+    }
+
+    /**
+     * Notifies the user about which members still need to approve the recording.
+     * @param channel The voice channel
+     * @param channelId The ID of the channel
+     * @param event The slash command event
+     */
+    private void notifyPendingApprovals(VoiceChannel channel, String channelId, SlashCommandInteractionEvent event) {
+<span class="nc" id="L248">        List&lt;String&gt; pendingNames = getPendingUserNames(channel, channelId);</span>
+
+<span class="nc" id="L250">        StringBuilder message = new StringBuilder();</span>
+
+<span class="nc bnc" id="L252" title="All 2 branches missed.">        if (pendingNames.isEmpty()) {</span>
+<span class="nc" id="L253">            message.append(BotMessages.get(MessageKey.ALL_APPROVED));</span>
+        } else {
+<span class="nc" id="L255">            message.append(BotMessages.get(MessageKey.WAITING_FOR_APPROVAL));</span>
+<span class="nc" id="L256">            message.append(&quot; **&quot;).append(String.join(&quot;**, **&quot;, pendingNames)).append(&quot;**&quot;);</span>
+        }
+
+<span class="nc" id="L259">        event.getHook().sendMessage(message.toString()).queue();</span>
+<span class="nc" id="L260">    }</span>
+
+    /**
+     * Gets a list of names of users who have not yet approved the recording.
+     * @param channel The voice channel
+     * @param channelId The ID of the channel
+     * @return A list of user names
+     */
+    private List&lt;String&gt; getPendingUserNames(VoiceChannel channel, String channelId) {
+<span class="nc" id="L269">        return channel.getMembers().stream()</span>
+<span class="nc" id="L270">                .filter(m -&gt; bot.getPendingAcceptances().get(channelId).contains(m.getId()))</span>
+<span class="nc" id="L271">                .map(Member::getEffectiveName)</span>
+<span class="nc" id="L272">                .collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Starts the recording session if not already active.
+     * @param event The slash command event
+     * @param channel The voice channel
+     * @param channelId The ID of the channel
+     */
+    private void startRecordingSession(SlashCommandInteractionEvent event, VoiceChannel channel, String channelId) {
+<span class="nc bnc" id="L282" title="All 2 branches missed.">        if (isRecordingActive(channelId, event)) {</span>
+<span class="nc" id="L283">            return;</span>
+        }
+
+        try {
+<span class="nc" id="L287">            createAndStartRecordingSession(channel, channelId);</span>
+<span class="nc" id="L288">            bot.setState(bot.getRecordingState());</span>
+<span class="nc" id="L289">            event.getHook().sendMessage(BotMessages.get(MessageKey.RECORDING_STARTED, channel)).queue();</span>
+<span class="nc" id="L290">        } catch (Exception e) {</span>
+<span class="nc" id="L291">            logger.error(&quot;Error starting recording&quot;, e);</span>
+<span class="nc" id="L292">            event.getHook().sendMessage(&quot;Fehler beim Starten der Aufnahme: &quot; + e.getMessage())</span>
+<span class="nc" id="L293">                    .setEphemeral(true).queue();</span>
+<span class="nc" id="L294">        }</span>
+<span class="nc" id="L295">    }</span>
+
+    /**
+     * Checks if there is already an active recording for the channel.
+     * @param channelId The ID of the channel to check
+     * @param event The slash command event
+     * @return True if there is an active recording, false otherwise
+     */
+    private boolean isRecordingActive(String channelId, SlashCommandInteractionEvent event) {
+<span class="nc bnc" id="L304" title="All 2 branches missed.">        if (bot.getActiveSessions().containsKey(channelId)) {</span>
+<span class="nc" id="L305">            event.getHook().sendMessage(BotMessages.get(MessageKey.RECORDING_ACTIVE))</span>
+<span class="nc" id="L306">                    .setEphemeral(true).queue();</span>
+<span class="nc" id="L307">            return true;</span>
+        }
+<span class="nc" id="L309">        return false;</span>
+    }
+
+    /**
+     * Creates and starts a new recording session for the channel.
+     * @param channel The voice channel
+     * @param channelId The ID of the channel
+     */
+    private void createAndStartRecordingSession(VoiceChannel channel, String channelId) {
+<span class="nc" id="L318">        MultiUserRecordingSession session = applicationContext.getBean(MultiUserRecordingSession.class);</span>
+<span class="nc" id="L319">        session.setAudioManager(bot.getActiveAudioManager());</span>
+<span class="nc" id="L320">        session.setChannel(channel);</span>
+<span class="nc" id="L321">        bot.getActiveSessions().put(channelId, session);</span>
+
+<span class="nc" id="L323">        bot.getActiveAudioManager().setReceivingHandler(session);</span>
+<span class="nc" id="L324">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

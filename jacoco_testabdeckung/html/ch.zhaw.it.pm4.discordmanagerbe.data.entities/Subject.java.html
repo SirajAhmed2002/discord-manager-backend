@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Subject.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.data.entities</a> &gt; <span class="el_source">Subject.java</span></div><h1>Subject.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.data.entities;
+
+import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Entity representing an academic subject with grades and Discord context.
+ * Manages subject information and calculates weighted grade averages.
+ */
+@Entity
+@Table(name = &quot;subjects&quot;,
+        uniqueConstraints = {
+                @UniqueConstraint(name = &quot;subject_server_channel_user_name_semester_unique&quot;,
+                        columnNames = {&quot;server_id&quot;, &quot;channel_id&quot;, &quot;user_id&quot;, &quot;name&quot;, &quot;semester&quot;})
+        })
+public class Subject {
+
+    /** Unique identifier for the subject */
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    /** Name of the subject */
+    @Column(name = &quot;name&quot;, nullable = false)
+    private String name;
+
+    /** Number of credits for this subject */
+    @Column(name = &quot;credits&quot;, nullable = false)
+    private int credits;
+
+    /** Semester when the subject is taken */
+    @Column(name = &quot;semester&quot;, nullable = true)
+    private String semester;
+
+    /** Discord server ID where subject is tracked */
+    @Column(name = &quot;server_id&quot;, nullable = false)
+    private String serverId;
+
+    /** Discord channel ID where subject is tracked */
+    @Column(name = &quot;channel_id&quot;, nullable = false)
+    private String channelId;
+
+    /** Discord user ID who owns this subject */
+    @Column(name = &quot;user_id&quot;, nullable = false)
+    private String userId;
+
+    /** List of grades associated with this subject */
+<span class="fc" id="L49">    @OneToMany(mappedBy = &quot;subject&quot;, cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)</span>
+    private List&lt;Grade&gt; grades = new ArrayList&lt;&gt;();
+
+    /**
+     * Default constructor.
+     */
+<span class="fc" id="L55">    public Subject() {}</span>
+
+    /**
+     * Creates a new subject with specified details.
+     *
+     * @param name subject name
+     * @param credits number of credits
+     * @param semester semester identifier
+     * @param serverId Discord server ID
+     * @param channelId Discord channel ID
+     * @param userId Discord user ID
+     */
+<span class="fc" id="L67">    public Subject(String name, int credits, String semester, String serverId, String channelId, String userId) {</span>
+<span class="fc" id="L68">        this.name = name;</span>
+<span class="fc" id="L69">        this.credits = credits;</span>
+<span class="fc" id="L70">        this.semester = semester;</span>
+<span class="fc" id="L71">        this.serverId = serverId;</span>
+<span class="fc" id="L72">        this.channelId = channelId;</span>
+<span class="fc" id="L73">        this.userId = userId;</span>
+<span class="fc" id="L74">    }</span>
+
+    /**
+     * Calculates the weighted average of all grades.
+     * Returns 0 if no grades exist or total weight is 0.
+     *
+     * @return weighted average grade
+     */
+    public double calculateAverage() {
+<span class="pc bpc" id="L83" title="1 of 2 branches missed.">        if (grades.isEmpty()) {</span>
+<span class="fc" id="L84">            return 0;</span>
+        }
+
+<span class="nc" id="L87">        double sumWeightedGrades = 0;</span>
+<span class="nc" id="L88">        double sumWeights = 0;</span>
+
+<span class="nc bnc" id="L90" title="All 2 branches missed.">        for (Grade grade : grades) {</span>
+<span class="nc" id="L91">            sumWeightedGrades += grade.getValue() * grade.getWeight();</span>
+<span class="nc" id="L92">            sumWeights += grade.getWeight();</span>
+<span class="nc" id="L93">        }</span>
+
+<span class="nc bnc" id="L95" title="All 2 branches missed.">        if (sumWeights == 0) {</span>
+<span class="nc" id="L96">            return 0;</span>
+        }
+
+<span class="nc" id="L99">        return sumWeightedGrades / sumWeights;</span>
+    }
+
+    /**
+     * Gets the subject ID.
+     *
+     * @return the subject ID
+     */
+    public Long getId() {
+<span class="nc" id="L108">        return id;</span>
+    }
+
+    /**
+     * Sets the subject ID.
+     *
+     * @param id the subject ID
+     */
+    public void setId(Long id) {
+<span class="fc" id="L117">        this.id = id;</span>
+<span class="fc" id="L118">    }</span>
+
+    /**
+     * Gets the subject name.
+     *
+     * @return the subject name
+     */
+    public String getName() {
+<span class="fc" id="L126">        return name;</span>
+    }
+
+    /**
+     * Sets the subject name.
+     *
+     * @param name the subject name
+     */
+    public void setName(String name) {
+<span class="nc" id="L135">        this.name = name;</span>
+<span class="nc" id="L136">    }</span>
+
+    /**
+     * Gets the number of credits.
+     *
+     * @return the credits
+     */
+    public int getCredits() {
+<span class="fc" id="L144">        return credits;</span>
+    }
+
+    /**
+     * Sets the number of credits.
+     *
+     * @param credits the credits
+     */
+    public void setCredits(int credits) {
+<span class="nc" id="L153">        this.credits = credits;</span>
+<span class="nc" id="L154">    }</span>
+
+    /**
+     * Gets the semester identifier.
+     *
+     * @return the semester
+     */
+    public String getSemester() {
+<span class="fc" id="L162">        return semester;</span>
+    }
+
+    /**
+     * Sets the semester identifier.
+     *
+     * @param semester the semester
+     */
+    public void setSemester(String semester) {
+<span class="nc" id="L171">        this.semester = semester;</span>
+<span class="nc" id="L172">    }</span>
+
+    /**
+     * Gets the Discord server ID.
+     *
+     * @return the server ID
+     */
+    public String getServerId() {
+<span class="nc" id="L180">        return serverId;</span>
+    }
+
+    /**
+     * Sets the Discord server ID.
+     *
+     * @param serverId the server ID
+     */
+    public void setServerId(String serverId) {
+<span class="nc" id="L189">        this.serverId = serverId;</span>
+<span class="nc" id="L190">    }</span>
+
+    /**
+     * Gets the Discord channel ID.
+     *
+     * @return the channel ID
+     */
+    public String getChannelId() {
+<span class="nc" id="L198">        return channelId;</span>
+    }
+
+    /**
+     * Sets the Discord channel ID.
+     *
+     * @param channelId the channel ID
+     */
+    public void setChannelId(String channelId) {
+<span class="nc" id="L207">        this.channelId = channelId;</span>
+<span class="nc" id="L208">    }</span>
+
+    /**
+     * Gets the Discord user ID.
+     *
+     * @return the user ID
+     */
+    public String getUserId() {
+<span class="nc" id="L216">        return userId;</span>
+    }
+
+    /**
+     * Sets the Discord user ID.
+     *
+     * @param userId the user ID
+     */
+    public void setUserId(String userId) {
+<span class="nc" id="L225">        this.userId = userId;</span>
+<span class="nc" id="L226">    }</span>
+
+    /**
+     * Gets the list of grades.
+     *
+     * @return the grades list
+     */
+    public List&lt;Grade&gt; getGrades() {
+<span class="fc" id="L234">        return grades;</span>
+    }
+
+    /**
+     * Sets the list of grades.
+     *
+     * @param grades the grades list
+     */
+    public void setGrades(List&lt;Grade&gt; grades) {
+<span class="nc" id="L243">        this.grades = grades;</span>
+<span class="nc" id="L244">    }</span>
+
+    /**
+     * Adds a grade to this subject and establishes bidirectional relationship.
+     *
+     * @param grade the grade to add
+     */
+    public void addGrade(Grade grade) {
+<span class="fc" id="L252">        grades.add(grade);</span>
+<span class="fc" id="L253">        grade.setSubject(this);</span>
+<span class="fc" id="L254">    }</span>
+
+    /**
+     * Removes a grade from this subject and clears bidirectional relationship.
+     *
+     * @param grade the grade to remove
+     */
+    public void removeGrade(Grade grade) {
+<span class="nc" id="L262">        grades.remove(grade);</span>
+<span class="nc" id="L263">        grade.setSubject(null);</span>
+<span class="nc" id="L264">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

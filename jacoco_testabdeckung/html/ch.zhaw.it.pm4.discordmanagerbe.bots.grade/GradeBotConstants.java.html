@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GradeBotConstants.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.grade</a> &gt; <span class="el_source">GradeBotConstants.java</span></div><h1>GradeBotConstants.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.grade;
+
+import java.awt.Color;
+
+/**
+ * Constants for the grade calculator bot
+ */
+public final class GradeBotConstants {
+
+    /**
+     * Private constructor to prevent instantiation of this utility class.
+     */
+    private GradeBotConstants() {
+        // Utility class - no instantiation
+    }
+
+    /**
+     * The name of the bot.
+     */
+    public static final String BOT_DESCRIPTION = 
+        &quot;Notenrechner Bot für Discord, der dir hilft, deine Noten zu verwalten und deinen Notendurchschnitt zu berechnen.&quot;;
+
+    /**
+     * The prefix for commands used by the bot.
+     */
+    public static final String CMD_CREATE_SUBJECT = &quot;fach-erstellen&quot;;
+
+    /**
+     * Command to add a grade to a subject.
+     */
+    public static final String CMD_ADD_GRADE = &quot;note-hinzufuegen&quot;;
+
+    /**
+     * Command to show subjects, grades, averages, and semesters.
+     */
+    public static final String CMD_SHOW_SUBJECTS = &quot;faecher-anzeigen&quot;;
+
+    /**
+     * Command to show grades for a specific subject.
+     */
+    public static final String CMD_SHOW_GRADES = &quot;noten-anzeigen&quot;;
+
+    /**
+     * Command to show the average grade.
+     */
+    public static final String CMD_SHOW_AVERAGE = &quot;durchschnitt&quot;;
+
+    /**
+     * Command to show all semesters.
+     */
+    public static final String CMD_SHOW_SEMESTERS = &quot;semester-anzeigen&quot;;
+
+    /**
+     * Command to remove a subject and all its grades.
+     */
+    public static final String CMD_REMOVE_SUBJECT = &quot;fach-loeschen&quot;;
+
+    /**
+     * Command to remove all grades from a subject.
+     */
+    public static final String CMD_REMOVE_GRADES = &quot;noten-loeschen&quot;;
+
+    /**
+     * Command to remove a semester and all its subjects.
+     */
+    public static final String CMD_REMOVE_SEMESTER = &quot;semester-loeschen&quot;;
+
+    /**
+     * Option &quot;name&quot; for commands that require a subject name.
+     */
+    public static final String OPT_NAME = &quot;name&quot;;
+
+    /**
+     * Option &quot;fach&quot; for commands that require a subject name.
+     */
+    public static final String OPT_FACH = &quot;fach&quot;;
+
+    /**
+     * Option &quot;note&quot; for commands that require a grade.
+     */
+    public static final String OPT_NOTE = &quot;note&quot;;
+
+    /**
+     * Option &quot;gewichtung&quot; for commands that require a weight for the grade.
+     */
+    public static final String OPT_GEWICHTUNG = &quot;gewichtung&quot;;
+
+    /**
+     * Option &quot;credits&quot; for commands that require the number of credits for a subject.
+     */
+    public static final String OPT_CREDITS = &quot;credits&quot;;
+
+    /**
+     * Option &quot;semester&quot; for commands that require a semester.
+     */
+    public static final String OPT_SEMESTER = &quot;semester&quot;;
+
+    /**
+     * Option &quot;beschreibung&quot; for commands that allow adding a description to a grade.
+     */
+    public static final String OPT_BESCHREIBUNG = &quot;beschreibung&quot;;
+
+    /**
+     * Success color for successful operations. Is typically green.
+     */
+<span class="fc" id="L106">    public static final Color SUCCESS_COLOR = Color.GREEN;</span>
+
+    /**
+     * Info color for informational messages. Is typically blue.
+     */
+<span class="fc" id="L111">    public static final Color INFO_COLOR = Color.BLUE;</span>
+
+    /**
+     * Error color for error messages. Is typically red.
+     */
+<span class="fc" id="L116">    public static final Color ERROR_COLOR = Color.RED;</span>
+
+    /**
+     * Tahiti Gold color, used for highlighting important information.
+     */
+<span class="fc" id="L121">    public static final Color TAHITI_GOLD = new Color(255, 165, 0);</span>
+
+    /**
+     * Unknown server identifier.
+     */
+    public static final String UNKNOWN_SERVER = &quot;unknown&quot;;
+
+    /**
+     * Default value for no semester
+     */
+    public static final String NO_SEMESTER = &quot;Ohne Semester&quot;;
+
+    /**
+     * Default value for no description
+     */
+    public static final String NO_DESCRIPTION = &quot;Keine Beschreibung&quot;;
+
+    /**
+     * Default value for no grades
+     */
+    public static final String NO_GRADES = &quot;Keine Noten&quot;;
+
+    /**
+     * Default value for an empty string, used in various contexts where a string is expected but no value is provided.
+     */
+    public static final String EMPTY_STRING = &quot;&quot;;
+
+    /**
+     * Grade normalization factor for converting grades &gt; 6.0 to a scale of 1.0 to 6.0.
+     */
+    public static final double GRADE_NORMALIZATION_FACTOR = 10.0;
+
+    /**
+     * Weight normalization factor for converting weights &gt; 1.0 to a scale of 0.0 to 1.0.
+     */
+    public static final double WEIGHT_NORMALIZATION_FACTOR = 100.0;
+
+    /**
+     * Min grade
+     */
+    public static final double MIN_GRADE = 1.0;
+
+    /**
+     * Max grade
+     */
+    public static final double MAX_GRADE = 6.0;
+
+    /**
+     * Min grade weight
+     */
+    public static final double MIN_WEIGHT = 0.0;
+
+    /**
+     * Max grade weight
+     */
+    public static final double MAX_WEIGHT = 1.0;
+
+    /**
+     * Percentage threshold for grade weights, used to determine if a weight is considered valid.
+     */
+    public static final double PERCENTAGE_THRESHOLD = 1.0;
+
+    /**
+     * Grade threshold for determining if a grade is considered passing.
+     */
+    public static final double GRADE_THRESHOLD = 6.0;
+    
+    /**
+     * Message no subjects created.
+     */
+    public static final String MSG_NO_SUBJECTS_CREATED = &quot;Du hast noch keine Fächer angelegt. Nutze `/%s` um zu beginnen.&quot;;
+
+    /**
+     * Message indicating no subjects for a specific semester.
+     */
+    public static final String MSG_NO_SUBJECTS_FOR_SEMESTER = &quot;Du hast noch keine Fächer für das Semester %s angelegt.&quot;;
+
+    /**
+     * Message no grades entered.
+     */
+    public static final String MSG_NO_GRADES_ENTERED = &quot;Du hast noch keine Noten eingetragen.&quot;;
+
+    /**
+     * Message indicating no semesters created.
+     */
+    public static final String MSG_NO_SEMESTERS = &quot;Du hast noch keine Semester angelegt.&quot;;
+
+    /**
+     * Message no data for a specific semester.
+     */
+    public static final String MSG_NO_DATA_FOR_SEMESTER = &quot;Keine Daten für das Semester %s gefunden.&quot;;
+
+    /**
+     * Message indicating a subject was not found.
+     */
+    public static final String MSG_SUBJECT_NOT_FOUND = &quot;Fach '%s' wurde nicht gefunden.&quot;;
+
+    /**
+     * Message no grades to remove for a specific subject.
+     */
+    public static final String MSG_NO_GRADES_TO_REMOVE = &quot;Das Fach '%s' hat keine Noten zum Löschen.&quot;;
+
+    /**
+     * Message indicating a semester was not found or is already empty.
+     */
+    public static final String MSG_SEMESTER_NOT_FOUND = &quot;Semester '%s' wurde nicht gefunden oder ist bereits leer.&quot;;
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

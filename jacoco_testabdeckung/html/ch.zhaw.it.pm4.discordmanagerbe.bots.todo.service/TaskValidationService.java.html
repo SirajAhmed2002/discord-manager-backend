@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TaskValidationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.todo.service</a> &gt; <span class="el_source">TaskValidationService.java</span></div><h1>TaskValidationService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.todo.service;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.todo.model.Task;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.todo.util.DateTimeUtils;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+/**
+ * Clean validation service following single responsibility principle.
+ * Encapsulates all task-related validation logic with clear, intention-revealing methods.
+ */
+@Service
+<span class="fc" id="L15">public class TaskValidationService {</span>
+
+    /**
+     * Validates task title according to business rules.
+     * @param title the task title to validate
+     * @return ValidationResult indicating success or failure with error message
+     */
+    public ValidationResult&lt;Void&gt; validateTaskTitle(String title) {
+<span class="fc bfc" id="L23" title="All 2 branches covered.">        if (isNullOrEmpty(title)) {</span>
+<span class="fc" id="L24">            return ValidationResult.failure(&quot;Title cannot be null or empty&quot;);</span>
+        }
+<span class="fc" id="L26">        return ValidationResult.success();</span>
+    }
+
+    /**
+     * Validates and parses date string with business rules.
+     * @param dateString the date string to validate and parse
+     * @return ValidationResult containing parsed LocalDate or error message
+     */
+    public ValidationResult&lt;LocalDate&gt; validateAndParseDate(String dateString) {
+<span class="fc bfc" id="L35" title="All 2 branches covered.">        if (isNullOrEmpty(dateString)) {</span>
+<span class="fc" id="L36">            return ValidationResult.success(null); // Empty date is allowed</span>
+        }
+
+<span class="fc" id="L39">        LocalDate parsedDate = DateTimeUtils.parseDate(dateString);</span>
+<span class="fc bfc" id="L40" title="All 2 branches covered.">        if (parsedDate == null) {</span>
+<span class="fc" id="L41">            return ValidationResult.failure(&quot;Invalid date format&quot;);</span>
+        }
+
+<span class="fc bfc" id="L44" title="All 2 branches covered.">        if (!DateTimeUtils.isValidFutureDate(parsedDate)) {</span>
+<span class="fc" id="L45">            return ValidationResult.failure(&quot;Date must be in the future or today&quot;);</span>
+        }
+
+<span class="fc" id="L48">        return ValidationResult.success(parsedDate);</span>
+    }
+
+    /**
+     * Validates and parses time string.
+     * Clean code: consistent with date validation, handles edge cases.
+     * @param timeString the time string to validate and parse
+     * @return ValidationResult containing parsed LocalTime or error message
+     */
+    public ValidationResult&lt;LocalTime&gt; validateAndParseTime(String timeString) {
+<span class="fc" id="L58">        LocalTime parsedTime = DateTimeUtils.parseTime(timeString);</span>
+<span class="pc bpc" id="L59" title="1 of 2 branches missed.">        if (parsedTime == null) {</span>
+<span class="nc" id="L60">            return ValidationResult.failure(&quot;Invalid time format&quot;);</span>
+        }
+<span class="fc" id="L62">        return ValidationResult.success(parsedTime);</span>
+    }
+
+    /**
+     * Validates datetime combination for task scheduling.
+     * @param time the LocalTime to validate (nullable)
+     * @param date the LocalDate to validate (nullable)
+     * @return ValidationResult indicating if the datetime is valid for scheduling
+     */
+    public ValidationResult&lt;Void&gt; validateScheduledDateTime(LocalTime time, LocalDate date) {
+<span class="fc bfc" id="L72" title="All 2 branches covered.">        if (!isValidDateTimeForScheduling(time, date)) {</span>
+<span class="fc" id="L73">            return ValidationResult.failure(&quot;Date and time must be in the future&quot;);</span>
+        }
+<span class="fc" id="L75">        return ValidationResult.success();</span>
+    }
+
+    /**
+     * Validates reminder parameters against business rules.
+     * @param reminderValue the reminder value as a string
+     * @param task the Task object containing reminder unit and time to be done
+     * @param currentTime the current time in milliseconds
+     * @return ValidationResult containing reminder duration or error message
+     */
+    public ValidationResult&lt;Long&gt; validateReminderConfiguration(String reminderValue, Task task, long currentTime) {
+<span class="fc" id="L86">        ValidationResult&lt;Long&gt; parseResult = parseReminderValue(reminderValue);</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        if (parseResult.isFailure()) {</span>
+<span class="fc" id="L88">            return parseResult;</span>
+        }
+
+<span class="fc" id="L91">        ValidationResult&lt;Void&gt; unitResult = validateReminderUnit(task);</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        if (unitResult.isFailure()) {</span>
+<span class="fc" id="L93">            return ValidationResult.failure(unitResult.getErrorMessage());</span>
+        }
+
+<span class="fc" id="L96">        return validateReminderTiming(parseResult.getData(), task, currentTime);</span>
+    }
+
+    /**
+     * Checks if a string is null or empty.
+     * @param input the string to check
+     * @return true if the string is null or empty, false otherwise
+     */
+    private boolean isNullOrEmpty(String input) {
+<span class="fc bfc" id="L105" title="All 4 branches covered.">        return input == null || input.trim().isEmpty();</span>
+    }
+
+    /**
+     * Validates if the provided time and date are suitable for scheduling a task.
+     * @param time the LocalTime to validate (nullable)
+     * @param date the LocalDate to validate (nullable)
+     * @return true if the datetime is valid for scheduling, false otherwise
+     */
+    private boolean isValidDateTimeForScheduling(LocalTime time, LocalDate date) {
+<span class="fc bfc" id="L115" title="All 6 branches covered.">        return time == null || date == null || DateTimeUtils.isValidFutureDateTime(time, date);</span>
+    }
+
+    /**
+     * Parses the reminder value from a string to a long.
+     * @param reminderValue the reminder value as a string
+     * @return ValidationResult containing the parsed long value or error message
+     */
+    private ValidationResult&lt;Long&gt; parseReminderValue(String reminderValue) {
+<span class="fc bfc" id="L124" title="All 2 branches covered.">        if (isNullOrEmpty(reminderValue)) {</span>
+<span class="fc" id="L125">            return ValidationResult.failure(&quot;Reminder value cannot be empty&quot;);</span>
+        }
+
+        try {
+<span class="fc" id="L129">            long value = Long.parseLong(reminderValue);</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">            if (value &lt;= 0) {</span>
+<span class="fc" id="L131">                return ValidationResult.failure(&quot;Reminder value must be positive&quot;);</span>
+            }
+<span class="fc" id="L133">            return ValidationResult.success(value);</span>
+<span class="fc" id="L134">        } catch (NumberFormatException e) {</span>
+<span class="fc" id="L135">            return ValidationResult.failure(&quot;Invalid reminder value format&quot;);</span>
+        }
+    }
+
+    /**
+     * Validates the reminder unit against business rules.
+     * @param task the Task object containing the reminder unit
+     * @return ValidationResult indicating success or failure with error message
+     */
+    private ValidationResult&lt;Void&gt; validateReminderUnit(Task task) {
+<span class="fc bfc" id="L145" title="All 2 branches covered.">        if (task.getReminderUnit() == null) {</span>
+<span class="fc" id="L146">            return ValidationResult.failure(&quot;Reminder unit must be selected&quot;);</span>
+        }
+<span class="fc" id="L148">        return ValidationResult.success();</span>
+    }
+
+    /**
+     * Validates the timing of the reminder based on the task's time to be done.
+     * @param reminderValue the reminder value in minutes
+     * @param task the Task object containing time to be done and reminder unit
+     * @param currentTime the current time in milliseconds
+     * @return ValidationResult containing the reminder duration or error message
+     */
+    private ValidationResult&lt;Long&gt; validateReminderTiming(long reminderValue, Task task, long currentTime) {
+<span class="fc" id="L159">        long reminderDuration = reminderValue * task.getReminderUnit().getMillis();</span>
+<span class="fc" id="L160">        long reminderDateTime = task.getTimeToBeDone() - reminderDuration;</span>
+
+<span class="pc bpc" id="L162" title="1 of 2 branches missed.">        if (reminderDateTime &lt; currentTime) {</span>
+<span class="fc" id="L163">            return ValidationResult.failure(&quot;Reminder time is in the past&quot;);</span>
+        }
+
+<span class="nc" id="L166">        return ValidationResult.success(reminderDuration);</span>
+    }
+
+    /**
+     * Validation result class
+     */
+    public static class ValidationResult&lt;T&gt; {
+        /**
+         * Represents the result of a validation operation.
+         */
+        private final boolean successful;
+
+        /**
+         * Error message if validation failed.
+         */
+        private final String errorMessage;
+
+        /**
+         * Data returned if validation was successful.
+         */
+        private final T data;
+
+        /**
+         * Private constructor for ValidationResult.
+         * @param successful indicates if validation was successful
+         * @param errorMessage error message if validation failed
+         * @param data data returned if validation was successful
+         */
+<span class="fc" id="L194">        private ValidationResult(boolean successful, String errorMessage, T data) {</span>
+<span class="fc" id="L195">            this.successful = successful;</span>
+<span class="fc" id="L196">            this.errorMessage = errorMessage;</span>
+<span class="fc" id="L197">            this.data = data;</span>
+<span class="fc" id="L198">        }</span>
+
+        /**
+         * Creates a successful validation result with data.
+         * @param data the data to return if validation was successful
+         * @return ValidationResult indicating success with data
+         * @param &lt;T&gt; the type of data returned
+         */
+        public static &lt;T&gt; ValidationResult&lt;T&gt; success(T data) {
+<span class="fc" id="L207">            return new ValidationResult&lt;&gt;(true, null, data);</span>
+        }
+
+        /**
+         * Creates a successful validation result without data.
+         * @return ValidationResult indicating success without data
+         */
+        public static ValidationResult&lt;Void&gt; success() {
+<span class="fc" id="L215">            return new ValidationResult&lt;&gt;(true, null, null);</span>
+        }
+
+        /**
+         * Creates a failed validation result with an error message.
+         * @param errorMessage the error message indicating why validation failed
+         * @return ValidationResult indicating failure with error message
+         * @param &lt;T&gt; the type of data returned (can be null for failure)
+         */
+        public static &lt;T&gt; ValidationResult&lt;T&gt; failure(String errorMessage) {
+<span class="fc" id="L225">            return new ValidationResult&lt;&gt;(false, errorMessage, null);</span>
+        }
+
+        /**
+         * Checks if the validation was successful.
+         * @return true if validation was successful, false otherwise
+         */
+        public boolean isSuccess() {
+<span class="fc" id="L233">            return successful;</span>
+        }
+
+        /**
+         * Checks if the validation failed.
+         * @return true if validation failed, false otherwise
+         */
+        public boolean isFailure() {
+<span class="fc bfc" id="L241" title="All 2 branches covered.">            return !successful;</span>
+        }
+
+        /**
+         * Gets the error message if validation failed.
+         * @return the error message, or null if validation was successful
+         */
+        public String getErrorMessage() {
+<span class="fc" id="L249">            return errorMessage;</span>
+        }
+
+        /**
+         * Gets the data returned if validation was successful.
+         * @return the data, or null if validation failed
+         */
+        public T getData() {
+<span class="fc" id="L257">            return data;</span>
+        }
+
+        /**
+         * Checks if there is data available in the result.
+         * @return true if data is present, false otherwise
+         */
+        public boolean hasData() {
+<span class="fc bfc" id="L265" title="All 2 branches covered.">            return data != null;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

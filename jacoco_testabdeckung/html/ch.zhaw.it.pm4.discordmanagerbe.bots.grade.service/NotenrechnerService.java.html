@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotenrechnerService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.grade.service</a> &gt; <span class="el_source">NotenrechnerService.java</span></div><h1>NotenrechnerService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.grade.service;
+
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.Grade;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.Subject;
+import ch.zhaw.it.pm4.discordmanagerbe.data.repositories.GradeRepository;
+import ch.zhaw.it.pm4.discordmanagerbe.data.repositories.SubjectRepository;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.AddGradeRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@Service
+public class NotenrechnerService {
+
+    /**
+     * Service for managing subjects and grades in the grade calculator bot.
+     */
+<span class="fc" id="L25">    private static final Logger log = LoggerFactory.getLogger(NotenrechnerService.class);</span>
+
+    /**
+     * Repository for accessing subjects in the database.
+     */
+    private final SubjectRepository subjectRepository;
+
+    /**
+     * Repository for accessing grades in the database.
+     */
+    private final GradeRepository gradeRepository;
+
+    /**
+     * Service for validating and normalizing grade-related parameters.
+     */
+    private final GradeValidationService validationService;
+
+    /**
+     * Constructor for NotenrechnerService.
+     */
+    @Autowired
+    public NotenrechnerService(
+        SubjectRepository subjectRepository,
+        GradeRepository gradeRepository,
+<span class="fc" id="L49">        GradeValidationService validationService) {</span>
+
+<span class="fc" id="L51">        this.subjectRepository = subjectRepository;</span>
+<span class="fc" id="L52">        this.gradeRepository = gradeRepository;</span>
+<span class="fc" id="L53">        this.validationService = validationService;</span>
+<span class="fc" id="L54">    }</span>
+
+    /**
+     * Creates a new subject for a server/channel/user combination
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @param subjectName Name of the subject
+     * @param credits Number of credits
+     * @param semester Semester in which the subject is taken
+     * @return The created subject
+     */
+    @Transactional
+    public Subject createSubject(String serverId, String channelId, String userId, 
+                               String subjectName, int credits, String semester) {
+<span class="fc" id="L69">        log.info(&quot;Creating subject {} with {} credits for semester {} and server/channel/user: {}/{}/{}&quot;, </span>
+<span class="fc" id="L70">                 subjectName, credits, semester, serverId, channelId, userId);</span>
+
+<span class="fc" id="L72">        validationService.validateCreateSubjectParameters(subjectName, credits);</span>
+
+<span class="fc" id="L74">        Optional&lt;Subject&gt; existingSubject = subjectRepository.findByServerIdAndChannelIdAndUserIdAndNameAndSemester(</span>
+            serverId, channelId, userId, subjectName, semester);
+            
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        if (existingSubject.isPresent()) {</span>
+<span class="fc" id="L78">            throw new IllegalArgumentException(&quot;Fach &quot; + subjectName + &quot; existiert bereits im Semester &quot; + semester + &quot;!&quot;);</span>
+        }
+
+<span class="fc" id="L81">        Subject subject = new Subject(subjectName, credits, semester, serverId, channelId, userId);</span>
+<span class="fc" id="L82">        return subjectRepository.save(subject);</span>
+    }
+
+    /**
+     * Adds a grade to a subject - new overload with AddGradeRequest
+     * @param request The request containing the required parameters
+     * @return The added grade
+     */
+    @Transactional
+    public Grade addGrade(AddGradeRequest request) {
+<span class="fc" id="L92">        return addGrade(</span>
+<span class="fc" id="L93">            request.serverId(), request.channelId(), request.userId(),</span>
+<span class="fc" id="L94">            request.subjectName(), request.semester(),</span>
+<span class="fc" id="L95">            request.note(), request.weight(), request.description()</span>
+        );
+    }
+
+    /**
+     * Adds a grade to a subject - existing method
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @param subjectName Name of the subject
+     * @param semester Semester in which the grade is entered
+     * @param value Value of the grade
+     * @param weight Weight of the grade
+     * @param description Description of the grade (optional)
+     * @return The added grade
+     */
+    @Transactional
+    public Grade addGrade(String serverId, String channelId, String userId, 
+                         String subjectName, String semester,
+                         double value, double weight, String description) {
+<span class="fc" id="L115">        log.info(&quot;Adding grade {} with weight {} to subject {} (semester {}) for server/channel/user: {}/{}/{}&quot;, </span>
+<span class="fc" id="L116">                 value, weight, subjectName, semester, serverId, channelId, userId);</span>
+        
+        // Validierung und Normalisierung
+<span class="fc" id="L119">        double normalizedValue = validationService.normalizeGrade(value);</span>
+<span class="fc" id="L120">        double normalizedWeight = validationService.normalizeWeight(weight);</span>
+        
+<span class="fc" id="L122">        validationService.validateAddGradeParameters(subjectName, normalizedValue, normalizedWeight);</span>
+        
+        // Fach suchen
+<span class="fc" id="L125">        Subject subject = findSubject(serverId, channelId, userId, subjectName, semester);</span>
+        
+        // Note hinzufügen
+<span class="pc bpc" id="L128" title="1 of 2 branches missed.">        Grade grade = new Grade(normalizedValue, normalizedWeight, description != null ? description : &quot;&quot;, subject);</span>
+<span class="fc" id="L129">        subject.addGrade(grade);</span>
+        
+<span class="fc" id="L131">        return gradeRepository.save(grade);</span>
+    }
+
+    /**
+     * Removes a subject and all its grades
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @param subjectName Name of the subject to remove
+     * @param semester Semester of the subject
+     * @return true if the subject was successfully removed, false if it was not found
+     */
+    @Transactional
+    public boolean removeSubject(String serverId, String channelId, String userId, 
+                               String subjectName, String semester) {
+<span class="fc" id="L146">        log.info(&quot;Removing subject {} (semester {}) for server/channel/user: {}/{}/{}&quot;, </span>
+                 subjectName, semester, serverId, channelId, userId);
+        
+<span class="fc" id="L149">        Optional&lt;Subject&gt; subjectOpt = subjectRepository.findByServerIdAndChannelIdAndUserIdAndNameAndSemester(</span>
+            serverId, channelId, userId, subjectName, semester);
+        
+<span class="fc bfc" id="L152" title="All 2 branches covered.">        if (subjectOpt.isPresent()) {</span>
+<span class="fc" id="L153">            Subject subject = subjectOpt.get();</span>
+            
+            // First remove all grades
+<span class="fc" id="L156">            gradeRepository.deleteBySubject(subject);</span>
+            
+            // Then remove the subject
+<span class="fc" id="L159">            subjectRepository.delete(subject);</span>
+            
+<span class="fc" id="L161">            log.info(&quot;Successfully removed subject {} with {} grades&quot;, </span>
+<span class="fc" id="L162">                     subjectName, subject.getGrades().size());</span>
+<span class="fc" id="L163">            return true;</span>
+        }
+        
+<span class="fc" id="L166">        log.warn(&quot;Subject {} not found for removal&quot;, subjectName);</span>
+<span class="fc" id="L167">        return false;</span>
+    }
+
+    /**
+     * Removes all grades from a specific subject
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @param subjectName Name of the subject
+     * @param semester Semester of the subject
+     * @return the number of grades removed, or 0 if no grades were found
+     */
+    @Transactional
+    public int removeAllGradesFromSubject(String serverId, String channelId, String userId, 
+                                         String subjectName, String semester) {
+<span class="fc" id="L182">        log.info(&quot;Removing all grades from subject {} (semester {}) for server/channel/user: {}/{}/{}&quot;, </span>
+                 subjectName, semester, serverId, channelId, userId);
+        
+<span class="fc" id="L185">        Subject subject = findSubject(serverId, channelId, userId, subjectName, semester);</span>
+<span class="fc" id="L186">        int gradeCount = subject.getGrades().size();</span>
+        
+<span class="pc bpc" id="L188" title="1 of 2 branches missed.">        if (gradeCount == 0) {</span>
+<span class="nc" id="L189">            log.info(&quot;No grades found in subject {} to remove&quot;, subjectName);</span>
+<span class="nc" id="L190">            return 0;</span>
+        }
+        
+        // Remove all grades from the subject
+<span class="fc" id="L194">        gradeRepository.deleteBySubject(subject);</span>
+        
+        // Clear the grades list in the subject entity
+<span class="fc" id="L197">        subject.getGrades().clear();</span>
+        
+<span class="fc" id="L199">        log.info(&quot;Successfully removed {} grades from subject {}&quot;, gradeCount, subjectName);</span>
+<span class="fc" id="L200">        return gradeCount;</span>
+    }
+
+    /**
+     * Removes all subjects in a semester
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @param semester Semester to remove
+     * @return the number of subjects removed, or 0 if no subjects were found
+     */
+    @Transactional
+    public int removeSemester(String serverId, String channelId, String userId, String semester) {
+<span class="fc" id="L213">        log.info(&quot;Removing semester {} for server/channel/user: {}/{}/{}&quot;, </span>
+                 semester, serverId, channelId, userId);
+        
+<span class="fc" id="L216">        List&lt;Subject&gt; subjects = subjectRepository.findByServerIdAndChannelIdAndUserIdAndSemester(</span>
+            serverId, channelId, userId, semester);
+        
+<span class="pc bpc" id="L219" title="1 of 2 branches missed.">        if (subjects.isEmpty()) {</span>
+<span class="nc" id="L220">            log.warn(&quot;No subjects found in semester {} for removal&quot;, semester);</span>
+<span class="nc" id="L221">            return 0;</span>
+        }
+        
+        // Remove all grades first
+<span class="fc bfc" id="L225" title="All 2 branches covered.">        for (Subject subject : subjects) {</span>
+<span class="fc" id="L226">            gradeRepository.deleteBySubject(subject);</span>
+<span class="fc" id="L227">        }</span>
+        
+        // Then remove all subjects
+<span class="fc" id="L230">        subjectRepository.deleteAll(subjects);</span>
+        
+<span class="fc" id="L232">        int removedCount = subjects.size();</span>
+<span class="fc" id="L233">        log.info(&quot;Successfully removed semester {} with {} subjects&quot;, semester, removedCount);</span>
+<span class="fc" id="L234">        return removedCount;</span>
+    }
+
+    /**
+     * Returns a list of all available semesters
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @return List of semesters
+     */
+    @Transactional(readOnly = true)
+    public List&lt;String&gt; getSemesters(String serverId, String channelId, String userId) {
+<span class="nc" id="L246">        return subjectRepository.findSemestersByServerIdAndChannelIdAndUserId(serverId, channelId, userId);</span>
+    }
+
+    /**
+     * Returns an overview of all subjects for a server/channel/user combination
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @return List of subjects
+     */
+    @Transactional(readOnly = true)
+    public List&lt;Subject&gt; getSubjects(String serverId, String channelId, String userId) {
+<span class="nc" id="L258">        log.info(&quot;Fetching subjects for server/channel/user: {}/{}/{}&quot;, serverId, channelId, userId);</span>
+<span class="nc" id="L259">        return subjectRepository.findByServerIdAndChannelIdAndUserId(serverId, channelId, userId);</span>
+    }
+
+    /**
+     * Returns an overview of all subjects for a specific semester
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @param semester Semester for which the subjects are queried
+     * @return List of subjects for the specified semester
+     */
+    @Transactional(readOnly = true)
+    public List&lt;Subject&gt; getSubjectsForSemester(String serverId, String channelId, String userId, String semester) {
+<span class="nc" id="L272">        log.info(&quot;Fetching subjects for semester {} and server/channel/user: {}/{}/{}&quot;, </span>
+                 semester, serverId, channelId, userId);
+<span class="nc" id="L274">        return subjectRepository.findByServerIdAndChannelIdAndUserIdAndSemester(serverId, channelId, userId, semester);</span>
+    }
+
+    /**
+     * Retrieves the grades for a specific subject
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @param subjectName Name of the subject
+     * @param semester Semester in which the subject is taken
+     * @return List of grades for the subject
+     */
+    @Transactional(readOnly = true)
+    public List&lt;Grade&gt; getGradesForSubject(String serverId, String channelId, String userId, 
+                                          String subjectName, String semester) {
+<span class="nc" id="L289">        log.info(&quot;Fetching grades for subject {} (semester {}) of server/channel/user: {}/{}/{}&quot;, </span>
+                 subjectName, semester, serverId, channelId, userId);
+        
+<span class="nc" id="L292">        Subject subject = findSubject(serverId, channelId, userId, subjectName, semester);</span>
+<span class="nc" id="L293">        return gradeRepository.findBySubjectOrderByCreatedAtDesc(subject);</span>
+    }
+
+    /**
+     * Calculates the weighted average for a subject
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @param subjectName Name of the subject
+     * @param semester Semester in which the subject is taken
+     * @return The weighted average for the subject
+     */
+    @Transactional(readOnly = true)
+    public double calculateSubjectAverage(String serverId, String channelId, String userId, 
+                                         String subjectName, String semester) {
+<span class="fc" id="L308">        Subject subject = findSubject(serverId, channelId, userId, subjectName, semester);</span>
+<span class="fc" id="L309">        return subject.calculateAverage();</span>
+    }
+
+    /**
+     * Calculates the weighted overall average (weighted by credits) for a semester
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @param semester Semester for which the average is calculated
+     * @return The weighted average for the semester
+     */
+    @Transactional(readOnly = true)
+    public double calculateSemesterAverage(String serverId, String channelId, String userId, String semester) {
+<span class="nc" id="L322">        List&lt;Subject&gt; subjects = subjectRepository.findByServerIdAndChannelIdAndUserIdAndSemester(</span>
+            serverId, channelId, userId, semester);
+        
+<span class="nc" id="L325">        return calculateAverageForSubjects(subjects);</span>
+    }
+
+    /**
+     * Calculates the weighted overall average (weighted by credits) for all semesters
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @return The weighted overall average for all subjects of the user
+     */
+    @Transactional(readOnly = true)
+    public double calculateOverallAverage(String serverId, String channelId, String userId) {
+<span class="nc" id="L337">        List&lt;Subject&gt; subjects = subjectRepository.findByServerIdAndChannelIdAndUserId(serverId, channelId, userId);</span>
+        
+<span class="nc" id="L339">        return calculateAverageForSubjects(subjects);</span>
+    }
+
+    /**
+     * Returns an overview of all subjects with their averages, grouped by semester
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @return A map with semesters as keys and subjects with their averages as values
+     */
+    @Transactional(readOnly = true)
+    public Map&lt;String, Object&gt; getSummary(String serverId, String channelId, String userId) {
+<span class="fc" id="L351">        List&lt;Subject&gt; allSubjects = subjectRepository.findByServerIdAndChannelIdAndUserId(serverId, channelId, userId);</span>
+<span class="fc" id="L352">        List&lt;String&gt; semesters = subjectRepository.findSemestersByServerIdAndChannelIdAndUserId(serverId, channelId, userId);</span>
+        
+        // Fächer ohne Semester auch berücksichtigen
+<span class="pc bpc" id="L355" title="3 of 6 branches missed.">        if (allSubjects.stream().anyMatch(s -&gt; s.getSemester() == null || s.getSemester().isEmpty())) {</span>
+<span class="nc" id="L356">            semesters.add(&quot;Ohne Semester&quot;);</span>
+        }
+        
+<span class="fc" id="L359">        Map&lt;String, Object&gt; summary = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L360">        Map&lt;String, Object&gt; semesterMap = new HashMap&lt;&gt;();</span>
+        
+        // Für jedes Semester einen Eintrag erstellen
+<span class="fc bfc" id="L363" title="All 2 branches covered.">        for (String semester : semesters) {</span>
+<span class="fc" id="L364">            List&lt;Subject&gt; semesterSubjects = getSemesterSubjects(allSubjects, semester);</span>
+<span class="fc" id="L365">            double semesterAverage = calculateAverageForSubjects(semesterSubjects);</span>
+            
+<span class="fc" id="L367">            Map&lt;String, Object&gt; semesterInfo = createSemesterInfo(semesterAverage, semesterSubjects);</span>
+<span class="fc" id="L368">            semesterMap.put(semester, semesterInfo);</span>
+<span class="fc" id="L369">        }</span>
+        
+<span class="fc" id="L371">        summary.put(&quot;semesters&quot;, semesterMap);</span>
+<span class="fc" id="L372">        summary.put(&quot;overallAverage&quot;, calculateAverageForSubjects(allSubjects));</span>
+        
+<span class="fc" id="L374">        return summary;</span>
+    }
+
+    /**
+     * Helper method to calculate the weighted average for a list of subjects
+     * @param subjects List of subjects
+     * @return The weighted average for the subjects, 0.0 if no subjects with grades are present
+     */
+    private double calculateAverageForSubjects(List&lt;Subject&gt; subjects) {
+<span class="fc" id="L383">        double totalWeightedAverage = 0.0;</span>
+<span class="fc" id="L384">        int totalCredits = 0;</span>
+        
+<span class="fc bfc" id="L386" title="All 2 branches covered.">        for (Subject subject : subjects) {</span>
+<span class="fc" id="L387">            double average = subject.calculateAverage();</span>
+<span class="pc bpc" id="L388" title="1 of 2 branches missed.">            if (average &gt; 0) { // Nur Fächer mit Noten berücksichtigen</span>
+<span class="nc" id="L389">                totalWeightedAverage += average * subject.getCredits();</span>
+<span class="nc" id="L390">                totalCredits += subject.getCredits();</span>
+            }
+<span class="fc" id="L392">        }</span>
+        
+<span class="pc bpc" id="L394" title="1 of 2 branches missed.">        if (totalCredits == 0) {</span>
+<span class="fc" id="L395">            return 0.0;</span>
+        }
+        
+<span class="nc" id="L398">        return totalWeightedAverage / totalCredits;</span>
+    }
+
+    /**
+     * Helper method to find a subject
+     * @param serverId ID of the Discord server
+     * @param channelId ID of the Discord channel
+     * @param userId ID of the Discord user
+     * @param subjectName Name of the subject
+     * @param semester Semester in which the subject is taken
+     * @return The found subject
+     */
+    private Subject findSubject(String serverId, String channelId, String userId, String subjectName, String semester) {
+<span class="fc" id="L411">        return subjectRepository.findByServerIdAndChannelIdAndUserIdAndNameAndSemester(</span>
+            serverId, channelId, userId, subjectName, semester)
+<span class="fc" id="L413">            .orElseThrow(() -&gt; new IllegalArgumentException(</span>
+<span class="fc" id="L414">                String.format(&quot;Fach '%s' im Semester '%s' nicht gefunden!&quot;, subjectName, semester)));</span>
+    }
+
+    /**
+     * Helper method to filter subjects by semester
+     * @param allSubjects List of all subjects
+     * @param semester Semester for which the subjects should be filtered
+     * @return List of subjects for the specified semester
+     */
+    private List&lt;Subject&gt; getSemesterSubjects(List&lt;Subject&gt; allSubjects, String semester) {
+<span class="pc bpc" id="L424" title="1 of 2 branches missed.">        if (&quot;Ohne Semester&quot;.equals(semester)) {</span>
+<span class="nc" id="L425">            return allSubjects.stream()</span>
+<span class="nc bnc" id="L426" title="All 4 branches missed.">                .filter(s -&gt; s.getSemester() == null || s.getSemester().isEmpty())</span>
+<span class="nc" id="L427">                .toList();</span>
+        } else {
+<span class="fc" id="L429">            return allSubjects.stream()</span>
+<span class="fc" id="L430">                .filter(s -&gt; semester.equals(s.getSemester()))</span>
+<span class="fc" id="L431">                .toList();</span>
+        }
+    }
+
+    /**
+     * Helper method to create the semester info map
+     * @param semesterAverage Average for the semester
+     * @param semesterSubjects List of subjects for the semester
+     * @return Map with information about the semester
+     */
+    private Map&lt;String, Object&gt; createSemesterInfo(double semesterAverage, List&lt;Subject&gt; semesterSubjects) {
+<span class="fc" id="L442">        Map&lt;String, Object&gt; semesterInfo = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L443">        semesterInfo.put(&quot;average&quot;, semesterAverage);</span>
+        
+<span class="fc" id="L445">        Map&lt;String, Object&gt; subjectMap = new HashMap&lt;&gt;();</span>
+        
+<span class="fc bfc" id="L447" title="All 2 branches covered.">        for (Subject subject : semesterSubjects) {</span>
+<span class="fc" id="L448">            double average = subject.calculateAverage();</span>
+<span class="fc" id="L449">            Map&lt;String, Object&gt; subjectInfo = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L450">            subjectInfo.put(&quot;average&quot;, average);</span>
+<span class="fc" id="L451">            subjectInfo.put(&quot;credits&quot;, subject.getCredits());</span>
+<span class="fc" id="L452">            subjectInfo.put(&quot;gradeCount&quot;, subject.getGrades().size());</span>
+            
+<span class="fc" id="L454">            subjectMap.put(subject.getName(), subjectInfo);</span>
+<span class="fc" id="L455">        }</span>
+        
+<span class="fc" id="L457">        semesterInfo.put(&quot;subjects&quot;, subjectMap);</span>
+<span class="fc" id="L458">        return semesterInfo;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

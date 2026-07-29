@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DiscordServer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.data.entities</a> &gt; <span class="el_source">DiscordServer.java</span></div><h1>DiscordServer.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.data.entities;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.SlashCommandBotType;
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+
+/**
+ * Entity representing a Discord server with enabled bot configurations.
+ * Manages bot activation states and server metadata.
+ */
+@Entity
+@Table(name = &quot;discord_servers&quot;)
+public class DiscordServer {
+
+    /** Unique Discord server identifier */
+    @Id
+    @Column(name = &quot;server_id&quot;, nullable = false)
+    private String serverId;
+
+    /** Display name of the Discord server */
+    @Column(name = &quot;server_name&quot;, nullable = false)
+    private String serverName;
+
+    /** Discord ID of the server owner */
+    @Column(name = &quot;owner_id&quot;)
+    private String ownerId;
+
+    /** Timestamp when the server was first registered */
+    @Column(name = &quot;created_at&quot;, nullable = false)
+    private LocalDateTime createdAt;
+
+    /** Timestamp of the last server update */
+    @Column(name = &quot;updated_at&quot;)
+    private LocalDateTime updatedAt;
+
+    /** Set of enabled bot types for this server */
+<span class="fc" id="L39">    @ElementCollection(fetch = FetchType.EAGER)</span>
+    @CollectionTable(
+            name = &quot;server_enabled_bots&quot;,
+            joinColumns = @JoinColumn(name = &quot;server_id&quot;)
+    )
+    @Column(name = &quot;bot_type&quot;)
+    @Enumerated(EnumType.STRING)
+    private Set&lt;SlashCommandBotType&gt; enabledBots = new HashSet&lt;&gt;();
+
+    /**
+     * Default constructor initializing creation timestamp.
+     */
+<span class="fc" id="L51">    public DiscordServer() {</span>
+<span class="fc" id="L52">        this.createdAt = LocalDateTime.now();</span>
+<span class="fc" id="L53">    }</span>
+
+    /**
+     * Creates a new Discord server with specified details.
+     *
+     * @param serverId Discord server ID
+     * @param serverName server display name
+     * @param ownerId Discord ID of the server owner
+     */
+<span class="fc" id="L62">    public DiscordServer(String serverId, String serverName, String ownerId) {</span>
+<span class="fc" id="L63">        this.serverId = serverId;</span>
+<span class="fc" id="L64">        this.serverName = serverName;</span>
+<span class="fc" id="L65">        this.ownerId = ownerId;</span>
+<span class="fc" id="L66">        this.createdAt = LocalDateTime.now();</span>
+        // All bots are disabled by default (empty set)
+<span class="fc" id="L68">    }</span>
+
+    /**
+     * Enables a specific bot type for this server.
+     * Updates the modification timestamp if successful.
+     *
+     * @param botType the bot type to enable
+     * @return true if the bot was newly enabled, false if already enabled
+     */
+    public boolean enableBot(SlashCommandBotType botType) {
+<span class="fc" id="L78">        boolean added = enabledBots.add(botType);</span>
+<span class="pc bpc" id="L79" title="1 of 2 branches missed.">        if (added) {</span>
+<span class="fc" id="L80">            this.updatedAt = LocalDateTime.now();</span>
+        }
+<span class="fc" id="L82">        return added;</span>
+    }
+
+    /**
+     * Disables a specific bot type for this server.
+     * Updates the modification timestamp if successful.
+     *
+     * @param botType the bot type to disable
+     * @return true if the bot was disabled, false if not previously enabled
+     */
+    public boolean disableBot(SlashCommandBotType botType) {
+<span class="nc" id="L93">        boolean removed = enabledBots.remove(botType);</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">        if (removed) {</span>
+<span class="nc" id="L95">            this.updatedAt = LocalDateTime.now();</span>
+        }
+<span class="nc" id="L97">        return removed;</span>
+    }
+
+    /**
+     * Checks if a specific bot type is enabled for this server.
+     *
+     * @param botType the bot type to check
+     * @return true if the bot is enabled, false otherwise
+     */
+    public boolean isBotEnabled(SlashCommandBotType botType) {
+<span class="nc" id="L107">        return enabledBots.contains(botType);</span>
+    }
+
+    /**
+     * Gets the Discord server ID.
+     *
+     * @return the server ID
+     */
+    public String getServerId() {
+<span class="fc" id="L116">        return serverId;</span>
+    }
+
+    /**
+     * Sets the Discord server ID.
+     *
+     * @param serverId the server ID
+     */
+    public void setServerId(String serverId) {
+<span class="nc" id="L125">        this.serverId = serverId;</span>
+<span class="nc" id="L126">    }</span>
+
+    /**
+     * Gets the server display name.
+     *
+     * @return the server name
+     */
+    public String getServerName() {
+<span class="fc" id="L134">        return serverName;</span>
+    }
+
+    /**
+     * Sets the server display name and updates modification timestamp.
+     *
+     * @param serverName the server name
+     */
+    public void setServerName(String serverName) {
+<span class="fc" id="L143">        this.serverName = serverName;</span>
+<span class="fc" id="L144">        this.updatedAt = LocalDateTime.now();</span>
+<span class="fc" id="L145">    }</span>
+
+    /**
+     * Gets the Discord ID of the server owner.
+     *
+     * @return the owner ID
+     */
+    public String getOwnerId() {
+<span class="fc" id="L153">        return ownerId;</span>
+    }
+
+    /**
+     * Sets the Discord ID of the server owner and updates modification timestamp.
+     *
+     * @param ownerId the owner ID
+     */
+    public void setOwnerId(String ownerId) {
+<span class="fc" id="L162">        this.ownerId = ownerId;</span>
+<span class="fc" id="L163">        this.updatedAt = LocalDateTime.now();</span>
+<span class="fc" id="L164">    }</span>
+
+    /**
+     * Gets the server creation timestamp.
+     *
+     * @return the creation timestamp
+     */
+    public LocalDateTime getCreatedAt() {
+<span class="nc" id="L172">        return createdAt;</span>
+    }
+
+    /**
+     * Gets the last update timestamp.
+     *
+     * @return the update timestamp
+     */
+    public LocalDateTime getUpdatedAt() {
+<span class="nc" id="L181">        return updatedAt;</span>
+    }
+
+    /**
+     * Gets a copy of enabled bot types.
+     *
+     * @return set of enabled bot types
+     */
+    public Set&lt;SlashCommandBotType&gt; getEnabledBots() {
+<span class="fc" id="L190">        return new HashSet&lt;&gt;(enabledBots);</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="fc" id="L195">        return &quot;DiscordServer{&quot; +</span>
+                &quot;serverId='&quot; + serverId + '\'' +
+                &quot;, serverName='&quot; + serverName + '\'' +
+                &quot;, ownerId='&quot; + ownerId + '\'' +
+                &quot;, enabledBots=&quot; + enabledBots +
+                '}';
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

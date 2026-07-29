@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TaskReminderEntity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.data.entities</a> &gt; <span class="el_source">TaskReminderEntity.java</span></div><h1>TaskReminderEntity.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.data.entities;
+
+import jakarta.persistence.*;
+
+/**
+ * Entity representing a reminder for a specific task.
+ * Links reminder times to their corresponding tasks.
+ */
+@Entity
+@Table(name = &quot;task_reminders&quot;)
+<span class="fc" id="L11">public class TaskReminderEntity {</span>
+
+    /** Unique identifier for the reminder */
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    /** Reminder timestamp in milliseconds */
+    private Long reminderTime;
+
+    /** Task this reminder belongs to */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = &quot;task_id&quot;, nullable = false, foreignKey = @ForeignKey(name = &quot;fk_task_reminder_task&quot;))
+    private TaskEntity task;
+
+    /**
+     * Sets the associated task.
+     *
+     * @param task the task this reminder belongs to
+     */
+    public void setTask(TaskEntity task) {
+<span class="fc" id="L32">        this.task = task;</span>
+<span class="fc" id="L33">    }</span>
+
+    /**
+     * Sets the reminder timestamp.
+     *
+     * @param reminderTime reminder time in milliseconds
+     */
+    public void setReminderTime(Long reminderTime) {
+<span class="fc" id="L41">        this.reminderTime = reminderTime;</span>
+<span class="fc" id="L42">    }</span>
+
+    /**
+     * Gets the reminder ID.
+     *
+     * @return the reminder ID
+     */
+    public Long getId() {
+<span class="fc" id="L50">        return id;</span>
+    }
+
+    /**
+     * Gets the reminder timestamp.
+     *
+     * @return reminder time in milliseconds
+     */
+    public Long getReminderTime(){
+<span class="nc" id="L59">        return reminderTime;</span>
+    }
+
+    /**
+     * Gets the associated task.
+     *
+     * @return the task this reminder belongs to
+     */
+    public TaskEntity getTask(){
+<span class="fc" id="L68">        return task;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

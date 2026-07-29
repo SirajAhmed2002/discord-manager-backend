@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExtendedRoleDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.dto</a> &gt; <span class="el_source">ExtendedRoleDTO.java</span></div><h1>ExtendedRoleDTO.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.dto;
+
+import java.util.List;
+
+/**
+ * Extended Role DTO with all Discord role properties.
+ * Extends RoleDTO with additional role information like name, color, and permissions.
+ */
+<span class="fc" id="L9">public class ExtendedRoleDTO extends RoleDTO {</span>
+    /** The name of the role */
+    private String name;
+    /** The color of the role in hex format */
+    private String color;
+    /** List of permissions assigned to this role */
+    private List&lt;String&gt; permissions;
+
+    /**
+     * Gets the role name.
+     * @return The role name
+     */
+    public String getName() {
+<span class="fc" id="L22">        return name;</span>
+    }
+
+    /**
+     * Sets the role name.
+     * @param name The role name to set
+     */
+    public void setName(String name) {
+<span class="fc" id="L30">        this.name = name;</span>
+<span class="fc" id="L31">    }</span>
+
+    /**
+     * Gets the role color.
+     * @return The role color in hex format
+     */
+    public String getColor() {
+<span class="fc" id="L38">        return color;</span>
+    }
+
+    /**
+     * Sets the role color.
+     * @param color The role color in hex format to set
+     */
+    public void setColor(String color) {
+<span class="fc" id="L46">        this.color = color;</span>
+<span class="fc" id="L47">    }</span>
+
+    /**
+     * Gets the list of permissions for this role.
+     * @return List of permission names
+     */
+    public List&lt;String&gt; getPermissions() {
+<span class="fc" id="L54">        return permissions;</span>
+    }
+
+    /**
+     * Sets the list of permissions for this role.
+     * @param permissions List of permission names to set
+     */
+    public void setPermissions(List&lt;String&gt; permissions) {
+<span class="fc" id="L62">        this.permissions = permissions;</span>
+<span class="fc" id="L63">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

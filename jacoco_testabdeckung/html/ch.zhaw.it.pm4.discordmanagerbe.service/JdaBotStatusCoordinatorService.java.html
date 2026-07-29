@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdaBotStatusCoordinatorService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.service</a> &gt; <span class="el_source">JdaBotStatusCoordinatorService.java</span></div><h1>JdaBotStatusCoordinatorService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.service;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.SlashCommandBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.model.JdaSlashCommand;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.service.JdaSlashCommandService;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.DiscordServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+/**
+ * Coordinator service that manages the interactions between DiscordServerService and JdaSlashCommandService
+ * to avoid circular dependencies.
+ */
+@Service
+public class JdaBotStatusCoordinatorService {
+
+    /** Logger instance for logging events and debugging information. */
+<span class="fc" id="L25">    private static final Logger log = LoggerFactory.getLogger(JdaBotStatusCoordinatorService.class);</span>
+
+    /** Service for managing Discord server data and bot statuses. */
+    private final DiscordServerService serverService;
+
+    /** Service for managing JDA slash commands. */
+    private final JdaSlashCommandService jdaSlashCommandService;
+
+    /**
+     * Constructor for JdaBotStatusCoordinatorService.
+     *
+     * @param serverService The service for managing Discord server data
+     * @param jdaSlashCommandService The service for managing JDA slash commands
+     */
+    @Autowired
+    public JdaBotStatusCoordinatorService(DiscordServerService serverService,
+<span class="fc" id="L41">                                          JdaSlashCommandService jdaSlashCommandService) {</span>
+<span class="fc" id="L42">        this.serverService = serverService;</span>
+<span class="fc" id="L43">        this.jdaSlashCommandService = jdaSlashCommandService;</span>
+<span class="fc" id="L44">    }</span>
+
+    /**
+     * Enables a bot for a specific server and registers its commands.
+     * 
+     * @param serverId The Discord server ID
+     * @param botType The type of bot to enable
+     * @return true if the bot was enabled, false if the server wasn't found
+     */
+    public boolean enableBot(String serverId, SlashCommandBotType botType) {
+<span class="nc" id="L54">        boolean success = serverService.enableBotInternal(serverId, botType);</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">        if (success) {</span>
+<span class="nc" id="L56">            jdaSlashCommandService.registerCommandsForServer(serverId, botType.name());</span>
+<span class="nc" id="L57">            log.info(&quot;JDA Bot {} enabled and commands registered for server {}&quot;, botType, serverId);</span>
+        }
+<span class="nc" id="L59">        return success;</span>
+    }
+
+    /**
+     * Disables a bot for a specific server and unregisters its commands.
+     * 
+     * @param serverId The Discord server ID
+     * @param botType The type of bot to disable
+     * @return true if the bot was disabled, false if the server wasn't found
+     */
+    public boolean disableBot(String serverId, SlashCommandBotType botType) {
+<span class="nc" id="L70">        boolean success = serverService.disableBotInternal(serverId, botType);</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">        if (success) {</span>
+<span class="nc" id="L72">            jdaSlashCommandService.unregisterCommandsForServer(serverId, botType.name());</span>
+<span class="nc" id="L73">            log.info(&quot;JDA Bot {} disabled and commands unregistered for server {}&quot;, botType, serverId);</span>
+        }
+<span class="nc" id="L75">        return success;</span>
+    }
+    
+    /**
+     * Gets a server by its ID.
+     * 
+     * @param serverId The Discord server ID
+     * @return Optional containing the server if found
+     */
+    public Optional&lt;DiscordServer&gt; getServerById(String serverId) {
+<span class="nc" id="L85">        return serverService.getServerById(serverId);</span>
+    }
+    
+    /**
+     * Gets all slash commands for a server, grouped by bot type.
+     * 
+     * @param serverId The Discord server ID
+     * @return Map of bot types to their commands
+     */
+    public Map&lt;String, List&lt;JdaSlashCommand&gt;&gt; getServerCommands(String serverId) {
+<span class="nc" id="L95">        return jdaSlashCommandService.getCommandsForServer(serverId);</span>
+    }
+    
+    /**
+     * Initializes slash commands for all bots on all enabled servers.
+     * Should be called after application startup.
+     */
+    public void initializeAllCommands() {
+<span class="fc" id="L103">        log.info(&quot;Initializing JDA slash commands for all servers&quot;);</span>
+        // Get all servers
+<span class="fc" id="L105">        List&lt;DiscordServer&gt; allServers = serverService.getAllServers();</span>
+        
+        // For each server, register commands for enabled bots
+<span class="fc bfc" id="L108" title="All 2 branches covered.">        for (DiscordServer server : allServers) {</span>
+<span class="fc" id="L109">            Set&lt;SlashCommandBotType&gt; enabledBots = server.getEnabledBots();</span>
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">            for (SlashCommandBotType botType : enabledBots) {</span>
+<span class="nc" id="L111">                jdaSlashCommandService.registerCommandsForServer(server.getServerId(), botType.name());</span>
+<span class="nc" id="L112">            }</span>
+<span class="fc" id="L113">        }</span>
+<span class="fc" id="L114">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

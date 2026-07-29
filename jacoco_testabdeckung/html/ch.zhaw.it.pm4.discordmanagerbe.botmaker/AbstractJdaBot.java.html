@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractJdaBot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.botmaker</a> &gt; <span class="el_source">AbstractJdaBot.java</span></div><h1>AbstractJdaBot.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.botmaker;
+
+import net.dv8tion.jda.api.JDA;
+import org.springframework.beans.factory.annotation.Autowired;
+
+/**
+ * Abstract base class for all JDA Discord bot implementations.
+ * Provides common functionality and JDA instance management for Discord bots.
+ */
+public abstract class AbstractJdaBot {
+
+    /**
+     * The JDA instance used for Discord API communication.
+     */
+    protected final JDA jdaBean;
+
+    /**
+     * Constructs an AbstractJdaBot with the specified JDA instance.
+     *
+     * @param jdaBean the JDA instance for Discord API operations
+     */
+    @Autowired
+<span class="fc" id="L23">    public AbstractJdaBot(JDA jdaBean) {</span>
+<span class="fc" id="L24">        this.jdaBean = jdaBean;</span>
+<span class="fc" id="L25">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

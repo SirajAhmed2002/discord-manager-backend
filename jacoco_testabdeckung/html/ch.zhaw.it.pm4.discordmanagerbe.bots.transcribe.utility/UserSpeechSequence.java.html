@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserSpeechSequence.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility</a> &gt; <span class="el_source">UserSpeechSequence.java</span></div><h1>UserSpeechSequence.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.function.Supplier;
+
+/**
+ * Manages the ongoing speech sequence for a single user with buffer management.
+ */
+public class UserSpeechSequence {
+
+    /** Logger instance for logging events and debugging information. */
+<span class="fc" id="L16">    private static final Logger logger = LoggerFactory.getLogger(UserSpeechSequence.class);</span>
+
+    /** Discord ID of the user. */
+    private final String userId;
+
+    /** Discord username of the user. */
+    private final String username;
+
+    /** Timestamp when the sequence started. */
+    private long startTime;
+
+    /** Timestamp of the last audio data update. */
+    private long lastUpdateTime;
+
+    /** Buffer for storing accumulated audio data. */
+    private ByteArrayOutputStream audioBuffer;
+
+    /** Identifier for the current sequence. */
+    private int sequenceId;
+
+    /** Generator for creating unique sequence IDs. */
+    private Supplier&lt;Integer&gt; sequenceIdGenerator;
+
+    /**
+     * Creates a new speech sequence tracker for a user.
+     *
+     * @param userId User's Discord ID
+     * @param username User's Discord username
+     */
+<span class="fc" id="L45">    public UserSpeechSequence(String userId, String username) {</span>
+<span class="fc" id="L46">        this.userId = userId;</span>
+<span class="fc" id="L47">        this.username = username;</span>
+<span class="fc" id="L48">        this.audioBuffer = new ByteArrayOutputStream();</span>
+<span class="fc" id="L49">        this.sequenceIdGenerator = () -&gt; this.sequenceId + 1;</span>
+<span class="fc" id="L50">    }</span>
+
+    public void setCustomSequenceIdGenerator(Supplier&lt;Integer&gt; generator) {
+<span class="fc" id="L53">        this.sequenceIdGenerator = generator;</span>
+<span class="fc" id="L54">    }</span>
+
+    /**
+     * Starts a new speech sequence with a unique ID.
+     *
+     * @param timestamp Start timestamp for the sequence
+     */
+    public void startNewSequence(long timestamp) {
+<span class="fc" id="L62">        this.startTime = timestamp;</span>
+<span class="fc" id="L63">        this.lastUpdateTime = timestamp;</span>
+<span class="fc" id="L64">        this.audioBuffer = new ByteArrayOutputStream();</span>
+<span class="fc" id="L65">        this.sequenceId = sequenceIdGenerator.get();</span>
+<span class="fc" id="L66">    }</span>
+
+    /**
+     * Adds audio data to the current sequence buffer.
+     *
+     * @param data Raw audio data bytes to add
+     * @param timestamp Current timestamp for the update
+     */
+    public void addAudioData(byte[] data, long timestamp) {
+        try {
+<span class="fc" id="L76">            audioBuffer.write(data);</span>
+<span class="fc" id="L77">            lastUpdateTime = timestamp;</span>
+<span class="nc" id="L78">        } catch (IOException e) {</span>
+<span class="nc" id="L79">            logger.error(&quot;Error writing audio data&quot;, e);</span>
+<span class="fc" id="L80">        }</span>
+<span class="fc" id="L81">    }</span>
+
+    /**
+     * Checks if this sequence is inactive based on the time threshold.
+     *
+     * @param currentTime Current timestamp to check against
+     * @param threshold Inactivity threshold in milliseconds
+     * @return True if the sequence is inactive or not started
+     */
+    public boolean isInactive(long currentTime, long threshold) {
+<span class="pc bpc" id="L91" title="1 of 4 branches missed.">        return sequenceId == -1 || (currentTime - lastUpdateTime) &gt; threshold;</span>
+    }
+
+    /**
+     * @return True if the audio buffer contains data
+     */
+    public boolean hasData() {
+<span class="fc bfc" id="L98" title="All 2 branches covered.">        return audioBuffer.size() &gt; 0;</span>
+    }
+
+    /**
+     * @return The user's Discord ID
+     */
+    public String getUserId() {
+<span class="fc" id="L105">        return userId;</span>
+    }
+
+    /**
+     * @return The user's Discord username
+     */
+    public String getUsername() {
+<span class="fc" id="L112">        return username;</span>
+    }
+
+    /**
+     * @return The current sequence identifier
+     */
+    public int getSequenceId() {
+<span class="fc" id="L119">        return sequenceId;</span>
+    }
+
+    /**
+     * @return Timestamp when the sequence started
+     */
+    public long getStartTime() {
+<span class="fc" id="L126">        return startTime;</span>
+    }
+
+    /**
+     * @return Timestamp of the last audio data update
+     */
+    public long getLastUpdateTime() {
+<span class="fc" id="L133">        return lastUpdateTime;</span>
+    }
+
+    /**
+     * @return The audio buffer containing all accumulated audio data
+     */
+    public ByteArrayOutputStream getAudioBuffer() {
+<span class="fc" id="L140">        return audioBuffer;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DiscordAuthService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.auth.oauth</a> &gt; <span class="el_source">DiscordAuthService.java</span></div><h1>DiscordAuthService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.auth.oauth;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Service handling Discord OAuth authentication flow including token exchange and user information retrieval.
+ */
+@Service
+public class DiscordAuthService {
+
+    /** Logger instance for this class. */
+<span class="fc" id="L27">    private static final Logger logger = LoggerFactory.getLogger(DiscordAuthService.class);</span>
+
+    /** REST template for HTTP requests. */
+    private final RestTemplate restTemplate;
+
+    /** JSON object mapper for response parsing. */
+    private final ObjectMapper objectMapper;
+
+    /** Discord application client ID. */
+    private final String clientId;
+
+    /** Discord application client secret. */
+    private final String clientSecret;
+
+    /** OAuth redirect URI. */
+    private final String redirectUri;
+
+    /** Discord token exchange endpoint URL. */
+    private final String discordTokenUrl;
+
+    /** Discord user information endpoint URL. */
+    private final String discordUserUrl;
+
+    /**
+     * Constructs DiscordAuthService with required dependencies and configuration.
+     *
+     * @param restTemplate REST template for HTTP requests
+     * @param objectMapper JSON object mapper
+     * @param clientId Discord application client ID
+     * @param clientSecret Discord application client secret
+     * @param redirectUri OAuth redirect URI
+     * @param discordTokenUrl Discord token endpoint URL
+     * @param discordUserUrl Discord user info endpoint URL
+     */
+    @Autowired
+    public DiscordAuthService(
+            RestTemplate restTemplate,
+            ObjectMapper objectMapper,
+            @Value(&quot;${discord.client-id}&quot;) String clientId,
+            @Value(&quot;${discord.client-secret}&quot;) String clientSecret,
+            @Value(&quot;${discord.redirect-uri}&quot;) String redirectUri,
+            @Value(&quot;${discord.auth-endpoints.token-url}&quot;) String discordTokenUrl,
+<span class="fc" id="L69">            @Value(&quot;${discord.auth-endpoints.user-url}&quot;) String discordUserUrl) {</span>
+<span class="fc" id="L70">        this.restTemplate = restTemplate;</span>
+<span class="fc" id="L71">        this.objectMapper = objectMapper;</span>
+<span class="fc" id="L72">        this.clientId = clientId;</span>
+<span class="fc" id="L73">        this.clientSecret = clientSecret;</span>
+<span class="fc" id="L74">        this.redirectUri = redirectUri;</span>
+<span class="fc" id="L75">        this.discordTokenUrl = discordTokenUrl;</span>
+<span class="fc" id="L76">        this.discordUserUrl = discordUserUrl;</span>
+<span class="fc" id="L77">    }</span>
+
+    /**
+     * Exchanges authorization code for Discord access token.
+     *
+     * @param code authorization code from OAuth flow
+     * @return Discord access token
+     * @throws IOException if parsing response fails
+     * @throws RestClientException if Discord API call fails
+     */
+    public String exchangeCodeForToken(String code) throws IOException {
+<span class="fc" id="L88">        logger.debug(&quot;Exchanging code for token with Discord&quot;);</span>
+<span class="fc" id="L89">        HttpEntity&lt;MultiValueMap&lt;String, String&gt;&gt; requestEntity = createTokenRequestEntity(code);</span>
+<span class="fc" id="L90">        ResponseEntity&lt;String&gt; tokenResponse = requestDiscordToken(requestEntity);</span>
+<span class="fc" id="L91">        String token = extractAccessToken(tokenResponse.getBody());</span>
+<span class="fc" id="L92">        logger.info(&quot;Successfully obtain Discord access token&quot;);</span>
+<span class="fc" id="L93">        return token;</span>
+    }
+
+    /**
+     * Retrieves user details from Discord API.
+     *
+     * @param accessToken Discord access token
+     * @return user information from Discord
+     * @throws IOException if parsing response fails
+     * @throws RestClientException if Discord API call fails
+     */
+    public Map&lt;String, Object&gt; getUserInfo(String accessToken) throws IOException {
+<span class="fc" id="L105">        logger.debug(&quot;Retrieving user info from Discord&quot;);</span>
+<span class="fc" id="L106">        HttpEntity&lt;String&gt; requestEntity = createUserInfoRequestEntity(accessToken);</span>
+<span class="fc" id="L107">        ResponseEntity&lt;String&gt; userInfoResponse = requestUserInfo(requestEntity);</span>
+<span class="fc" id="L108">        Map&lt;String, Object&gt; userInfo = parseUserInfo(userInfoResponse.getBody());</span>
+<span class="fc" id="L109">        logger.info(&quot;Successfully retrieved Discord user info for user: {}&quot;, userInfo.get(&quot;username&quot;));</span>
+<span class="fc" id="L110">        return userInfo;</span>
+    }
+
+    /**
+     * Creates HTTP entity for token exchange request.
+     *
+     * @param code authorization code
+     * @return HTTP entity with form data and headers
+     */
+    private HttpEntity&lt;MultiValueMap&lt;String, String&gt;&gt; createTokenRequestEntity(String code) {
+<span class="fc" id="L120">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="fc" id="L121">        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);</span>
+
+<span class="fc" id="L123">        MultiValueMap&lt;String, String&gt; requestParams = new LinkedMultiValueMap&lt;&gt;();</span>
+<span class="fc" id="L124">        requestParams.add(&quot;client_id&quot;, clientId);</span>
+<span class="fc" id="L125">        requestParams.add(&quot;client_secret&quot;, clientSecret);</span>
+<span class="fc" id="L126">        requestParams.add(&quot;grant_type&quot;, &quot;authorization_code&quot;);</span>
+<span class="fc" id="L127">        requestParams.add(&quot;code&quot;, code);</span>
+<span class="fc" id="L128">        requestParams.add(&quot;redirect_uri&quot;, redirectUri);</span>
+<span class="fc" id="L129">        requestParams.add(&quot;scope&quot;, &quot;identify email&quot;);</span>
+
+<span class="fc" id="L131">        return new HttpEntity&lt;&gt;(requestParams, headers);</span>
+    }
+
+    /**
+     * Creates HTTP entity for user info request.
+     *
+     * @param accessToken Discord access token
+     * @return HTTP entity with authorization header
+     */
+    private HttpEntity&lt;String&gt; createUserInfoRequestEntity(String accessToken) {
+<span class="fc" id="L141">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="fc" id="L142">        headers.setBearerAuth(accessToken);</span>
+<span class="fc" id="L143">        return new HttpEntity&lt;&gt;(headers);</span>
+    }
+
+    /**
+     * Sends token exchange request to Discord.
+     *
+     * @param entity HTTP entity with request data
+     * @return Discord API response
+     * @throws RestClientException if request fails
+     */
+    private ResponseEntity&lt;String&gt; requestDiscordToken(HttpEntity&lt;MultiValueMap&lt;String, String&gt;&gt; entity) {
+        try {
+<span class="fc" id="L155">            return restTemplate.exchange(</span>
+                    discordTokenUrl,
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+            );
+<span class="fc" id="L161">        } catch (RestClientException e) {</span>
+<span class="fc" id="L162">            logger.error(&quot;Failed to exchange code for token: {}&quot;, e.getMessage());</span>
+<span class="fc" id="L163">            throw e;</span>
+        }
+    }
+
+    /**
+     * Sends user info request to Discord.
+     *
+     * @param entity HTTP entity with authorization header
+     * @return Discord API response
+     * @throws RestClientException if request fails
+     */
+    private ResponseEntity&lt;String&gt; requestUserInfo(HttpEntity&lt;String&gt; entity) {
+        try {
+<span class="fc" id="L176">            return restTemplate.exchange(</span>
+                    discordUserUrl,
+                    HttpMethod.GET,
+                    entity,
+                    String.class
+            );
+<span class="fc" id="L182">        } catch (RestClientException e) {</span>
+<span class="fc" id="L183">            logger.error(&quot;Failed to get user info: {}&quot;, e.getMessage());</span>
+<span class="fc" id="L184">            throw e;</span>
+        }
+    }
+
+    /**
+     * Extracts access token from Discord response.
+     *
+     * @param responseBody JSON response from Discord
+     * @return access token string
+     * @throws IOException if JSON parsing fails
+     */
+    private String extractAccessToken(String responseBody) throws IOException {
+<span class="fc" id="L196">        Map&lt;String, String&gt; tokenData = objectMapper.readValue(responseBody, new TypeReference&lt;&gt;() {});</span>
+<span class="fc" id="L197">        return tokenData.get(&quot;access_token&quot;);</span>
+    }
+
+    /**
+     * Parses user information from Discord response.
+     *
+     * @param responseBody JSON response from Discord
+     * @return user information map
+     * @throws IOException if JSON parsing fails
+     */
+    private Map&lt;String, Object&gt; parseUserInfo(String responseBody) throws IOException {
+<span class="fc" id="L208">        return objectMapper.readValue(responseBody, new TypeReference&lt;&gt;() {});</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

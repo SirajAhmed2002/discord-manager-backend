@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TrackScheduler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.music</a> &gt; <span class="el_source">TrackScheduler.java</span></div><h1>TrackScheduler.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.music;
+
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
+import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
+
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
+/**
+ * This class is responsible for managing the audio track queue and handling track events.
+ * It extends AudioEventAdapter to listen for track end events and manage the playback queue.
+ */
+public class TrackScheduler extends AudioEventAdapter {
+    private final AudioPlayer player;
+    private final BlockingQueue&lt;AudioTrack&gt; queue;
+
+    /**
+     * Constructor for TrackScheduler.
+     * @param player The AudioPlayer instance to manage.
+     */
+<span class="fc" id="L23">    public TrackScheduler(AudioPlayer player) {</span>
+<span class="fc" id="L24">        this.player = player;</span>
+<span class="fc" id="L25">        this.queue = new LinkedBlockingQueue&lt;&gt;();</span>
+<span class="fc" id="L26">    }</span>
+
+    /**
+     * Queues an audio track for playback.
+     * If the player is not currently playing a track, the queued track will be played immediately.
+     * @param track The audio track to queue.
+     */
+    public void queue(AudioTrack track) {
+<span class="fc bfc" id="L34" title="All 2 branches covered.">        if (!player.startTrack(track, true)) {</span>
+<span class="fc" id="L35">            queue.offer(track);</span>
+        }
+<span class="fc" id="L37">    }</span>
+
+    /**
+     * Plays the next track in the queue.
+     * If there are no tracks in the queue, nothing happens.
+     */
+    public void nextTrack() {
+<span class="fc" id="L44">        player.startTrack(queue.poll(), false);</span>
+<span class="fc" id="L45">    }</span>
+
+    /**
+     * Called when a track ends.
+     * If the track ended normally and the next track can be started, it will be played.
+     * @param player The AudioPlayer instance.
+     * @param track The audio track that ended.
+     * @param endReason The reason why the track ended.
+     */
+    @Override
+    public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        if (endReason.mayStartNext) {</span>
+<span class="fc" id="L57">            nextTrack();</span>
+        }
+<span class="fc" id="L59">    }</span>
+
+    /**
+     * Clears the track queue.
+     * This will remove all tracks from the queue.
+     */
+    public void clearQueue() {
+<span class="fc" id="L66">        queue.clear();</span>
+<span class="fc" id="L67">    }</span>
+
+    /**
+     * Gets the current queue of audio tracks.
+     * @return The queue of audio tracks.
+     */
+    public BlockingQueue&lt;AudioTrack&gt; getQueue() {
+<span class="fc" id="L74">        return queue;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

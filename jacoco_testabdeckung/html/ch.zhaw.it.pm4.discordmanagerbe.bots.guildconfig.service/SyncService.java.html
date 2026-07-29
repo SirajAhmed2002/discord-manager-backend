@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SyncService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildconfig.service</a> &gt; <span class="el_source">SyncService.java</span></div><h1>SyncService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildconfig.service;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildconfig.handler.UniversalDiscordHandler;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildconfig.handler.UniversalDiscordHandler.EntityType;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.CategoryDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ServerConfigDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.TextChannelDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.VoiceChannelDTO;
+import net.dv8tion.jda.api.entities.Guild;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+/**
+ * Service for synchronizing Discord server configurations with rate limiting and ID mapping.
+ * Handles CRUD operations for categories, text channels, and voice channels in proper order.
+ */
+@Service
+public class SyncService {
+
+    /** Logger instance for this class. */
+<span class="fc" id="L31">    private static final Logger log = LoggerFactory.getLogger(SyncService.class);</span>
+
+    /** Maximum number of Discord API requests per second. */
+    private static final int MAX_REQUESTS_PER_SECOND = 10;
+
+    /** Universal Discord handler for entity operations. */
+    private final UniversalDiscordHandler handler;
+
+    /** Mapping from DTO IDs to Discord entity IDs. */
+<span class="fc" id="L40">    private final Map&lt;String, String&gt; idMapping = new ConcurrentHashMap&lt;&gt;();</span>
+
+    /** Counter for rate limiting requests. */
+<span class="fc" id="L43">    private final AtomicInteger requestCounter = new AtomicInteger(0);</span>
+
+    /** Timestamp of the last rate limit reset. */
+<span class="fc" id="L46">    private volatile long lastResetTime = System.currentTimeMillis();</span>
+
+<span class="fc" id="L48">    public SyncService(UniversalDiscordHandler handler) {</span>
+<span class="fc" id="L49">        this.handler = handler;</span>
+<span class="fc" id="L50">    }</span>
+
+    /**
+     * Main synchronization method processing all changes in correct order.
+     * @param guild the Discord guild to sync
+     * @param diff the differences to apply
+     * @param config the target server configuration
+     */
+    public void processSync(Guild guild, Map&lt;String, Object&gt; diff, ServerConfigDTO config) {
+<span class="fc" id="L59">        idMapping.clear();</span>
+<span class="fc" id="L60">        log.info(&quot;Starting sync for guild: {}&quot;, guild.getName());</span>
+
+        // Process in correct order
+<span class="fc" id="L63">        processEntities(guild, diff, &quot;categories&quot;, UniversalDiscordHandler.CATEGORY, &quot;create&quot;);</span>
+<span class="fc" id="L64">        sleep(100); // Consistency wait for categories</span>
+<span class="fc" id="L65">        processEntities(guild, diff, &quot;categories&quot;, UniversalDiscordHandler.CATEGORY, &quot;update&quot;);</span>
+
+<span class="fc" id="L67">        processEntities(guild, diff, &quot;textChannels&quot;, UniversalDiscordHandler.TEXT_CHANNEL, &quot;create&quot;);</span>
+<span class="fc" id="L68">        processEntities(guild, diff, &quot;voiceChannels&quot;, UniversalDiscordHandler.VOICE_CHANNEL, &quot;create&quot;);</span>
+
+<span class="fc" id="L70">        processEntities(guild, diff, &quot;textChannels&quot;, UniversalDiscordHandler.TEXT_CHANNEL, &quot;update&quot;);</span>
+<span class="fc" id="L71">        processEntities(guild, diff, &quot;voiceChannels&quot;, UniversalDiscordHandler.VOICE_CHANNEL, &quot;update&quot;);</span>
+
+<span class="fc" id="L73">        updateAllPositions(guild, config);</span>
+
+<span class="fc" id="L75">        processEntities(guild, diff, &quot;textChannels&quot;, UniversalDiscordHandler.TEXT_CHANNEL, &quot;delete&quot;);</span>
+<span class="fc" id="L76">        processEntities(guild, diff, &quot;voiceChannels&quot;, UniversalDiscordHandler.VOICE_CHANNEL, &quot;delete&quot;);</span>
+<span class="fc" id="L77">        processEntities(guild, diff, &quot;categories&quot;, UniversalDiscordHandler.CATEGORY, &quot;delete&quot;);</span>
+
+<span class="fc" id="L79">        log.info(&quot;Sync completed for guild: {}&quot;, guild.getName());</span>
+<span class="fc" id="L80">    }</span>
+
+    /**
+     * Processes entities of a specific type and action from the diff.
+     * @param guild the Discord guild
+     * @param diff the differences map
+     * @param entityKey the key for the entity type in the diff
+     * @param entityType the entity type configuration
+     * @param action the action to perform (create, update, delete)
+     */
+    private &lt;T&gt; void processEntities(Guild guild, Map&lt;String, Object&gt; diff, String entityKey,
+                                     EntityType&lt;T&gt; entityType, String action) {
+<span class="fc" id="L92">        getDiffList(diff, entityKey).stream()</span>
+<span class="fc" id="L93">                .filter(diffEntry -&gt; action.equals(diffEntry.get(&quot;action&quot;)))</span>
+<span class="fc" id="L94">                .forEach(diffEntry -&gt; executeWithRateLimit(() -&gt;</span>
+<span class="fc" id="L95">                        processEntity(guild, diffEntry, entityType, action)));</span>
+<span class="fc" id="L96">    }</span>
+
+    /**
+     * Processes a single entity based on the action type.
+     * @param guild the Discord guild
+     * @param diffEntry the diff entry for this entity
+     * @param entityType the entity type configuration
+     * @param action the action to perform
+     */
+    private &lt;T&gt; void processEntity(Guild guild, Map&lt;String, Object&gt; diffEntry,
+                                   EntityType&lt;T&gt; entityType, String action) {
+        try {
+<span class="pc bpc" id="L108" title="1 of 4 branches missed.">            switch (action) {</span>
+                case &quot;create&quot; -&gt; {
+<span class="fc" id="L110">                    Object data = diffEntry.get(&quot;data&quot;);</span>
+<span class="fc" id="L111">                    T created = handler.create(guild, data, entityType, this::resolveId);</span>
+<span class="fc" id="L112">                    storeMapping(data, created);</span>
+<span class="fc" id="L113">                }</span>
+                case &quot;update&quot; -&gt; {
+<span class="fc" id="L115">                    String id = (String) diffEntry.get(&quot;id&quot;);</span>
+                    @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L117">                    Map&lt;String, Object&gt; changes = (Map&lt;String, Object&gt;) diffEntry.get(&quot;changes&quot;);</span>
+<span class="fc" id="L118">                    handler.update(guild, resolveId(id), changes, entityType, this::resolveId);</span>
+<span class="fc" id="L119">                }</span>
+                case &quot;delete&quot; -&gt; {
+<span class="fc" id="L121">                    String id = (String) diffEntry.get(&quot;id&quot;);</span>
+<span class="fc" id="L122">                    handler.delete(guild, id, entityType);</span>
+                }
+            }
+<span class="fc" id="L125">        } catch (Exception e) {</span>
+<span class="fc" id="L126">            log.error(&quot;Failed to {} {}: {}&quot;, action, entityType.name(), e.getMessage(), e);</span>
+<span class="fc" id="L127">        }</span>
+<span class="fc" id="L128">    }</span>
+
+    /**
+     * Updates positions for all entities in the configuration.
+     * @param guild the Discord guild
+     * @param config the server configuration containing position data
+     */
+    private void updateAllPositions(Guild guild, ServerConfigDTO config) {
+        // Categories
+<span class="fc" id="L137">        Optional.ofNullable(config.getCategories())</span>
+<span class="fc" id="L138">                .ifPresent(categories -&gt; updatePositions(guild, categories,</span>
+                        CategoryDTO::getPosition, CategoryDTO::getId, UniversalDiscordHandler.CATEGORY));
+
+        // Text channels grouped by parent
+<span class="fc" id="L142">        Optional.ofNullable(config.getTextChannels())</span>
+<span class="fc" id="L143">                .ifPresent(channels -&gt; updateChannelPositions(guild, channels,</span>
+                        TextChannelDTO::getPosition, TextChannelDTO::getId,
+                        TextChannelDTO::getParentCategoryId, UniversalDiscordHandler.TEXT_CHANNEL));
+
+        // Voice channels grouped by parent
+<span class="fc" id="L148">        Optional.ofNullable(config.getVoiceChannels())</span>
+<span class="fc" id="L149">                .ifPresent(channels -&gt; updateChannelPositions(guild, channels,</span>
+                        VoiceChannelDTO::getPosition, VoiceChannelDTO::getId,
+                        VoiceChannelDTO::getParentCategoryId, UniversalDiscordHandler.VOICE_CHANNEL));
+<span class="fc" id="L152">    }</span>
+
+    /**
+     * Generic method to update positions for a list of entities.
+     * @param guild the Discord guild
+     * @param entities list of entities to position
+     * @param positionExtractor function to extract position from entity
+     * @param idExtractor function to extract ID from entity
+     * @param entityType the entity type configuration
+     */
+    private &lt;T, E&gt; void updatePositions(Guild guild, List&lt;E&gt; entities,
+                                        Function&lt;E, Integer&gt; positionExtractor,
+                                        Function&lt;E, String&gt; idExtractor,
+                                        EntityType&lt;T&gt; entityType) {
+<span class="fc" id="L166">        entities.stream()</span>
+<span class="fc" id="L167">                .sorted(Comparator.comparing(positionExtractor))</span>
+<span class="fc" id="L168">                .forEach(entity -&gt; {</span>
+<span class="fc" id="L169">                    int position = entities.indexOf(entity);</span>
+<span class="fc" id="L170">                    String id = idExtractor.apply(entity);</span>
+<span class="fc" id="L171">                    executeWithRateLimit(() -&gt;</span>
+<span class="fc" id="L172">                            handler.updatePosition(guild, id, position, entityType, this::resolveId));</span>
+<span class="fc" id="L173">                });</span>
+<span class="fc" id="L174">    }</span>
+
+    /**
+     * Updates positions for channels grouped by their parent category.
+     * @param guild the Discord guild
+     * @param channels list of channels to position
+     * @param positionExtractor function to extract position from channel
+     * @param idExtractor function to extract ID from channel
+     * @param parentExtractor function to extract parent ID from channel
+     * @param entityType the entity type configuration
+     */
+    private &lt;T, E&gt; void updateChannelPositions(Guild guild, List&lt;E&gt; channels,
+                                               Function&lt;E, Integer&gt; positionExtractor,
+                                               Function&lt;E, String&gt; idExtractor,
+                                               Function&lt;E, String&gt; parentExtractor,
+                                               EntityType&lt;T&gt; entityType) {
+<span class="fc" id="L190">        channels.stream()</span>
+<span class="fc" id="L191">                .collect(Collectors.groupingBy(c -&gt;</span>
+<span class="fc" id="L192">                        String.valueOf(parentExtractor.apply(c))))</span>
+<span class="fc" id="L193">                .values()</span>
+<span class="fc" id="L194">                .forEach(group -&gt; updatePositions(guild, group, positionExtractor, idExtractor, entityType));</span>
+<span class="fc" id="L195">    }</span>
+
+    /**
+     * Executes an operation with rate limiting and automatic retry on rate limit errors.
+     * @param operation the operation to execute
+     */
+    private void executeWithRateLimit(Runnable operation) {
+        // Simple rate limiting
+<span class="fc" id="L203">        long currentTime = System.currentTimeMillis();</span>
+<span class="pc bpc" id="L204" title="1 of 2 branches missed.">        if (currentTime - lastResetTime &gt; 1000) {</span>
+<span class="nc" id="L205">            requestCounter.set(0);</span>
+<span class="nc" id="L206">            lastResetTime = currentTime;</span>
+        }
+
+<span class="pc bpc" id="L209" title="1 of 2 branches missed.">        if (requestCounter.incrementAndGet() &gt; MAX_REQUESTS_PER_SECOND) {</span>
+<span class="nc" id="L210">            long waitTime = 1000 - (currentTime - lastResetTime);</span>
+<span class="nc bnc" id="L211" title="All 2 branches missed.">            if (waitTime &gt; 0) {</span>
+<span class="nc" id="L212">                log.info(&quot;Local rate limit reached, waiting {} ms&quot;, waitTime);</span>
+<span class="nc" id="L213">                sleep(waitTime);</span>
+            }
+<span class="nc" id="L215">            requestCounter.set(1);</span>
+<span class="nc" id="L216">            lastResetTime = System.currentTimeMillis();</span>
+        }
+
+        try {
+<span class="fc" id="L220">            operation.run();</span>
+<span class="nc" id="L221">        } catch (Exception e) {</span>
+            // Enhanced rate limit error handling
+<span class="nc bnc" id="L223" title="All 4 branches missed.">            if (e.getMessage() != null &amp;&amp; e.getMessage().contains(&quot;rate limit&quot;)) {</span>
+<span class="nc" id="L224">                log.warn(&quot;Discord rate limit encountered: {}&quot;, e.getMessage());</span>
+
+                // Try to extract retry-after time from exception message
+<span class="nc" id="L227">                String retryAfterMs = extractRetryAfterTime(e.getMessage());</span>
+<span class="nc bnc" id="L228" title="All 2 branches missed.">                if (retryAfterMs != null) {</span>
+<span class="nc" id="L229">                    long retryAfter = Long.parseLong(retryAfterMs);</span>
+<span class="nc" id="L230">                    log.warn(&quot;Discord requests us to wait {} ms ({} seconds) before retrying&quot;,</span>
+<span class="nc" id="L231">                            retryAfter, retryAfter / 1000.0);</span>
+<span class="nc" id="L232">                    sleep(retryAfter + 100); // Add small buffer</span>
+<span class="nc" id="L233">                } else {</span>
+<span class="nc" id="L234">                    log.warn(&quot;Could not extract retry-after time, using default 1000ms wait&quot;);</span>
+<span class="nc" id="L235">                    sleep(1000);</span>
+                }
+
+<span class="nc" id="L238">                log.info(&quot;Retrying operation after rate limit wait...&quot;);</span>
+<span class="nc" id="L239">                executeWithRateLimit(operation); // Retry</span>
+<span class="nc" id="L240">            } else {</span>
+<span class="nc" id="L241">                throw e;</span>
+            }
+<span class="fc" id="L243">        }</span>
+<span class="fc" id="L244">    }</span>
+
+    /**
+     * Stores ID mapping from DTO to created Discord entity.
+     * @param dto the data transfer object
+     * @param entity the created Discord entity
+     */
+    private void storeMapping(Object dto, Object entity) {
+        try {
+<span class="fc" id="L253">            String dtoId = (String) dto.getClass().getMethod(&quot;getId&quot;).invoke(dto);</span>
+<span class="fc" id="L254">            String entityId = (String) entity.getClass().getMethod(&quot;getId&quot;).invoke(entity);</span>
+<span class="pc bpc" id="L255" title="2 of 4 branches missed.">            if (dtoId != null &amp;&amp; entityId != null) {</span>
+<span class="fc" id="L256">                idMapping.put(dtoId, entityId);</span>
+<span class="fc" id="L257">                log.debug(&quot;Stored mapping: {} -&gt; {}&quot;, dtoId, entityId);</span>
+            }
+<span class="fc" id="L259">        } catch (Exception e) {</span>
+<span class="fc" id="L260">            log.debug(&quot;Could not store ID mapping: {}&quot;, e.getMessage());</span>
+<span class="fc" id="L261">        }</span>
+<span class="fc" id="L262">    }</span>
+
+    /**
+     * Resolves a DTO ID to a Discord entity ID using stored mappings.
+     * @param id the DTO ID to resolve
+     * @return the Discord entity ID or original ID if no mapping exists
+     */
+    private String resolveId(String id) {
+<span class="fc" id="L270">        return idMapping.getOrDefault(id, id);</span>
+    }
+
+    /**
+     * Thread-safe sleep method with interrupt handling.
+     * @param millis milliseconds to sleep
+     */
+    private void sleep(long millis) {
+        try {
+<span class="fc" id="L279">            TimeUnit.MILLISECONDS.sleep(millis);</span>
+<span class="nc" id="L280">        } catch (InterruptedException e) {</span>
+<span class="nc" id="L281">            Thread.currentThread().interrupt();</span>
+<span class="nc" id="L282">            throw new RuntimeException(&quot;Sleep interrupted&quot;, e);</span>
+<span class="fc" id="L283">        }</span>
+<span class="fc" id="L284">    }</span>
+
+    /**
+     * Safely extracts a list from the diff map for a given component.
+     * @param diff the differences map
+     * @param component the component key
+     * @return list of diff entries or empty list if not found
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    private List&lt;Map&lt;String, Object&gt;&gt; getDiffList(Map&lt;String, Object&gt; diff, String component) {
+<span class="fc" id="L294">        return Optional.ofNullable(diff.get(component))</span>
+<span class="fc" id="L295">                .filter(List.class::isInstance)</span>
+<span class="fc" id="L296">                .map(list -&gt; (List&lt;Map&lt;String, Object&gt;&gt;) list)</span>
+<span class="fc" id="L297">                .orElse(Collections.emptyList());</span>
+    }
+
+    /**
+     * Extracts retry-after time from Discord rate limit error messages.
+     * @param errorMessage the error message from Discord
+     * @return the retry-after time in milliseconds or null if not found
+     */
+    private String extractRetryAfterTime(String errorMessage) {
+        try {
+            // Look for pattern &quot;Retry-After: &lt;number&gt; ms&quot;
+<span class="nc" id="L308">            Pattern pattern = Pattern.compile(&quot;Retry-After:\\s*(\\d+)\\s*ms&quot;);</span>
+<span class="nc" id="L309">            Matcher matcher = pattern.matcher(errorMessage);</span>
+<span class="nc bnc" id="L310" title="All 2 branches missed.">            if (matcher.find()) {</span>
+<span class="nc" id="L311">                return matcher.group(1);</span>
+            }
+<span class="nc" id="L313">        } catch (Exception e) {</span>
+<span class="nc" id="L314">            log.debug(&quot;Failed to extract retry-after time: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L315">        }</span>
+<span class="nc" id="L316">        return null;</span>
+    }
+
+    /**
+     * Clears all stored ID mappings for a fresh synchronization.
+     */
+    public void clearMappings() {
+<span class="fc" id="L323">        idMapping.clear();</span>
+<span class="fc" id="L324">    }</span>
+
+    /**
+     * Returns service statistics for monitoring.
+     * @return map containing current service statistics
+     */
+    public Map&lt;String, Object&gt; getStats() {
+<span class="fc" id="L331">        return Map.of(</span>
+<span class="fc" id="L332">                &quot;mappingCount&quot;, idMapping.size(),</span>
+<span class="fc" id="L333">                &quot;currentRequests&quot;, requestCounter.get(),</span>
+<span class="fc" id="L334">                &quot;lastReset&quot;, java.time.Instant.ofEpochMilli(lastResetTime)</span>
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

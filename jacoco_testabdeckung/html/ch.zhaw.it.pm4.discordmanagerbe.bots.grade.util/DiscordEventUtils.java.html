@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DiscordEventUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.grade.util</a> &gt; <span class="el_source">DiscordEventUtils.java</span></div><h1>DiscordEventUtils.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.grade.util;
+
+import ch.zhaw.it.pm4.discordmanagerbe.dto.DiscordIdsDTO;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import static ch.zhaw.it.pm4.discordmanagerbe.bots.grade.GradeBotConstants.*;
+
+/**
+ * Utility class for Discord event handling
+ */
+@Component
+<span class="fc" id="L16">public class DiscordEventUtils {</span>
+
+    /**
+     * Logger for DiscordEventUtils
+     */
+<span class="fc" id="L21">    private static final Logger log = LoggerFactory.getLogger(DiscordEventUtils.class);</span>
+
+    /**
+     * Constructs a DiscordIdsDTO from the SlashCommandInteractionEvent
+     * @param event the event containing Discord interaction data
+     * @return DiscordIdsDTO with server, channel, and user IDs
+     */
+    public DiscordIdsDTO extractDiscordIds(SlashCommandInteractionEvent event) {
+<span class="fc" id="L29">        return DiscordIdsDTO.builder()</span>
+<span class="fc bfc" id="L30" title="All 2 branches covered.">            .serverId(event.getGuild() != null ? event.getGuild().getId() : UNKNOWN_SERVER)</span>
+<span class="fc" id="L31">            .channelId(event.getChannel().getId())</span>
+<span class="fc" id="L32">            .userId(event.getUser().getId())</span>
+<span class="fc" id="L33">            .build();</span>
+    }
+
+    /**
+     * Gets a required string option from the event, returning an empty string if not found
+     * @param event the SlashCommandInteractionEvent
+     * @param optionName the name of the required option
+     * @return the value of the required string option
+     */
+    public String getRequiredString(SlashCommandInteractionEvent event, String optionName) {
+<span class="fc" id="L43">        return event.getOption(optionName, EMPTY_STRING, OptionMapping::getAsString);</span>
+    }
+
+    /**
+     * Gets an optional string option from the event
+     * @param event the SlashCommandInteractionEvent
+     * @param optionName the name of the optional option
+     */
+    public String getOptionalString(SlashCommandInteractionEvent event, String optionName) {
+<span class="fc" id="L52">        return event.getOption(optionName, null, OptionMapping::getAsString);</span>
+    }
+
+    /**
+     * Gets a required integer option from the event
+     * @param event the SlashCommandInteractionEvent
+     * @param optionName the name of the required option
+     */
+    public int getRequiredInt(SlashCommandInteractionEvent event, String optionName) {
+<span class="fc" id="L61">        return event.getOption(optionName, 0, OptionMapping::getAsInt);</span>
+    }
+
+    /**
+     * Sends an error message to the user
+     * @param event the SlashCommandInteractionEvent
+     * @param operation the operation that caused the error
+     * @param e the exception that was thrown
+     */
+    public void sendErrorMessage(SlashCommandInteractionEvent event, String operation, Exception e) {
+<span class="fc" id="L71">        log.error(&quot;Error in {}: {}&quot;, operation, e.getMessage(), e);</span>
+<span class="fc" id="L72">        event.getHook().sendMessage(&quot;Fehler beim &quot; + operation + &quot;: &quot; + e.getMessage())</span>
+<span class="fc" id="L73">            .setEphemeral(true).queue();</span>
+<span class="fc" id="L74">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

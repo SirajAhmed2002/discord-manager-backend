@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StringSelectDelegationHandlerImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.handlers</a> &gt; <span class="el_source">StringSelectDelegationHandlerImpl.java</span></div><h1>StringSelectDelegationHandlerImpl.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.handlers;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.error.InteractionErrorHandler;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.core.AbstractDelegationHandler;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
+import org.springframework.stereotype.Component;
+
+/**
+ * Specialized delegation handler for Discord string select menu interactions.
+ * Extends the abstract delegation handler to provide specific behavior for string select components.
+ */
+@Component
+public class StringSelectDelegationHandlerImpl extends AbstractDelegationHandler&lt;StringSelectInteractionEvent&gt; {
+
+    /**
+     * Constructs a new StringSelectDelegationHandlerImpl with error handling capabilities.
+     *
+     * @param errorHandler the error handler for managing interaction failures
+     */
+    public StringSelectDelegationHandlerImpl(InteractionErrorHandler errorHandler) {
+<span class="fc" id="L21">        super(errorHandler);</span>
+<span class="fc" id="L22">    }</span>
+
+    /**
+     * Extracts the unique identifier from a string select interaction event.
+     *
+     * @param event the string select interaction event
+     * @return the component ID as the identifier
+     */
+    @Override
+    protected String extractIdentifier(StringSelectInteractionEvent event) {
+<span class="nc" id="L32">        return event.getComponentId();</span>
+    }
+
+    /**
+     * Provides the handler type name for logging and debugging purposes.
+     *
+     * @return the string &quot;string select&quot; identifying this handler type
+     */
+    @Override
+    protected String getHandlerTypeName() {
+<span class="fc" id="L42">        return &quot;string select&quot;;</span>
+    }
+
+    /**
+     * Handles errors that occur during string select interaction processing.
+     *
+     * @param event the string select interaction event that caused the error
+     * @param identifier the component identifier where the error occurred
+     * @param e the exception that was thrown
+     */
+    @Override
+    protected void handleError(StringSelectInteractionEvent event, String identifier, Exception e) {
+<span class="nc" id="L54">        errorHandler.handleInteractionError(event, identifier, e);</span>
+<span class="nc" id="L55">    }</span>
+
+    /**
+     * Handles cases where no handler is registered for a string select interaction.
+     * String select menus typically don't require a response when no handler is found.
+     *
+     * @param event the string select interaction event with no registered handler
+     * @param identifier the component identifier that has no handler
+     */
+    @Override
+    protected void handleNoHandlerFound(StringSelectInteractionEvent event, String identifier) {
+<span class="nc" id="L66">        log.debug(&quot;No handler found for string select interaction: {}&quot;, identifier);</span>
+        // String selects typically don't need a response when no handler is found
+<span class="nc" id="L68">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

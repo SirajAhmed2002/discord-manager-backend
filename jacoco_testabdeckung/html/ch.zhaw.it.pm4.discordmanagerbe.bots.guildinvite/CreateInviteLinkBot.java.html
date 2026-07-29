@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CreateInviteLinkBot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildinvite</a> &gt; <span class="el_source">CreateInviteLinkBot.java</span></div><h1>CreateInviteLinkBot.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildinvite;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.AbstractJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.BotIdentifier;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.ServerBotType;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Invite;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.util.Optional;
+
+/**
+ * This class is responsible for creating an invite link for a specified guild (server).
+ * It allows setting parameters for the maximum number of users and the maximum age of the invite link.
+ */
+@BotIdentifier(category = BotIdentifier.BotCategory.SERVER,
+        server = ServerBotType.GUILD_INVITE_CREATE)
+@Component
+public class CreateInviteLinkBot extends AbstractJdaBot {
+
+    /** The prefix for Discord invite links. */
+    private static final String INVITE_LINK_PREFIX = &quot;https://discord.gg/&quot;;
+
+    /** Number of seconds in one hour, used for converting hours to seconds. */
+    private static final int SECONDS_PER_HOUR = 3600;
+
+    /** Logger instance for this class. */
+<span class="fc" id="L32">    private static final Logger logger = LoggerFactory.getLogger(CreateInviteLinkBot.class);</span>
+
+    /** The most recently generated invite link, cached for retrieval. */
+    private String inviteLink;
+
+    /**
+     * Constructs a new CreateInviteLinkBot with the provided JDA instance.
+     *
+     * @param jdaBean The JDA instance used for Discord API interactions
+     */
+    public CreateInviteLinkBot(JDA jdaBean) {
+<span class="fc" id="L43">        super(jdaBean);</span>
+<span class="fc" id="L44">    }</span>
+
+    /**
+     * Creates an invite link for the specified guild.
+     * With settable parameters for max users and max age.
+     *
+     * @param guildId The ID of the guild to create an invite for
+     * @param maxUsers The maximum number of uses for the invite (0 for unlimited)
+     * @param maxAgeInHours The maximum age of the invite in hours (0 for unlimited)
+     * @return The generated invite link
+     * @throws IllegalArgumentException if the guild ID is not set or the guild is not found
+     * @throws RuntimeException if there is an error creating the invite
+     */
+    public String createInviteLink(String guildId, int maxUsers, int maxAgeInHours) {
+<span class="fc" id="L58">        validateGuildId(guildId);</span>
+<span class="fc" id="L59">        Guild guild = getGuildOrThrow(guildId);</span>
+<span class="fc" id="L60">        TextChannel channel = getAvailableTextChannel(guild);</span>
+
+<span class="fc" id="L62">        return createInvite(guild, channel, maxUsers, maxAgeInHours);</span>
+    }
+
+    /**
+     * Gets the most recently generated invite link.
+     *
+     * @return The invite link, or null if no invite has been generated yet
+     */
+    public String getInviteLink() {
+<span class="fc" id="L71">        return inviteLink;</span>
+    }
+
+    /**
+     * Validates that the provided guild ID is not null or empty.
+     *
+     * @param guildId The guild ID to validate
+     * @throws IllegalArgumentException if the guild ID is null, empty, or contains only whitespace
+     */
+    private void validateGuildId(String guildId) {
+<span class="fc bfc" id="L81" title="All 4 branches covered.">        if (guildId == null || guildId.trim().isEmpty()) {</span>
+<span class="fc" id="L82">            logger.error(&quot;Guild ID is not set or empty.&quot;);</span>
+<span class="fc" id="L83">            throw new IllegalArgumentException(&quot;Guild ID must be set and not empty.&quot;);</span>
+        }
+<span class="fc" id="L85">    }</span>
+
+    /**
+     * Retrieves a Guild by its ID, throwing an exception if not found.
+     *
+     * @param guildId The ID of the guild to retrieve
+     * @return The Guild object corresponding to the provided ID
+     * @throws IllegalArgumentException if no guild is found with the given ID
+     */
+    private Guild getGuildOrThrow(String guildId) {
+<span class="fc" id="L95">        return Optional.ofNullable(jdaBean.getGuildById(guildId))</span>
+<span class="fc" id="L96">                .orElseThrow(() -&gt; {</span>
+<span class="fc" id="L97">                    logger.error(&quot;Guild not found: {}&quot;, guildId);</span>
+<span class="fc" id="L98">                    return new IllegalArgumentException(&quot;Guild not found: &quot; + guildId);</span>
+                });
+    }
+
+    /**
+     * Finds an available text channel in the guild for invite creation.
+     * Prefers the system channel, falls back to the first available text channel.
+     *
+     * @param guild The guild to search for text channels
+     * @return A TextChannel that can be used for invite creation
+     * @throws IllegalStateException if no text channels are found in the guild
+     */
+    private TextChannel getAvailableTextChannel(Guild guild) {
+<span class="fc" id="L111">        return Optional.ofNullable(guild.getSystemChannel())</span>
+<span class="fc" id="L112">                .or(() -&gt; {</span>
+<span class="fc" id="L113">                    logger.info(&quot;System channel not set for guild {}. Using first text channel instead.&quot;,</span>
+<span class="fc" id="L114">                            guild.getId());</span>
+<span class="fc" id="L115">                    return guild.getTextChannels().stream().findFirst();</span>
+                })
+<span class="fc" id="L117">                .orElseThrow(() -&gt; {</span>
+<span class="fc" id="L118">                    logger.error(&quot;No text channels found in guild {}&quot;, guild.getId());</span>
+<span class="fc" id="L119">                    return new IllegalStateException(&quot;No text channels found in guild&quot;);</span>
+                });
+    }
+
+    /**
+     * Creates an invite link.
+     *
+     * @param guild The guild for which to create the invite
+     * @param channel The text channel to create the invite for
+     * @param maxUsers The maximum number of uses for the invite (0 for unlimited)
+     * @param maxAgeInHours The maximum age of the invite in hours (0 for unlimited)
+     * @return The generated invite link
+     * @throws RuntimeException if invite creation fails
+     */
+    private String createInvite(Guild guild, TextChannel channel, int maxUsers, int maxAgeInHours) {
+        try {
+<span class="fc" id="L135">            Invite invite = channel.createInvite()</span>
+<span class="fc" id="L136">                    .setMaxUses(maxUsers)</span>
+<span class="fc" id="L137">                    .setMaxAge(maxAgeInHours * SECONDS_PER_HOUR)</span>
+<span class="fc" id="L138">                    .complete();</span>
+
+<span class="fc" id="L140">            String link = INVITE_LINK_PREFIX + invite.getCode();</span>
+<span class="fc" id="L141">            this.inviteLink = link;</span>
+
+<span class="fc" id="L143">            logger.info(&quot;Created invite link for guild {}: {}&quot;, guild.getId(), link);</span>
+<span class="fc" id="L144">            return link;</span>
+
+<span class="fc" id="L146">        } catch (Exception e) {</span>
+<span class="fc" id="L147">            String errorMessage = &quot;Error creating invite for guild &quot; + guild.getId() + &quot;: &quot; + e.getMessage();</span>
+<span class="fc" id="L148">            logger.error(errorMessage, e);</span>
+<span class="fc" id="L149">            throw new RuntimeException(errorMessage, e);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

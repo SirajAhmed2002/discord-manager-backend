@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ChannelDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.dto</a> &gt; <span class="el_source">ChannelDTO.java</span></div><h1>ChannelDTO.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.dto;
+
+/**
+ * Base Data Transfer Object for Discord channels.
+ * Contains common properties for all channel types.
+ */
+public class ChannelDTO {
+    /** The unique ID of the channel */
+    private String id;
+    /** The name of the channel */
+    private String name;
+    /** The type of the channel (TEXT, VOICE, CATEGORY) */
+    private ChannelType channelType;
+    /** The position of the channel in the channel list */
+    private int position;
+
+    /**
+     * Default constructor.
+     */
+<span class="fc" id="L20">    public ChannelDTO() {</span>
+        // Default constructor
+<span class="fc" id="L22">    }</span>
+
+    /**
+     * Gets the channel ID.
+     * @return The channel ID
+     */
+    public String getId() {
+<span class="fc" id="L29">        return id;</span>
+    }
+
+    /**
+     * Sets the channel ID.
+     * @param id The channel ID to set
+     */
+    public void setId(String id) {
+<span class="fc" id="L37">        this.id = id;</span>
+<span class="fc" id="L38">    }</span>
+
+    /**
+     * Gets the channel name.
+     * @return The channel name
+     */
+    public String getName() {
+<span class="fc" id="L45">        return name;</span>
+    }
+
+    /**
+     * Sets the channel name.
+     * @param name The channel name to set
+     */
+    public void setName(String name) {
+<span class="fc" id="L53">        this.name = name;</span>
+<span class="fc" id="L54">    }</span>
+
+    /**
+     * Gets the channel type.
+     * @return The channel type
+     */
+    public ChannelType getChannelType() {
+<span class="fc" id="L61">        return channelType;</span>
+    }
+
+    /**
+     * Sets the channel type.
+     * @param channelType The channel type to set
+     */
+    public void setChannelType(ChannelType channelType) {
+<span class="fc" id="L69">        this.channelType = channelType;</span>
+<span class="fc" id="L70">    }</span>
+
+    /**
+     * Gets the channel position.
+     * @return The channel position in the list
+     */
+    public int getPosition() {
+<span class="fc" id="L77">        return position;</span>
+    }
+
+    /**
+     * Sets the channel position.
+     * @param position The channel position to set
+     */
+    public void setPosition(int position) {
+<span class="fc" id="L85">        this.position = position;</span>
+<span class="fc" id="L86">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

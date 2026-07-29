@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleAnalyzer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.analyzer</a> &gt; <span class="el_source">RoleAnalyzer.java</span></div><h1>RoleAnalyzer.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.analyzer;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model.RoleSyncAnalysis;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model.RoleUpdateInfo;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ExtendedRoleDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ServerRoleListDTO;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Role;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.awt.Color;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Analyzes differences between current Discord roles and desired configuration.
+ */
+@Component
+<span class="fc" id="L22">public class RoleAnalyzer {</span>
+    /**
+     * Logger for this class.
+     */
+<span class="fc" id="L26">    private static final Logger logger = LoggerFactory.getLogger(RoleAnalyzer.class);</span>
+
+    /**
+     * Analyzes the current roles in a guild against the desired roles defined in ServerRoleListDTO.
+     * @param guild the Discord guild to analyze
+     * @param roleListDTO the desired roles configuration
+     * @return RoleSyncAnalysis containing the analysis results
+     */
+    public RoleSyncAnalysis analyzeRoleChanges(Guild guild, ServerRoleListDTO roleListDTO) {
+<span class="fc" id="L35">        logger.debug(&quot;Analyzing role changes for guild: {}&quot;, guild.getName());</span>
+        
+<span class="fc" id="L37">        RoleSyncAnalysis analysis = new RoleSyncAnalysis();</span>
+<span class="fc" id="L38">        RoleMapping roleMapping = RoleMapping.fromGuild(guild);</span>
+<span class="fc" id="L39">        HashSet&lt;String&gt; processedRoleIds = new HashSet&lt;&gt;();</span>
+        
+<span class="fc" id="L41">        analyzeDesiredRoles(roleListDTO, analysis, roleMapping, processedRoleIds);</span>
+<span class="fc" id="L42">        findRolesToDelete(guild, analysis, processedRoleIds);</span>
+        
+<span class="fc" id="L44">        logAnalysisResults(analysis);</span>
+<span class="fc" id="L45">        return analysis;</span>
+    }
+
+    /**
+     * Analyzes the desired roles against the current roles in the guild.
+     * @param roleListDTO the desired roles configuration
+     * @param analysis the RoleSyncAnalysis to populate with results
+     * @param roleMapping the mapping of current roles for efficient lookups
+     * @param processedRoleIds a set to track which roles have been processed
+     */
+    private void analyzeDesiredRoles(ServerRoleListDTO roleListDTO, 
+                                   RoleSyncAnalysis analysis, 
+                                   RoleMapping roleMapping, 
+                                   Set&lt;String&gt; processedRoleIds) {
+<span class="fc bfc" id="L59" title="All 2 branches covered.">        for (ExtendedRoleDTO dtoRole : roleListDTO.getRoles()) {</span>
+<span class="fc" id="L60">            Role existingRole = roleMapping.findRole(dtoRole);</span>
+            
+<span class="fc bfc" id="L62" title="All 2 branches covered.">            if (existingRole == null) {</span>
+<span class="fc" id="L63">                analysis.addRoleToCreate(dtoRole);</span>
+<span class="fc" id="L64">                logger.debug(&quot;Role to create: {}&quot;, dtoRole.getName());</span>
+            } else {
+<span class="fc" id="L66">                processedRoleIds.add(existingRole.getId());</span>
+<span class="fc" id="L67">                RoleUpdateInfo updateInfo = RoleUpdateAnalyzer.analyze(existingRole, dtoRole);</span>
+                
+<span class="fc bfc" id="L69" title="All 2 branches covered.">                if (updateInfo.hasChanges()) {</span>
+<span class="fc" id="L70">                    analysis.addRoleToUpdate(updateInfo);</span>
+<span class="fc" id="L71">                    logger.debug(&quot;Role to update: {} with changes: {}&quot;, </span>
+<span class="fc" id="L72">                               existingRole.getName(), updateInfo.getChanges());</span>
+                }
+            }
+<span class="fc" id="L75">        }</span>
+<span class="fc" id="L76">    }</span>
+
+    /**
+     * Finds roles in the guild that are not present in the processedRoleIds set,
+     * @param guild the Discord guild to analyze
+     * @param analysis the RoleSyncAnalysis to populate with roles to delete
+     * @param processedRoleIds a set of role IDs that have already been processed
+     */
+    private void findRolesToDelete(Guild guild, RoleSyncAnalysis analysis, Set&lt;String&gt; processedRoleIds) {
+<span class="fc" id="L85">        List&lt;Role&gt; rolesToDelete = guild.getRoles().stream()</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">            .filter(role -&gt; !processedRoleIds.contains(role.getId()))</span>
+<span class="fc" id="L87">            .filter(this::isNotSystemRole)</span>
+<span class="fc" id="L88">            .collect(Collectors.toList());</span>
+            
+<span class="fc" id="L90">        analysis.addRolesToDelete(rolesToDelete);</span>
+<span class="fc" id="L91">    }</span>
+
+    /**
+     * Checks if a role is not a system role (public or managed).
+     * @param role the role to check
+     * @return true if the role is not a system role, false otherwise
+     */
+    private boolean isNotSystemRole(Role role) {
+<span class="fc bfc" id="L99" title="All 4 branches covered.">        return !role.isPublicRole() &amp;&amp; !role.isManaged();</span>
+    }
+
+    /**
+     * Logs the results of the role analysis.
+     * @param analysis the RoleSyncAnalysis containing the results
+     */
+    private void logAnalysisResults(RoleSyncAnalysis analysis) {
+<span class="fc" id="L107">        logger.info(&quot;Analysis complete - Create: {}, Update: {}, Delete: {}&quot;,</span>
+<span class="fc" id="L108">                   analysis.getRolesToCreate().size(),</span>
+<span class="fc" id="L109">                   analysis.getRolesToUpdate().size(), </span>
+<span class="fc" id="L110">                   analysis.getRolesToDelete().size());</span>
+<span class="fc" id="L111">    }</span>
+
+    /**
+     * Handles role mapping for efficient lookups.
+     */
+    private static class RoleMapping {
+        /**
+         * Maps roles by ID and name for quick access.
+         */
+        private final Map&lt;String, Role&gt; byId;
+
+        /**
+         * Maps roles by name (case-insensitive) for quick access.
+         */
+        private final Map&lt;String, Role&gt; byName;
+
+        /**
+         * Constructor for RoleMapping.
+         * @param byId a map of roles by ID
+         * @param byName a map of roles by name (case-insensitive)
+         */
+<span class="fc" id="L132">        private RoleMapping(Map&lt;String, Role&gt; byId, Map&lt;String, Role&gt; byName) {</span>
+<span class="fc" id="L133">            this.byId = byId;</span>
+<span class="fc" id="L134">            this.byName = byName;</span>
+<span class="fc" id="L135">        }</span>
+
+        /**
+         * Creates a RoleMapping from a Discord guild.
+         * @param guild the Discord guild to extract roles from
+         * @return a RoleMapping instance containing roles by ID and name
+         */
+        static RoleMapping fromGuild(Guild guild) {
+<span class="fc" id="L143">            HashMap&lt;String, Role&gt; byId = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L144">            HashMap&lt;String, Role&gt; byName = new HashMap&lt;String, Role&gt;();</span>
+            
+<span class="fc bfc" id="L146" title="All 2 branches covered.">            for (Role role : guild.getRoles()) {</span>
+<span class="fc" id="L147">                byId.put(role.getId(), role);</span>
+<span class="fc" id="L148">                byName.put(role.getName().toLowerCase(), role);</span>
+<span class="fc" id="L149">            }</span>
+            
+<span class="fc" id="L151">            return new RoleMapping(byId, byName);</span>
+        }
+
+        /**
+         * Finds a role based on the provided ExtendedRoleDTO.
+         * @param dtoRole the ExtendedRoleDTO containing role information
+         * @return the Role if found, or null if not found
+         */
+        Role findRole(ExtendedRoleDTO dtoRole) {
+            // Prefer ID lookup (most reliable)
+<span class="pc bpc" id="L161" title="1 of 4 branches missed.">            if (dtoRole.getId() != null &amp;&amp; !dtoRole.getId().isEmpty()) {</span>
+<span class="fc" id="L162">                Role roleById = byId.get(dtoRole.getId());</span>
+<span class="pc bpc" id="L163" title="1 of 2 branches missed.">                if (roleById != null) {</span>
+<span class="fc" id="L164">                    return roleById;</span>
+                }
+            }
+            
+            // Fallback to name lookup
+<span class="pc bpc" id="L169" title="1 of 2 branches missed.">            if (dtoRole.getName() != null) {</span>
+<span class="fc" id="L170">                return byName.get(dtoRole.getName().toLowerCase());</span>
+            }
+            
+<span class="nc" id="L173">            return null;</span>
+        }
+    }
+
+    /**
+     * Analyzes role updates in detail.
+     */
+    private static class RoleUpdateAnalyzer {
+
+        /**
+         * Analyzes the differences between the current role and the desired role configuration.
+         * @param currentRole the current role in the Discord server
+         * @param desiredRole the desired role configuration from ExtendedRoleDTO
+         * @return RoleUpdateInfo containing the analysis results
+         */
+        static RoleUpdateInfo analyze(Role currentRole, ExtendedRoleDTO desiredRole) {
+<span class="fc" id="L189">            RoleUpdateInfo updateInfo = new RoleUpdateInfo();</span>
+<span class="fc" id="L190">            updateInfo.setCurrentRole(currentRole);</span>
+<span class="fc" id="L191">            updateInfo.setDesiredRole(desiredRole);</span>
+            
+<span class="fc" id="L193">            analyzeNameChange(currentRole, desiredRole, updateInfo);</span>
+<span class="fc" id="L194">            analyzeColorChange(currentRole, desiredRole, updateInfo);</span>
+<span class="fc" id="L195">            analyzePermissionChange(currentRole, desiredRole, updateInfo);</span>
+            
+<span class="fc" id="L197">            return updateInfo;</span>
+        }
+
+        /**
+         * Analyzes if the role name has changed.
+         * @param currentRole the current role in the Discord server
+         * @param desiredRole the desired role configuration from ExtendedRoleDTO
+         * @param updateInfo the RoleUpdateInfo to populate with changes
+         */
+        private static void analyzeNameChange(Role currentRole, ExtendedRoleDTO desiredRole, RoleUpdateInfo updateInfo) {
+<span class="pc bpc" id="L207" title="1 of 4 branches missed.">            if (desiredRole.getName() != null &amp;&amp; !currentRole.getName().equals(desiredRole.getName())) {</span>
+<span class="fc" id="L208">                updateInfo.setNameChanged(true);</span>
+<span class="fc" id="L209">                updateInfo.addChange(String.format(&quot;Name: '%s' → '%s'&quot;, </span>
+<span class="fc" id="L210">                                   currentRole.getName(), desiredRole.getName()));</span>
+            }
+<span class="fc" id="L212">        }</span>
+
+        /**
+         * Analyzes if the role color has changed.
+         * @param currentRole the current role in the Discord server
+         * @param desiredRole the desired role configuration from ExtendedRoleDTO
+         * @param updateInfo the RoleUpdateInfo to populate with changes
+         */
+        private static void analyzeColorChange(Role currentRole, ExtendedRoleDTO desiredRole, RoleUpdateInfo updateInfo) {
+<span class="pc bpc" id="L221" title="1 of 2 branches missed.">            if (desiredRole.getColor() == null) {</span>
+<span class="nc" id="L222">                return;</span>
+            }
+            
+<span class="fc" id="L225">            String currentColorHex = formatColor(currentRole.getColor());</span>
+<span class="fc" id="L226">            String desiredColorHex = normalizeColor(desiredRole.getColor());</span>
+            
+<span class="fc bfc" id="L228" title="All 2 branches covered.">            if (!Objects.equals(currentColorHex, desiredColorHex)) {</span>
+<span class="fc" id="L229">                updateInfo.setColorChanged(true);</span>
+<span class="fc" id="L230">                updateInfo.addChange(String.format(&quot;Color: %s → %s&quot;, currentColorHex, desiredRole.getColor()));</span>
+            }
+<span class="fc" id="L232">        }</span>
+
+        /**
+         * Analyzes if the role permissions have changed.
+         * @param currentRole the current role in the Discord server
+         * @param desiredRole the desired role configuration from ExtendedRoleDTO
+         * @param updateInfo the RoleUpdateInfo to populate with changes
+         */
+        private static void analyzePermissionChange(Role currentRole, ExtendedRoleDTO desiredRole, RoleUpdateInfo updateInfo) {
+<span class="fc bfc" id="L241" title="All 2 branches covered.">            if (desiredRole.getPermissions() == null) {</span>
+<span class="fc" id="L242">                return;</span>
+            }
+            
+<span class="fc" id="L245">            EnumSet&lt;Permission&gt; currentPerms = currentRole.getPermissions();</span>
+<span class="fc" id="L246">            Set&lt;Permission&gt; desiredPerms = parsePermissions(desiredRole.getPermissions());</span>
+            
+<span class="pc bpc" id="L248" title="1 of 2 branches missed.">            if (!currentPerms.equals(desiredPerms)) {</span>
+<span class="fc" id="L249">                updateInfo.setPermissionsChanged(true);</span>
+<span class="fc" id="L250">                updateInfo.addChange(&quot;Permissions updated&quot;);</span>
+            }
+<span class="fc" id="L252">        }</span>
+
+        /**
+         * Formats a Color object to a hexadecimal string.
+         * @param color the Color object to format, may be null
+         * @return the hexadecimal color string (e.g., &quot;#FF5733&quot;) or null if color is null
+         */
+        private static String formatColor(Color color) {
+<span class="pc bpc" id="L260" title="1 of 2 branches missed.">            return color != null ? String.format(&quot;#%06X&quot;, color.getRGB() &amp; 0xFFFFFF) : null;</span>
+        }
+
+        /**
+         * Normalizes a color string to a consistent format.
+         * @param color the color string to normalize, may be null
+         * @return the normalized color string in hexadecimal format (e.g., &quot;#FF5733&quot;) or null if input is null
+         */
+        private static String normalizeColor(String color) {
+<span class="pc bpc" id="L269" title="1 of 2 branches missed.">            if (color == null) return null;</span>
+<span class="pc bpc" id="L270" title="1 of 2 branches missed.">            String hex = color.startsWith(&quot;#&quot;) ? color.substring(1) : color;</span>
+<span class="fc" id="L271">            return &quot;#&quot; + hex.toUpperCase();</span>
+        }
+
+        /**
+         * Parses a list of permission names into a set of Permission enums.
+         * @param permissionNames the list of permission names to parse, may be null
+         * @return a set of Permission enums corresponding to the provided names
+         */
+        private static Set&lt;Permission&gt; parsePermissions(List&lt;String&gt; permissionNames) {
+<span class="pc bpc" id="L280" title="1 of 2 branches missed.">            if (permissionNames == null) {</span>
+<span class="nc" id="L281">                return Collections.emptySet();</span>
+            }
+            
+<span class="fc" id="L284">            return permissionNames.stream()</span>
+<span class="fc" id="L285">                .map(RoleUpdateAnalyzer::parsePermission)</span>
+<span class="fc" id="L286">                .filter(Objects::nonNull)</span>
+<span class="fc" id="L287">                .collect(Collectors.toSet());</span>
+        }
+
+        /**
+         * Parses a single permission name into a Permission enum.
+         * @param permissionName the name of the permission to parse
+         * @return the corresponding Permission enum, or null if the name is invalid
+         */
+        private static Permission parsePermission(String permissionName) {
+            try {
+<span class="nc" id="L297">                return Permission.valueOf(permissionName.toUpperCase().replace(&quot; &quot;, &quot;_&quot;));</span>
+<span class="fc" id="L298">            } catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L299">                LoggerFactory.getLogger(RoleAnalyzer.class).warn(&quot;Unknown permission: {}&quot;, permissionName);</span>
+<span class="fc" id="L300">                return null;</span>
+            }
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GuildEntityService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildchannelrolepermission.service</a> &gt; <span class="el_source">GuildEntityService.java</span></div><h1>GuildEntityService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildchannelrolepermission.service;
+
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Optional;
+
+/**
+ * Service for managing guild-related entities such as Guilds, Channels, and Roles.
+ * Provides methods to retrieve these entities by their IDs.
+ */
+@Service
+public class GuildEntityService {
+
+    /**
+     * The JDA instance used to interact with Discord's API.
+     */
+    private final JDA jda;
+
+    /**
+     * Constructor for GuildEntityService.
+     * @param jda The JDA instance to use for API interactions.
+     */
+    @Autowired
+<span class="fc" id="L29">    public GuildEntityService(JDA jda) {</span>
+<span class="fc" id="L30">        this.jda = jda;</span>
+<span class="fc" id="L31">    }</span>
+
+    /**
+     * Retrieves a Guild by its ID.
+     * @param serverId The ID of the server (guild) to retrieve.
+     * @return An Optional containing the Guild if found, or empty if not found.
+     */
+    public Optional&lt;Guild&gt; getGuild(String serverId) {
+<span class="fc" id="L39">        return Optional.ofNullable(jda.getGuildById(serverId));</span>
+    }
+
+    /**
+     * Retrieves a GuildChannel by its ID within a specific Guild.
+     * @param guild The Guild to search within.
+     * @param channelId The ID of the channel to retrieve.
+     * @return An Optional containing the GuildChannel if found, or empty if not found.
+     */
+    public Optional&lt;GuildChannel&gt; getChannel(Guild guild, String channelId) {
+<span class="fc" id="L49">        return Optional.ofNullable(guild.getGuildChannelById(channelId));</span>
+    }
+
+    /**
+     * Retrieves a Role by its ID within a specific Guild.
+     * @param guild The Guild to search within.
+     * @param roleId The ID of the role to retrieve.
+     * @return An Optional containing the Role if found, or empty if not found.
+     */
+    public Optional&lt;Role&gt; getRole(Guild guild, String roleId) {
+<span class="fc" id="L59">        return Optional.ofNullable(guild.getRoleById(roleId));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

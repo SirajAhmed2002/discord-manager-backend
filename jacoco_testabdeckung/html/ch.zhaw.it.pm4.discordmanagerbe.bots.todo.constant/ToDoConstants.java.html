@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ToDoConstants.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.todo.constant</a> &gt; <span class="el_source">ToDoConstants.java</span></div><h1>ToDoConstants.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.todo.constant;
+
+import java.awt.Color;
+
+/**
+ * Constants used throughout the ToDo tracker bot.
+ * Following clean code principles: centralized configuration, meaningful names, and logical grouping.
+ */
+public final class ToDoConstants {
+
+    /**
+     * Private constructor to prevent instantiation.
+     */
+<span class="nc" id="L14">    private ToDoConstants() {</span>
+<span class="nc" id="L15">        throw new AssertionError(&quot;Utility class should not be instantiated&quot;);</span>
+    }
+
+    /**
+     * Command name add task
+     */
+    public static final String COMMAND_ADD_TASK = &quot;add-task&quot;;
+
+    /**
+     * Command name remove task
+     */
+    public static final String COMMAND_REMOVE_TASK = &quot;remove-task&quot;;
+
+    /**
+     * Command name list tasks
+     */
+    public static final String COMMAND_LIST_TASKS = &quot;list-tasks&quot;;
+
+    /**
+     * Date format
+     */
+    public static final String DATE_PATTERN = &quot;dd.MM.yyyy&quot;;
+
+    /**
+     * Time format
+     */
+    public static final String TIME_PATTERN = &quot;HH:mm&quot;;
+
+    /**
+     * Default time
+     */
+    public static final String DEFAULT_TIME = &quot;00:00&quot;;
+    
+    /**
+     * Color success
+     */
+<span class="fc" id="L51">    public static final Color COLOR_SUCCESS = Color.GREEN;</span>
+
+    /**
+     * Primary colors used in the bot's UI.
+     */
+<span class="fc" id="L56">    public static final Color COLOR_PRIMARY = Color.BLUE;</span>
+
+    /**
+     * Error and warning colors used in the bot's UI.
+     */
+<span class="fc" id="L61">    public static final Color COLOR_ERROR = Color.RED;</span>
+
+    /**
+     * Warning color used in the bot's UI.
+     */
+<span class="fc" id="L66">    public static final Color COLOR_WARNING = Color.ORANGE;</span>
+
+    /**
+     * Messages used in the ToDo tracker bot.
+     */
+    public static final class Messages {
+
+        /**
+         * Private constructor to prevent instantiation.
+         */
+        private Messages() {}
+
+        /**
+         * Message no tasks found.
+         */
+        public static final String NO_TASKS_FOUND = &quot;Keine Aufgaben gefunden&quot;;
+
+        /**
+         * Message indicating no tasks have been created yet.
+         */
+        public static final String NO_TASKS_CREATED = &quot;Du hast noch keine Aufgaben erstellt.&quot;;
+
+        /**
+         * Message indicating the task creation process has started.
+         */
+        public static final String TASK_CREATED = &quot;Aufgabe erstellt&quot;;
+
+        /**
+         * Message indicating the task has been successfully deleted.
+         */
+        public static final String TASK_REMOVED = &quot;Aufgabe entfernt&quot;;
+
+        /**
+         * Message indicating the task has been successfully removed.
+         */
+        public static final String TASK_REMOVED_SUCCESS = &quot;Die Aufgabe \&quot;%s\&quot; wurde erfolgreich entfernt.&quot;;
+
+        /**
+         * Message indicating that the task was not found.
+         */
+        public static final String TASK_NOT_FOUND = &quot;Aufgabe nicht gefunden.&quot;;
+
+        /**
+         * Message indicating that the session has expired.
+         */
+        public static final String SESSION_EXPIRED = &quot;Sitzung abgelaufen&quot;;
+
+        /**
+         * Message prompting the user to restart the process.
+         */
+        public static final String RESTART_PROCESS = &quot;Bitte starte den Vorgang erneut.&quot;;
+
+        /**
+         * Message indicating an error occurred during task creation.
+         */
+        public static final String ERROR = &quot;Fehler&quot;;
+
+        /**
+         * Message indicating that the task title is invalid.
+         */
+        public static final String INVALID_TITLE = &quot;Ungültiger Titel&quot;;
+
+        /**
+         * Message indicating that the task title must not be empty.
+         */
+        public static final String TITLE_NOT_EMPTY = &quot;Der Titel darf nicht leer sein.&quot;;
+
+        /**
+         * Message indicating that the date is invalid.
+         */
+        public static final String INVALID_DATE = &quot;Ungültiges Datum&quot;;
+
+        /**
+         * Message indicating that the date is not valid.
+         */
+        public static final String DATE_NOT_VALID = &quot;Das eingegebene Datum ist nicht gültig.&quot;;
+
+        /**
+         * Message indicating that the date is in the past.
+         */
+        public static final String DATE_IN_PAST = &quot;Datum in der Vergangenheit&quot;;
+
+        /**
+         * Message indicating that the date must be in the future.
+         */
+        public static final String DATE_MUST_BE_FUTURE = &quot;Das Datum muss in der Zukunft liegen.&quot;;
+
+        /**
+         * Message indicating that the time is invalid.
+         */
+        public static final String INVALID_TIME = &quot;Ungültige Zeit&quot;;
+
+        /**
+         * Message indicating that the time is not valid.
+         */
+        public static final String TIME_NOT_VALID = &quot;Die eingegebene Zeit ist nicht gültig.&quot;;
+
+        /**
+         * Message indicating that the time is in the past.
+         */
+        public static final String TIME_IN_PAST = &quot;Zeit in der Vergangenheit&quot;;
+
+        /**
+         * Message indicating that the time must be in the future.
+         */
+        public static final String TIME_MUST_BE_FUTURE = &quot;Die Zeit muss in der Zukunft liegen.&quot;;
+
+        /**
+         * Message indicating that the reminder is invalid.
+         */
+        public static final String INVALID_REMINDER = &quot;❌ Ungültiger Reminder&quot;;
+
+        /**
+         * Message indicating that the reminder is in the past.
+         */
+        public static final String REMINDER_IN_PAST = &quot;Der Reminder liegt in der Vergangenheit. Bitte wähle einen anderen Zeitpunkt.&quot;;
+
+        /**
+         * Message prompting the user to add a reminder.
+         */
+        public static final String ADD_REMINDER = &quot;🕒 Reminder hinzufügen&quot;;
+
+        /**
+         * Message prompting the user to select a reminder time.
+         */
+        public static final String REMINDER_QUESTION = &quot;Wie viel Zeit vor der Fälligkeit möchtest du erinnert werden?&quot;;
+
+        /**
+         * Message indicating the user is viewing their tasks.
+         */
+        public static final String YOUR_TASKS = &quot;Deine Aufgaben&quot;;
+    }
+
+    /**
+     * UI-related constants for the ToDo tracker bot.
+     */
+    public static final class UI {
+
+        /**
+         * Private constructor to prevent instantiation.
+         */
+        private UI() {}
+
+        /**
+         * Placeholder text for task title input.
+         */
+        public static final String PLACEHOLDER_TASK_TITLE = &quot;Abgabe Arbeit&quot;;
+
+        /**
+         * Placeholder text for task description input.
+         */
+        public static final String PLACEHOLDER_SELECT_NUMBER = &quot;Wähle eine Zahl&quot;;
+
+        /**
+         * Placeholder text for selecting a time unit for reminders.
+         */
+        public static final String PLACEHOLDER_SELECT_TIME_UNIT = &quot;Wähle eine Zeiteinheit&quot;;
+
+        /**
+         * Buton label for finishing task creation.
+         */
+        public static final String BTN_FINISH = &quot;Fertigstellen&quot;;
+
+        /**
+         * Button label for adding another reminder.
+         */
+        public static final String BTN_ADD_REMINDER = &quot;Weiterer Reminder&quot;;
+
+        /**
+         * Button label for skipping reminder creation.
+         */
+        public static final String BTN_NO_REMINDER = &quot;Ohne Reminder&quot;;
+
+        /**
+         * Button label for skipping the task creation process.
+         */
+        public static final String BTN_SKIP = &quot;Überspringen&quot;;
+
+        /**
+         * Button label for removing a task.
+         */
+        public static final String BTN_REMOVE_TASK = &quot;Aufgabe entfernen&quot;;
+
+        /**
+         * Modal titel for adding a new task.
+         */
+        public static final String MODAL_ADD_TASK = &quot;Aufgabe hinzufügen&quot;;
+
+        /**
+         * Field labels for task creation.
+         */
+        public static final String FIELD_TASK_TITLE = &quot;Aufgaben-Titel&quot;;
+
+        /**
+         * Field labels for task details.
+         */
+        public static final String FIELD_DESCRIPTION = &quot;Beschreibung&quot;;
+
+        /**
+         * Field labels for due date and time.
+         */
+        public static final String FIELD_DUE_DATE = &quot;Fälligkeitsdatum&quot;;
+
+        /**
+         * Field labels for due time.
+         */
+        public static final String FIELD_DUE_TIME = &quot;Fälligkeitszeit&quot;;
+
+        /**
+         * Option hours
+         */
+        public static final String OPTION_HOURS = &quot;Stunden&quot;;
+
+        /**
+         * Option days
+         */
+        public static final String OPTION_DAYS = &quot;Tage&quot;;
+
+        /**
+         * Option weeks
+         */
+        public static final String OPTION_WEEKS = &quot;Wochen&quot;;
+
+        /**
+         * Separator used in task lists to visually separate tasks.
+         */
+        public static final String TASK_LIST_SEPARATOR = &quot;\n──────────────\n&quot;;
+    }
+
+    /**
+     * Configuration constants for the ToDo bot.
+     */
+    public static final class Config {
+        /**
+         * Private constructor to prevent instantiation.
+         */
+        private Config() {}
+
+        /**
+         * Maximum number of reminders allowed for a task.
+         */
+        public static final int MAX_REMINDER_VALUE = 25;
+
+        /**
+         * Delay in seconds before a message is deleted.
+         */
+        public static final int MESSAGE_DELETE_DELAY_SECONDS = 60;
+
+        /**
+         * Interval in milliseconds for the scheduler to run.
+         */
+        public static final int SCHEDULER_INTERVAL_MS = 30_000;
+
+        /**
+         * Maximum lengths for various input fields.
+         */
+        public static final int DESCRIPTION_MAX_LENGTH = 1000;
+
+        /**
+         * Maximum lengths for date and time inputs.
+         */
+        public static final int DATE_INPUT_MAX_LENGTH = 10;
+
+        /**
+         * Maximum length for time input in HH:mm format.
+         */
+        public static final int TIME_INPUT_MAX_LENGTH = 5;
+    }
+
+    /**
+     * Constants for notification messages.
+     */
+    public static final class Notifications {
+
+        /**
+         * Private constructor to prevent instantiation.
+         */
+        private Notifications() {}
+
+        /**
+         * Prefix for reminder messages.
+         */
+        public static final String REMINDER_PREFIX = &quot;⏰ Reminder for your task: \n&quot;;
+
+        /**
+         * Prefix for task expiration messages.
+         */
+        public static final String TASK_EXPIRED_PREFIX = &quot;❌ Your task has been deleted because the time is up: \n&quot;;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

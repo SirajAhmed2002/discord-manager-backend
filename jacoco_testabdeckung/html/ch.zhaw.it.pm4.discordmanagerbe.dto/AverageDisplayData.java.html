@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AverageDisplayData.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.dto</a> &gt; <span class="el_source">AverageDisplayData.java</span></div><h1>AverageDisplayData.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.dto;
+
+import java.util.List;
+import java.util.Collections;
+
+/**
+ * DTO for displaying average grade data.
+ * Contains overall average and semester-specific summaries.
+ */
+public class AverageDisplayData {
+    /** The overall average across all semesters */
+    private final double overallAverage;
+    /** List of semester summaries */
+    private final List&lt;SemesterSummary&gt; semesters;
+    /** The specifically requested semester */
+    private final String requestedSemester;
+
+    /**
+     * Constructor for average display data.
+     * @param overallAverage The overall average grade
+     * @param semesters List of semester summaries
+     * @param requestedSemester The requested semester filter
+     */
+<span class="fc" id="L24">    public AverageDisplayData(double overallAverage, List&lt;SemesterSummary&gt; semesters, String requestedSemester) {</span>
+<span class="fc" id="L25">        this.overallAverage = overallAverage;</span>
+<span class="fc" id="L26">        this.semesters = semesters;</span>
+<span class="fc" id="L27">        this.requestedSemester = requestedSemester;</span>
+<span class="fc" id="L28">    }</span>
+
+    /**
+     * Creates an empty average display data instance.
+     * @return Empty AverageDisplayData with zero average and empty lists
+     */
+    public static AverageDisplayData empty() {
+<span class="fc" id="L35">        return new AverageDisplayData(0.0, Collections.emptyList(), null);</span>
+    }
+
+    /**
+     * Checks if the data is empty (no grades available).
+     * @return true if overall average is 0.0, false otherwise
+     */
+    public boolean isEmpty() {
+<span class="fc bfc" id="L43" title="All 2 branches covered.">        return overallAverage == 0.0;</span>
+    }
+
+    /**
+     * Gets the overall average grade.
+     * @return The overall average
+     */
+    public double getOverallAverage() {
+<span class="fc" id="L51">        return overallAverage;</span>
+    }
+
+    /**
+     * Gets the list of semester summaries.
+     * @return List of semester summaries
+     */
+    public List&lt;SemesterSummary&gt; getSemesters() {
+<span class="fc" id="L59">        return semesters;</span>
+    }
+
+    /**
+     * Gets the requested semester filter.
+     * @return The requested semester
+     */
+    public String getRequestedSemester() {
+<span class="fc" id="L67">        return requestedSemester;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

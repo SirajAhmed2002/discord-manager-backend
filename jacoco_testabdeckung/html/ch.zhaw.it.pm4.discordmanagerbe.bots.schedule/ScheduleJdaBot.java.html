@@ -1,0 +1,626 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ScheduleJdaBot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.schedule</a> &gt; <span class="el_source">ScheduleJdaBot.java</span></div><h1>ScheduleJdaBot.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.schedule;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.AbstractSlashCommandJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.BotIdentifier;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.SlashCommandBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.service.JdaEventListenerService;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.service.JdaSlashCommandService;
+import jakarta.annotation.PostConstruct;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.utils.FileUpload;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.awt.Color;
+import java.io.ByteArrayInputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.*;
+
+/**
+ * This bot provides a timetable feature for ZHAW students.
+ * It allows users to select their department, semester, and week to retrieve their schedule.
+ * The bot uses slash commands and buttons for interaction.
+ */
+@BotIdentifier(category = BotIdentifier.BotCategory.SLASH_COMMAND,
+        slashCommand = SlashCommandBotType.TIMETABLE)
+@Component
+public class ScheduleJdaBot extends AbstractSlashCommandJdaBot{
+
+<span class="fc" id="L44">    private static final Logger logger = LoggerFactory.getLogger(ScheduleJdaBot.class);</span>
+
+    // Slash Command
+    private static final String COMMAND_SCHEDULE = &quot;stundenplan&quot;;
+    private static final String OPTION_USERNAME = &quot;username&quot;;
+
+    // Colors
+<span class="fc" id="L51">    private static final Color COLOR_SUCCESS = Color.GREEN;</span>
+<span class="fc" id="L52">    private static final Color COLOR_PRIMARY = Color.BLUE;</span>
+<span class="fc" id="L53">    private static final Color COLOR_ERROR = Color.RED;</span>
+<span class="fc" id="L54">    private static final Color COLOR_LOADING = Color.GRAY;</span>
+
+    private final ScheduleScraper scheduleScraper;
+    private final MetadataScraper metadataScraper;
+    private final ScreenshotGenerator screenshotGenerator;
+
+    // Store user selections per user ID
+<span class="fc" id="L61">    private final Map&lt;String, Map&lt;String, String&gt;&gt; userSelections = new ConcurrentHashMap&lt;&gt;();</span>
+
+    // ExecutorService for async operations
+<span class="fc" id="L64">    private final ExecutorService executorService = Executors.newCachedThreadPool();</span>
+
+    /**
+     * Constructor for ScheduleJdaBot.
+     * Initializes the bot with the necessary services and sets the bot type and description.
+     * @param jdaBean              JDA instance for Discord API communication
+     * @param slashCommandService  Service for handling slash commands
+     * @param scheduleScraper      Service for scraping schedules
+     * @param metadataScraper      Service for scraping metadata
+     * @param screenshotGenerator  Service for generating screenshots
+     * @param slashCommandListener Listener for slash command events
+     */
+    @Autowired
+    public ScheduleJdaBot(JDA jdaBean, JdaSlashCommandService slashCommandService, ScheduleScraper scheduleScraper,
+                          MetadataScraper metadataScraper, ScreenshotGenerator screenshotGenerator,
+                          JdaEventListenerService slashCommandListener){
+<span class="fc" id="L80">        super(jdaBean, slashCommandService, slashCommandListener);</span>
+<span class="fc" id="L81">        this.scheduleScraper = scheduleScraper;</span>
+<span class="fc" id="L82">        this.metadataScraper = metadataScraper;</span>
+<span class="fc" id="L83">        this.screenshotGenerator = screenshotGenerator;</span>
+<span class="fc" id="L84">        setBotType(this.getClass().getAnnotation(BotIdentifier.class).slashCommand());</span>
+<span class="fc" id="L85">        setDescription(&quot;Timetable Bot für ZHAW Studierende&quot;);</span>
+<span class="fc" id="L86">    }</span>
+
+    /**
+     * Initializes the bot after construction.
+     * This method is called after the bean is fully constructed and dependencies are injected.
+     */
+    @Override
+    protected void setupCommands(){
+<span class="fc" id="L94">        SlashCommandData stundenplanCommand = createCommand(COMMAND_SCHEDULE, &quot;Zeigt deinen Stundenplan an&quot;)</span>
+<span class="fc" id="L95">                .addOption(OptionType.STRING, OPTION_USERNAME, &quot;Dein ZHAW-Benutzername&quot;, true);</span>
+
+<span class="fc" id="L97">        registerCommand(COMMAND_SCHEDULE, &quot;Erstellt einen Stundenplan&quot;, stundenplanCommand,</span>
+                this::handleStundenplanCommand);
+<span class="fc" id="L99">    }</span>
+
+    /**
+     * PostConstruct method to register interaction handlers.
+     * This method is called after the bean is fully initialized.
+     */
+    @Override
+    protected void registerButtonInteractionHandlers(){
+<span class="fc" id="L107">        registerButtonInteractionHandler(CustomId.SUBMIT.getId(), this::handleSubmitButton);</span>
+<span class="fc" id="L108">        registerButtonInteractionHandler(CustomId.CANCEL.getId(), this::handleCancelButton);</span>
+<span class="fc" id="L109">        registerButtonInteractionHandler(CustomId.CONFIRM_PREFIX.getId(), this::handleConfirmButton);</span>
+<span class="fc" id="L110">        registerButtonInteractionHandler(CustomId.RESTART.getId(), this::handleRestartButton);</span>
+<span class="fc" id="L111">    }</span>
+
+    /**
+     * Registers string interaction handlers for department, semester, and week selections.
+     * This method is called to handle user selections in the UI.
+     */
+    @Override
+    protected void registerStringInteractionHandlers(){
+<span class="fc" id="L119">        registerStringInteractionHandler(CustomId.DEPARTMENT.getId(), this::handleDepartmentSelection);</span>
+<span class="fc" id="L120">        registerStringInteractionHandler(CustomId.SEMESTER.getId(), this::handleSemesterSelection);</span>
+<span class="fc" id="L121">        registerStringInteractionHandler(CustomId.WEEK.getId(), this::handleWeekSelection);</span>
+<span class="fc" id="L122">    }</span>
+
+    /**
+     * Registers modal interaction handlers.
+     * This method is empty as this bot does not use modals for interactions.
+     */
+    @Override
+    protected void registerModalInteractionHandlers(){
+        // No modal interactions for this bot
+<span class="fc" id="L131">    }</span>
+
+    /**
+     * Handles the slash command interaction for fetching the timetable.
+     * It prompts the user to confirm their username and then proceeds with the selection process.
+     * @param event The SlashCommandInteractionEvent containing the command details
+     */
+    private void handleStundenplanCommand(SlashCommandInteractionEvent event){
+<span class="fc" id="L139">        event.deferReply().setEphemeral(true).queue();</span>
+<span class="fc" id="L140">        String userId = event.getUser().getId();</span>
+<span class="fc" id="L141">        String username = event.getOption(OPTION_USERNAME, &quot;&quot;, OptionMapping::getAsString);</span>
+
+<span class="fc bfc" id="L143" title="All 2 branches covered.">        if(username.isEmpty()){</span>
+<span class="fc" id="L144">            event.getHook().sendMessage(&quot;Bitte gib einen Benutzernamen an.&quot;)</span>
+<span class="fc" id="L145">                    .queue();</span>
+<span class="fc" id="L146">            return;</span>
+        }
+
+        // Store username in user selections
+<span class="fc" id="L150">        userSelections.computeIfAbsent(userId, k -&gt; new HashMap&lt;&gt;())</span>
+<span class="fc" id="L151">                .put(CustomId.USERNAME.getId(), username);</span>
+
+        // Show confirmation embed
+<span class="fc" id="L154">        MessageEmbed confirmEmbed = createEmbed(</span>
+                &quot;❓ Bestätigung&quot;,
+                &quot;Bist du dir sicher, dass du den Stundenplan für **&quot; + username + &quot;** abrufen möchtest?&quot;,
+                COLOR_PRIMARY
+        );
+
+        // Use hook to send embed with buttons
+<span class="fc" id="L161">        event.getHook().sendMessageEmbeds(confirmEmbed)</span>
+<span class="fc" id="L162">                .addComponents(ActionRow.of(</span>
+<span class="fc" id="L163">                        Button.primary(CustomId.CONFIRM_PREFIX.getId() + userId, &quot;Bestätigen&quot;),</span>
+<span class="fc" id="L164">                        Button.danger(CustomId.CANCEL.getId(), &quot;Abbrechen&quot;)</span>
+                ))
+<span class="fc" id="L166">                .queue();</span>
+<span class="fc" id="L167">    }</span>
+
+    // Button interaction handlers
+
+    /**
+     * Handles the submit button interaction.
+     * It checks if the user has made all necessary selections and fetches the schedule.
+     * @param event The ButtonInteractionEvent containing the button interaction details
+     */
+    private void handleSubmitButton(ButtonInteractionEvent event){
+<span class="fc" id="L177">        event.deferEdit().queue();</span>
+
+<span class="fc" id="L179">        String userId = event.getUser().getId();</span>
+<span class="fc" id="L180">        Map&lt;String, String&gt; selections = userSelections.get(userId);</span>
+
+<span class="pc bpc" id="L182" title="1 of 2 branches missed.">        if(selections!=null &amp;&amp;</span>
+<span class="pc bpc" id="L183" title="1 of 2 branches missed.">                selections.containsKey(CustomId.USERNAME.getId()) &amp;&amp;</span>
+<span class="fc bfc" id="L184" title="All 2 branches covered.">                selections.containsKey(CustomId.DEPARTMENT.getId()) &amp;&amp;</span>
+<span class="pc bpc" id="L185" title="1 of 2 branches missed.">                selections.containsKey(CustomId.SEMESTER.getId()) &amp;&amp;</span>
+<span class="pc bpc" id="L186" title="1 of 2 branches missed.">                selections.containsKey(CustomId.WEEK.getId())){</span>
+<span class="fc" id="L187">            fetchAndDisplaySchedule(event, selections);</span>
+        } else{
+<span class="fc" id="L189">            MessageEmbed errorEmbed = createErrorEmbed(&quot;Bitte vollständige Auswahl treffen&quot;);</span>
+<span class="fc" id="L190">            event.getHook().editOriginalEmbeds(errorEmbed)</span>
+<span class="fc" id="L191">                    .setComponents()</span>
+<span class="fc" id="L192">                    .queue();</span>
+
+            // Delete after delay using the hook
+<span class="fc" id="L195">            CompletableFuture.delayedExecutor(1, TimeUnit.MINUTES, executorService)</span>
+<span class="pc" id="L196">                    .execute(() -&gt; event.getHook().deleteOriginal().queue());</span>
+        }
+<span class="fc" id="L198">    }</span>
+
+    /**
+     * Handles the cancel button interaction.
+     * It clears the user's selections and deletes the original message.
+     * @param event The ButtonInteractionEvent containing the button interaction details
+     */
+    private void handleCancelButton(ButtonInteractionEvent event){
+<span class="fc" id="L206">        event.deferEdit().queue();</span>
+
+<span class="fc" id="L208">        String userId = event.getUser().getId();</span>
+<span class="fc" id="L209">        userSelections.remove(userId);</span>
+
+<span class="fc" id="L211">        event.getHook().deleteOriginal().queue();</span>
+<span class="fc" id="L212">    }</span>
+
+    /**
+     * Handles the confirm button interaction.
+     * It shows the department selection menu after confirmation.
+     * @param event The ButtonInteractionEvent containing the button interaction details
+     */
+    private void handleConfirmButton(ButtonInteractionEvent event){
+<span class="fc" id="L220">        event.deferEdit().queue();</span>
+<span class="fc" id="L221">        showDepartmentSelection(event);</span>
+<span class="fc" id="L222">    }</span>
+
+    /**
+     * Handles the restart button interaction.
+     * It shows the department selection menu again to allow the user to start over.
+     * @param event The ButtonInteractionEvent containing the button interaction details
+     */
+    private void handleRestartButton(ButtonInteractionEvent event){
+<span class="fc" id="L230">        event.deferEdit().queue();</span>
+<span class="fc" id="L231">        showDepartmentSelection(event);</span>
+<span class="fc" id="L232">    }</span>
+
+    // String select interaction handlers
+
+    /**
+     * Handles the department selection from the dropdown menu.
+     * It fetches the semesters for the selected department and shows the semester selection menu.
+     * @param event The StringSelectInteractionEvent containing the selection details
+     */
+    private void handleDepartmentSelection(StringSelectInteractionEvent event){
+<span class="fc" id="L242">        event.deferEdit().queue();</span>
+
+<span class="fc" id="L244">        String userId = event.getUser().getId();</span>
+<span class="fc" id="L245">        String selectedValue = event.getValues().getFirst();</span>
+
+        // Store selection
+<span class="fc" id="L248">        userSelections.computeIfAbsent(userId, k -&gt; new HashMap&lt;&gt;())</span>
+<span class="fc" id="L249">                .put(CustomId.DEPARTMENT.getId(), selectedValue);</span>
+
+<span class="fc" id="L251">        showLoadingEmbed(event);</span>
+
+<span class="fc" id="L253">        CompletableFuture.supplyAsync(() -&gt; metadataScraper.fetchSemesters(selectedValue), executorService)</span>
+<span class="fc" id="L254">                .thenAccept(semesters -&gt; {</span>
+<span class="fc" id="L255">                    MessageEmbed embed = createEmbed(</span>
+                            &quot;🎓 Semester auswählen&quot;,
+                            &quot;**Department: **&quot; + selectedValue + &quot;\n\nBitte wähle das Semester aus.&quot;,
+                            COLOR_PRIMARY
+                    );
+
+<span class="fc" id="L261">                    StringSelectMenu selectMenu = createSelectMenu(</span>
+<span class="fc" id="L262">                            CustomId.SEMESTER.getId(),</span>
+                            &quot;Wähle ein Semester&quot;,
+                            semesters
+                    );
+
+<span class="fc" id="L267">                    event.getHook().editOriginalEmbeds(embed)</span>
+<span class="fc" id="L268">                            .setComponents(ActionRow.of(selectMenu))</span>
+<span class="fc" id="L269">                            .queue();</span>
+<span class="fc" id="L270">                })</span>
+<span class="fc" id="L271">                .exceptionally(throwable -&gt; {</span>
+<span class="fc" id="L272">                    logger.error(&quot;Error fetching semesters&quot;, throwable);</span>
+<span class="fc" id="L273">                    MessageEmbed errorEmbed = createErrorEmbed(&quot;Fehler beim Laden der Semester&quot;);</span>
+<span class="fc" id="L274">                    event.getHook().editOriginalEmbeds(errorEmbed).queue();</span>
+<span class="fc" id="L275">                    return null;</span>
+                });
+<span class="fc" id="L277">    }</span>
+
+    /**
+     * Handles the semester selection from the dropdown menu.
+     * It fetches the weeks for the selected department and semester, and shows the week selection menu.
+     * @param event The StringSelectInteractionEvent containing the selection details
+     */
+    private void handleSemesterSelection(StringSelectInteractionEvent event){
+<span class="fc" id="L285">        event.deferEdit().queue();</span>
+
+<span class="fc" id="L287">        String userId = event.getUser().getId();</span>
+<span class="fc" id="L288">        String selectedValue = event.getValues().getFirst();</span>
+
+        // Store selection
+<span class="pc" id="L291">        userSelections.computeIfAbsent(userId, k -&gt; new HashMap&lt;&gt;())</span>
+<span class="fc" id="L292">                .put(CustomId.SEMESTER.getId(), selectedValue);</span>
+
+<span class="fc" id="L294">        showLoadingEmbed(event);</span>
+
+<span class="fc" id="L296">        String department = userSelections.get(userId).get(CustomId.DEPARTMENT.getId());</span>
+
+<span class="fc" id="L298">        CompletableFuture.supplyAsync(() -&gt; metadataScraper.fetchWeeks(department, selectedValue), executorService)</span>
+<span class="fc" id="L299">                .thenAccept(weeks -&gt; {</span>
+<span class="fc" id="L300">                    MessageEmbed embed = createEmbed(</span>
+                            &quot;🎓 Woche auswählen&quot;,
+                            &quot;**Department: **&quot; + department +
+                                    &quot;\n**Semester: **&quot; + selectedValue +
+                                    &quot;\n\nBitte wähle die Woche aus.&quot;,
+                            COLOR_PRIMARY
+                    );
+
+<span class="fc" id="L308">                    StringSelectMenu selectMenu = createSelectMenu(</span>
+<span class="fc" id="L309">                            CustomId.WEEK.getId(),</span>
+                            &quot;Wähle eine Woche&quot;,
+                            weeks
+                    );
+
+<span class="fc" id="L314">                    event.getHook().editOriginalEmbeds(embed)</span>
+<span class="fc" id="L315">                            .setComponents(ActionRow.of(selectMenu))</span>
+<span class="fc" id="L316">                            .queue();</span>
+<span class="fc" id="L317">                })</span>
+<span class="fc" id="L318">                .exceptionally(throwable -&gt; {</span>
+<span class="fc" id="L319">                    logger.error(&quot;Error fetching weeks&quot;, throwable);</span>
+<span class="fc" id="L320">                    MessageEmbed errorEmbed = createErrorEmbed(&quot;Fehler beim Laden der Wochen&quot;);</span>
+<span class="fc" id="L321">                    event.getHook().editOriginalEmbeds(errorEmbed).queue();</span>
+<span class="fc" id="L322">                    return null;</span>
+                });
+<span class="fc" id="L324">        logger.info(&quot;Finished fetching weeks for department: {} and semester: {}&quot;, department, selectedValue);</span>
+<span class="fc" id="L325">    }</span>
+
+    /**
+     * Handles the week selection from the dropdown menu.
+     * It confirms the user's selections and prompts them to retrieve their schedule.
+     * @param event The StringSelectInteractionEvent containing the selection details
+     */
+    private void handleWeekSelection(StringSelectInteractionEvent event){
+<span class="fc" id="L333">        event.deferEdit().queue();</span>
+
+<span class="fc" id="L335">        String userId = event.getUser().getId();</span>
+<span class="fc" id="L336">        String selectedValue = event.getValues().getFirst();</span>
+
+        // Store selection
+<span class="pc" id="L339">        userSelections.computeIfAbsent(userId, k -&gt; new HashMap&lt;&gt;())</span>
+<span class="fc" id="L340">                .put(CustomId.WEEK.getId(), selectedValue);</span>
+
+<span class="fc" id="L342">        showLoadingEmbed(event);</span>
+
+<span class="fc" id="L344">        Map&lt;String, String&gt; selections = userSelections.get(userId);</span>
+
+<span class="fc" id="L346">        MessageEmbed embed = createEmbed(</span>
+                &quot;🎓 Stundenplan-Auswahl abgeschlossen&quot;,
+<span class="fc" id="L348">                &quot;**Department: **&quot; + selections.get(CustomId.DEPARTMENT.getId()) +</span>
+<span class="fc" id="L349">                        &quot;\n**Semester: **&quot; + selections.get(CustomId.SEMESTER.getId()) +</span>
+                        &quot;\n**Woche: **&quot; + selectedValue +
+                        &quot;\n\nKlicke auf **'Stundenplan abrufen'** um fortzufahren.&quot;,
+                COLOR_PRIMARY
+        );
+
+<span class="fc" id="L355">        event.getHook().editOriginalEmbeds(embed)</span>
+<span class="fc" id="L356">                .setComponents(ActionRow.of(</span>
+<span class="fc" id="L357">                        Button.primary(CustomId.SUBMIT.getId(), &quot;Stundenplan abrufen&quot;),</span>
+<span class="fc" id="L358">                        Button.secondary(CustomId.RESTART.getId(), &quot;Neu auswählen&quot;),</span>
+<span class="fc" id="L359">                        Button.danger(CustomId.CANCEL.getId(), &quot;Abbrechen&quot;)</span>
+                ))
+<span class="fc" id="L361">                .queue();</span>
+<span class="fc" id="L362">    }</span>
+
+    /**
+     * Shows the department selection menu.
+     * It fetches the list of departments and displays them in a dropdown menu.
+     * @param event The ButtonInteractionEvent containing the button interaction details
+     */
+    private void showDepartmentSelection(ButtonInteractionEvent event){
+        // Show loading embed first
+<span class="fc" id="L371">        MessageEmbed loadingEmbed = createLoadingEmbed();</span>
+<span class="fc" id="L372">        event.getHook().editOriginalEmbeds(loadingEmbed)</span>
+<span class="fc" id="L373">                .setComponents()</span>
+<span class="fc" id="L374">                .queue();</span>
+
+        // Fetch departments asynchronously
+<span class="fc" id="L377">        CompletableFuture.supplyAsync(metadataScraper::fetchDepartments, executorService)</span>
+<span class="fc" id="L378">                .thenAccept(departments -&gt; {</span>
+<span class="fc" id="L379">                    MessageEmbed embed = createEmbed(</span>
+                            &quot;🎓 Department auswählen&quot;,
+                            &quot;Bitte wähle das Department aus.&quot;,
+                            COLOR_PRIMARY
+                    );
+
+<span class="fc" id="L385">                    StringSelectMenu selectMenu = createSelectMenu(</span>
+<span class="fc" id="L386">                            CustomId.DEPARTMENT.getId(),</span>
+                            &quot;Wähle ein Department&quot;,
+                            departments
+                    );
+
+<span class="fc" id="L391">                    event.getHook().editOriginalEmbeds(embed)</span>
+<span class="fc" id="L392">                            .setComponents(ActionRow.of(selectMenu))</span>
+<span class="fc" id="L393">                            .queue();</span>
+<span class="fc" id="L394">                })</span>
+<span class="fc" id="L395">                .exceptionally(throwable -&gt; {</span>
+<span class="fc" id="L396">                    logger.error(&quot;Error fetching departments&quot;, throwable);</span>
+<span class="fc" id="L397">                    MessageEmbed errorEmbed = createErrorEmbed(&quot;Fehler beim Laden der Departments&quot;);</span>
+<span class="fc" id="L398">                    event.getHook().editOriginalEmbeds(errorEmbed).queue();</span>
+<span class="fc" id="L399">                    return null;</span>
+                });
+<span class="fc" id="L401">    }</span>
+
+    /**
+     * Fetches the schedule based on user selections and displays it.
+     * It generates a screenshot of the schedule and sends it as an attachment.
+     * @param event      The ButtonInteractionEvent containing the button interaction details
+     * @param selections The map containing user selections for username, department, semester, and week
+     */
+    private void fetchAndDisplaySchedule(ButtonInteractionEvent event, Map&lt;String, String&gt; selections){
+<span class="fc" id="L410">        showLoadingEmbed(event);</span>
+
+<span class="fc" id="L412">        CompletableFuture.supplyAsync(() -&gt; {</span>
+                    try{
+<span class="fc" id="L414">                        String htmlSchedule = scheduleScraper.fetchScheduleHtml(</span>
+<span class="fc" id="L415">                                selections.get(CustomId.USERNAME.getId()),</span>
+<span class="fc" id="L416">                                selections.get(CustomId.DEPARTMENT.getId()),</span>
+<span class="fc" id="L417">                                selections.get(CustomId.SEMESTER.getId()),</span>
+<span class="fc" id="L418">                                selections.get(CustomId.WEEK.getId())</span>
+                        );
+
+<span class="fc" id="L421">                        byte[] screenshot = screenshotGenerator.createScreenshot(htmlSchedule);</span>
+<span class="fc" id="L422">                        String userInfo = extractUserInfo(htmlSchedule);</span>
+<span class="fc" id="L423">                        String username = extractUsername(htmlSchedule);</span>
+
+<span class="fc" id="L425">                        return new ScheduleResult(userInfo, username, screenshot);</span>
+<span class="fc" id="L426">                    } catch(Exception e){</span>
+<span class="fc" id="L427">                        logger.error(&quot;Error generating schedule&quot;, e);</span>
+<span class="fc" id="L428">                        return null;</span>
+                    }
+                }, executorService)
+<span class="fc" id="L431">                .thenAccept(result -&gt; {</span>
+<span class="fc bfc" id="L432" title="All 4 branches covered.">                    if(result==null || result.screenshot==null){</span>
+<span class="fc" id="L433">                        MessageEmbed errorEmbed = createErrorEmbed(&quot;Es ist ein Fehler beim Erstellen des Stundenplans aufgetreten.&quot;);</span>
+<span class="fc" id="L434">                        event.getHook().editOriginalEmbeds(errorEmbed).queue();</span>
+<span class="fc" id="L435">                        return;</span>
+                    }
+
+<span class="fc" id="L438">                    MessageEmbed embed = new EmbedBuilder()</span>
+<span class="fc" id="L439">                            .setTitle(&quot;🎓 Stundenplan für &quot; + result.username)</span>
+<span class="fc" id="L440">                            .setDescription(&quot;**&quot; + result.userInfo + &quot;**&quot;)</span>
+<span class="fc" id="L441">                            .setColor(COLOR_SUCCESS)</span>
+<span class="fc" id="L442">                            .setImage(&quot;attachment://stundenplan.png&quot;)</span>
+<span class="fc" id="L443">                            .build();</span>
+
+<span class="fc" id="L445">                    ByteArrayInputStream imageStream = new ByteArrayInputStream(result.screenshot);</span>
+<span class="fc" id="L446">                    FileUpload fileUpload = FileUpload.fromData(imageStream, &quot;stundenplan.png&quot;);</span>
+
+<span class="fc" id="L448">                    event.getHook().editOriginalEmbeds(embed)</span>
+<span class="fc" id="L449">                            .setFiles(fileUpload)</span>
+<span class="fc" id="L450">                            .setComponents(ActionRow.of(</span>
+<span class="fc" id="L451">                                    Button.secondary(CustomId.RESTART.getId(), &quot;Neuer Stundenplan&quot;),</span>
+<span class="fc" id="L452">                                    Button.danger(CustomId.CANCEL.getId(), &quot;Löschen&quot;)</span>
+                            ))
+<span class="fc" id="L454">                            .queue();</span>
+<span class="fc" id="L455">                })</span>
+<span class="fc" id="L456">                .exceptionally(throwable -&gt; {</span>
+<span class="nc" id="L457">                    logger.error(&quot;Error displaying schedule&quot;, throwable);</span>
+<span class="nc" id="L458">                    MessageEmbed errorEmbed = createErrorEmbed(&quot;Fehler beim Anzeigen des Stundenplans&quot;);</span>
+<span class="nc" id="L459">                    event.getHook().editOriginalEmbeds(errorEmbed).queue();</span>
+<span class="nc" id="L460">                    return null;</span>
+                });
+<span class="fc" id="L462">    }</span>
+
+    // Helper methods
+
+    /**
+     * Shows a loading embed while processing user requests.
+     * This method is used to indicate that the bot is working on the user's request.
+     * @param event The ButtonInteractionEvent containing the button interaction details
+     */
+    private void showLoadingEmbed(ButtonInteractionEvent event){
+<span class="fc" id="L472">        MessageEmbed loadingEmbed = createLoadingEmbed();</span>
+<span class="fc" id="L473">        event.getHook().editOriginalEmbeds(loadingEmbed)</span>
+<span class="fc" id="L474">                .setComponents()</span>
+<span class="fc" id="L475">                .queue();</span>
+<span class="fc" id="L476">    }</span>
+
+    /**
+     * Shows a loading embed while processing user requests in string select interactions.
+     * This method is used to indicate that the bot is working on the user's request.
+     * @param event The StringSelectInteractionEvent containing the selection details
+     */
+    private void showLoadingEmbed(StringSelectInteractionEvent event){
+<span class="fc" id="L484">        MessageEmbed loadingEmbed = createLoadingEmbed();</span>
+<span class="fc" id="L485">        event.getHook().editOriginalEmbeds(loadingEmbed)</span>
+<span class="fc" id="L486">                .setComponents()</span>
+<span class="fc" id="L487">                .queue();</span>
+<span class="fc" id="L488">    }</span>
+
+    /**
+     * Creates a select menu for department, semester, or week selection.
+     * This method builds a dropdown menu with the provided options.
+     * @param selectId    The ID of the select menu
+     * @param placeholder The placeholder text for the select menu
+     * @param options     The list of options to display in the select menu
+     * @return A StringSelectMenu object with the specified options
+     */
+    private StringSelectMenu createSelectMenu(String selectId, String placeholder, List&lt;String&gt; options){
+<span class="fc" id="L499">        StringSelectMenu.Builder builder = StringSelectMenu.create(selectId)</span>
+<span class="fc" id="L500">                .setPlaceholder(placeholder)</span>
+<span class="fc" id="L501">                .setRequiredRange(1, 1);</span>
+
+<span class="fc bfc" id="L503" title="All 2 branches covered.">        for(String option : options){</span>
+<span class="fc" id="L504">            builder.addOption(option, option);</span>
+<span class="fc" id="L505">        }</span>
+
+<span class="fc" id="L507">        return builder.build();</span>
+    }
+
+    /**
+     * Creates an embed message with the specified title, description, and color.
+     * This method is used to create consistent embed messages throughout the bot.
+     * @param title       The title of the embed
+     * @param description The description of the embed
+     * @param color       The color of the embed
+     * @return A MessageEmbed object with the specified properties
+     */
+    private MessageEmbed createEmbed(String title, String description, Color color){
+<span class="fc" id="L519">        return new EmbedBuilder()</span>
+<span class="fc" id="L520">                .setTitle(title)</span>
+<span class="fc" id="L521">                .setDescription(description)</span>
+<span class="fc" id="L522">                .setColor(color)</span>
+<span class="fc" id="L523">                .build();</span>
+    }
+
+    /**
+     * Creates a loading embed to indicate that the bot is processing a request.
+     * This method is used to inform users that their request is being processed.
+     * @return A MessageEmbed object with a loading message
+     */
+    private MessageEmbed createLoadingEmbed(){
+<span class="fc" id="L532">        return createEmbed(&quot;⏳ Verarbeitung&quot;, &quot;Der Bot denkt nach...&quot;, COLOR_LOADING);</span>
+    }
+
+    /**
+     * Creates an error embed to display error messages.
+     * This method is used to inform users about errors that occur during processing.
+     * @param errorMessage The error message to display
+     * @return A MessageEmbed object with the error message
+     */
+    private MessageEmbed createErrorEmbed(String errorMessage){
+<span class="fc" id="L542">        return createEmbed(&quot;❌ Fehler&quot;, errorMessage, COLOR_ERROR);</span>
+    }
+
+    /**
+     * Extracts user information from the HTML schedule.
+     * This method parses the HTML to retrieve user-specific information.
+     * @param htmlSchedule The HTML content of the schedule
+     * @return A string containing user information formatted for Discord
+     */
+    private String extractUserInfo(String htmlSchedule){
+<span class="fc bfc" id="L552" title="All 2 branches covered.">        if(htmlSchedule.contains(&quot;&lt;p&gt;&quot;)){</span>
+<span class="fc" id="L553">            String p = htmlSchedule.split(&quot;&lt;p&gt;&quot;)[1].split(&quot;&lt;/p&gt;&quot;)[0].trim();</span>
+
+            // HTML entities replacement
+<span class="fc" id="L556">            p = p.replace(&quot;&amp;nbsp;&quot;, &quot; &quot;)</span>
+<span class="fc" id="L557">                    .replace(&quot;&amp;amp;&quot;, &quot;&amp;&quot;)</span>
+<span class="fc" id="L558">                    .replace(&quot;&amp;lt;&quot;, &quot;&lt;&quot;)</span>
+<span class="fc" id="L559">                    .replace(&quot;&amp;gt;&quot;, &quot;&gt;&quot;);</span>
+
+            // HTML tags to Discord formatting
+<span class="fc" id="L562">            p = p.replace(&quot;&lt;b&gt;&quot;, &quot;**&quot;)</span>
+<span class="fc" id="L563">                    .replace(&quot;&lt;/b&gt;&quot;, &quot;**&quot;);</span>
+
+<span class="fc" id="L565">            return p;</span>
+        }
+<span class="fc" id="L567">        return &quot;&quot;;</span>
+    }
+
+    /**
+     * Extracts the username from the HTML schedule.
+     * This method retrieves the username from the HTML content.
+     * @param htmlSchedule The HTML content of the schedule
+     * @return The username extracted from the HTML
+     */
+    private String extractUsername(String htmlSchedule){
+<span class="fc bfc" id="L577" title="All 2 branches covered.">        if(htmlSchedule.contains(&quot;&lt;h1&gt;Stundenplan für &quot;)){</span>
+<span class="fc" id="L578">            return htmlSchedule.split(&quot;&lt;h1&gt;Stundenplan für &quot;)[1].split(&quot;&lt;/h1&gt;&quot;)[0].trim();</span>
+        }
+<span class="fc" id="L580">        return &quot;&quot;;</span>
+    }
+
+    // Data class for schedule results
+    /**
+     * ScheduleResult is a data class that holds the results of a schedule request.
+     * It contains user information, username, and the screenshot of the schedule.
+     */
+    private static class ScheduleResult{
+        final String userInfo;
+        final String username;
+        final byte[] screenshot;
+
+        /**
+         * Constructor for ScheduleResult.
+         * Initializes the userInfo, username, and screenshot fields.
+         * @param userInfo   The user information extracted from the schedule HTML
+         * @param username   The username of the user
+         * @param screenshot The screenshot of the schedule as a byte array
+         */
+<span class="fc" id="L600">        ScheduleResult(String userInfo, String username, byte[] screenshot){</span>
+<span class="fc" id="L601">            this.userInfo = userInfo;</span>
+<span class="fc" id="L602">            this.username = username;</span>
+<span class="fc" id="L603">            this.screenshot = screenshot;</span>
+<span class="fc" id="L604">        }</span>
+    }
+
+    /**
+     * Unregisters the commands and cleans up resources.
+     * This method is called when the bot is shutting down or no longer needed.
+     */
+    @Override
+    public void unregisterCommands(){
+        // Clean up executor service
+<span class="fc" id="L614">        executorService.shutdown();</span>
+        try{
+<span class="pc bpc" id="L616" title="1 of 2 branches missed.">            if(! executorService.awaitTermination(5, TimeUnit.SECONDS)){</span>
+<span class="nc" id="L617">                executorService.shutdownNow();</span>
+            }
+<span class="nc" id="L619">        } catch(InterruptedException e){</span>
+<span class="nc" id="L620">            executorService.shutdownNow();</span>
+<span class="nc" id="L621">            Thread.currentThread().interrupt();</span>
+<span class="fc" id="L622">        }</span>
+<span class="fc" id="L623">        super.unregisterCommands();</span>
+<span class="fc" id="L624">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

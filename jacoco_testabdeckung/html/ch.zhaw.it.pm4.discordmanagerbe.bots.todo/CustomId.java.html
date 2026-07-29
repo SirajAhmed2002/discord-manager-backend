@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomId.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.todo</a> &gt; <span class="el_source">CustomId.java</span></div><h1>CustomId.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.todo;
+
+/**
+ * Enum for custom IDs used in the ToDoTrackerJdaBot.
+ * This enum is used to define the custom IDs for buttons, modals, and select menus in the bot.
+ * The IDs are used to identify the components when they are interacted with.
+ */
+<span class="fc" id="L8">public enum CustomId {</span>
+    // Button IDs
+<span class="fc" id="L10">    ADD_TASK(&quot;ADD_TASK_BUTTON&quot;),</span>
+<span class="fc" id="L11">    REMOVE_TASK(&quot;REMOVE_TASK_BUTTON&quot;),</span>
+<span class="fc" id="L12">    LIST_TASKS(&quot;LIST_TASKS_BUTTON&quot;),</span>
+<span class="fc" id="L13">    NO_REMINDER(&quot;NO_REMINDER_BUTTON&quot;),</span>
+<span class="fc" id="L14">    REMINDER_ADD(&quot;REMINDER_ADD_BUTTON&quot;),</span>
+<span class="fc" id="L15">    REMINDER_DONE(&quot;REMINDER_DONE_BUTTON&quot;),</span>
+<span class="fc" id="L16">    TASK_TO_REMOVE(&quot;TASK_TO_REMOVE_&quot;),</span>
+
+    // Modal IDs
+<span class="fc" id="L19">    TASK_MODAL(&quot;TASK_MODAL&quot;),</span>
+
+    // Text Input IDs
+<span class="fc" id="L22">    TASK_TITLE(&quot;TASK_TITLE_TEXT_INPUT&quot;),</span>
+<span class="fc" id="L23">    TASK_DESCRIPTION(&quot;TASK_DESCRIPTION_TEXT_INPUT&quot;),</span>
+<span class="fc" id="L24">    TASK_DUE_DATE(&quot;TASK_DUE_DATE_TEXT_INPUT&quot;),</span>
+<span class="fc" id="L25">    TASK_DUE_TIME(&quot;TASK_DUE_TIME_TEXT_INPUT&quot;),</span>
+
+    // Select Menu IDs
+<span class="fc" id="L28">    REMINDER_VALUE(&quot;REMINDER_VALUE_SELECT&quot;),</span>
+<span class="fc" id="L29">    REMINDER_UNIT(&quot;REMINDER_UNIT_SELECT&quot;);</span>
+
+    private final String customId;
+
+<span class="fc" id="L33">    CustomId(String customId) {</span>
+<span class="fc" id="L34">        this.customId = customId;</span>
+<span class="fc" id="L35">    }</span>
+
+    public String getId() {
+<span class="fc" id="L38">        return customId;</span>
+    }
+
+    public static CustomId fromString(String customId) {
+<span class="nc bnc" id="L42" title="All 2 branches missed.">        if (customId.startsWith(TASK_TO_REMOVE.getId())) {</span>
+<span class="nc" id="L43">            return TASK_TO_REMOVE;</span>
+        }
+
+<span class="nc bnc" id="L46" title="All 2 branches missed.">        for (CustomId s : CustomId.values()) {</span>
+<span class="nc bnc" id="L47" title="All 2 branches missed.">            if (s.customId.equals(customId)) {</span>
+<span class="nc" id="L48">                return s;</span>
+            }
+        }
+<span class="nc" id="L51">        throw new IllegalArgumentException(&quot;Unknown custom ID: &quot; + customId);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

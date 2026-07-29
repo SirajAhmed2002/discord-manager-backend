@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReminderUnit.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.todo.constant</a> &gt; <span class="el_source">ReminderUnit.java</span></div><h1>ReminderUnit.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.todo.constant;
+
+/**
+ * Enum representing different time units for reminders.
+ */
+<span class="fc" id="L6">public enum ReminderUnit {</span>
+    /**
+     * Unit for seconds, equivalent to 1000 milliseconds.
+     */
+<span class="fc" id="L10">    HOURS(&quot;hours&quot;, 3600000),</span>
+
+    /**
+     * Unit for minutes, equivalent to 60,000 milliseconds.
+     */
+<span class="fc" id="L15">    DAYS(&quot;days&quot;, 86400000),</span>
+
+    /**
+     * Unit for weeks, equivalent to 604,800,000 milliseconds.
+     */
+<span class="fc" id="L20">    WEEKS(&quot;weeks&quot;, 604800000);</span>
+
+    /**
+     * The string representation of the reminder unit.
+     */
+    private final String unit;
+
+    /**
+     * The time in milliseconds that corresponds to the reminder unit.
+     */
+    private final long millis;
+
+    /**
+     * Constructor for ReminderUnit.
+     * @param unit the string representation of the reminder unit
+     * @param millis the time in milliseconds that corresponds to the reminder unit
+     */
+<span class="fc" id="L37">    ReminderUnit(String unit, long millis) {</span>
+<span class="fc" id="L38">        this.unit = unit;</span>
+<span class="fc" id="L39">        this.millis = millis;</span>
+<span class="fc" id="L40">    }</span>
+
+    /**
+     * Returns the string representation of the reminder unit.
+     * @return the string representation of the reminder unit
+     */
+    public String getUnit() {
+<span class="fc" id="L47">        return unit;</span>
+    }
+
+    /**
+     * Returns the time in milliseconds that corresponds to the reminder unit.
+     * @return the time in milliseconds that corresponds to the reminder unit
+     */
+    public long getMillis() {
+<span class="fc" id="L55">        return millis;</span>
+    }
+
+    /**
+     * Converts a string representation of a reminder unit to its corresponding ReminderUnit enum.
+     * @param unit the string representation of the reminder unit
+     * @return the corresponding ReminderUnit enum
+     */
+    public static ReminderUnit fromString(String unit) {
+<span class="pc bpc" id="L64" title="1 of 2 branches missed.">        for (ReminderUnit reminderUnit : ReminderUnit.values()) {</span>
+<span class="pc bpc" id="L65" title="1 of 2 branches missed.">            if (reminderUnit.unit.equalsIgnoreCase(unit)) {</span>
+<span class="fc" id="L66">                return reminderUnit;</span>
+            }
+        }
+<span class="nc" id="L69">        throw new IllegalArgumentException(&quot;Unknown reminder unit: &quot; + unit);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

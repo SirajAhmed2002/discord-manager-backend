@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServerInfoJdaBot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildinfo</a> &gt; <span class="el_source">ServerInfoJdaBot.java</span></div><h1>ServerInfoJdaBot.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildinfo;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.AbstractJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.BotIdentifier;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.ServerBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.CategoryDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ServerConfigDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.TextChannelDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.VoiceChannelDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.channel.concrete.Category;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Discord bot component for retrieving server information and configuration.
+ * Provides functionality to extract complete server details including categories,
+ * text channels, and voice channels from Discord guilds.
+ */
+@BotIdentifier(category = BotIdentifier.BotCategory.SERVER,
+        server = ServerBotType.GUILD_INFO)
+@Component
+public class ServerInfoJdaBot extends AbstractJdaBot {
+
+    /** Logger for this class */
+<span class="fc" id="L37">    private static final Logger log = LoggerFactory.getLogger(ServerInfoJdaBot.class);</span>
+
+    /** Object mapper for JSON serialization */
+    private final ObjectMapper objectMapper;
+
+    /**
+     * Constructs a new ServerInfoJdaBot with JDA bean and object mapper.
+     *
+     * @param jdaBean the JDA instance
+     * @param objectMapper the object mapper for JSON processing
+     */
+    @Autowired
+    public ServerInfoJdaBot(JDA jdaBean, ObjectMapper objectMapper) {
+<span class="fc" id="L50">        super(jdaBean);</span>
+<span class="fc" id="L51">        this.objectMapper = objectMapper;</span>
+<span class="fc" id="L52">    }</span>
+
+    /**
+     * Retrieves complete server information for a Discord server.
+     *
+     * @param serverId Discord server ID
+     * @return ServerConfigDTO containing the server configuration
+     * @throws IllegalArgumentException if the server ID is invalid or the server is not found
+     */
+    public ServerConfigDTO getServerInfo(String serverId) {
+<span class="fc" id="L62">        log.info(&quot;Retrieving server info for server ID: {}&quot;, serverId);</span>
+        
+        try {
+<span class="fc" id="L65">            Guild guild = jdaBean.getGuildById(serverId);</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">            if (guild == null) {</span>
+<span class="fc" id="L67">                throw new IllegalArgumentException(&quot;Guild not found: &quot; + serverId);</span>
+            }
+<span class="fc" id="L69">            return extractServerInfo(guild);</span>
+<span class="fc" id="L70">        } catch (NumberFormatException e) {</span>
+<span class="fc" id="L71">            throw new IllegalArgumentException(&quot;Invalid server ID: &quot; + serverId, e);</span>
+        }
+    }
+
+    /**
+     * Get server info as JSON string.
+     *
+     * @param serverId Discord server ID
+     * @return JSON string of server configuration
+     * @throws JsonProcessingException if there's an error processing JSON
+     */
+    public String getServerInfoJson(String serverId) throws JsonProcessingException {
+<span class="fc" id="L83">        return objectMapper.writeValueAsString(getServerInfo(serverId));</span>
+    }
+
+    /**
+     * Extracts server configuration from a Discord guild.
+     *
+     * @param guild The Discord guild
+     * @return The server configuration
+     */
+    private ServerConfigDTO extractServerInfo(Guild guild) {
+<span class="fc" id="L93">        log.info(&quot;Extracting server info for guild: {}&quot;, guild.getName());</span>
+        
+<span class="fc" id="L95">        ServerConfigDTO serverConfig = new ServerConfigDTO();</span>
+<span class="fc" id="L96">        serverConfig.setId(guild.getId());</span>
+<span class="fc" id="L97">        serverConfig.setName(guild.getName());</span>
+        
+        // Extract categories
+<span class="fc" id="L100">        List&lt;CategoryDTO&gt; categories = getCategories(guild);</span>
+<span class="fc" id="L101">        serverConfig.setCategories(categories);</span>
+        
+        // Extract text channels
+<span class="fc" id="L104">        List&lt;TextChannelDTO&gt; textChannels = getTextChannels(guild);</span>
+<span class="fc" id="L105">        serverConfig.setTextChannels(textChannels);</span>
+        
+        // Extract voice channels
+<span class="fc" id="L108">        List&lt;VoiceChannelDTO&gt; voiceChannels = getVoiceChannels(guild);</span>
+<span class="fc" id="L109">        serverConfig.setVoiceChannels(voiceChannels);</span>
+        
+<span class="fc" id="L111">        return serverConfig;</span>
+    }
+
+    /**
+     * Extract category information from a guild.
+     *
+     * @param guild The Discord guild
+     * @return List of category DTOs
+     */
+    private List&lt;CategoryDTO&gt; getCategories(Guild guild) {
+<span class="fc" id="L121">        return guild.getCategories().stream()</span>
+<span class="fc" id="L122">            .map(this::mapCategory)</span>
+<span class="fc" id="L123">            .collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Extract text channel information from a guild.
+     *
+     * @param guild The Discord guild
+     * @return List of text channel DTOs
+     */
+    private List&lt;TextChannelDTO&gt; getTextChannels(Guild guild) {
+<span class="fc" id="L133">        return guild.getTextChannels().stream()</span>
+<span class="fc" id="L134">            .map(this::mapTextChannel)</span>
+<span class="fc" id="L135">            .collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Extract voice channel information from a guild.
+     *
+     * @param guild The Discord guild
+     * @return List of voice channel DTOs
+     */
+    private List&lt;VoiceChannelDTO&gt; getVoiceChannels(Guild guild) {
+<span class="fc" id="L145">        return guild.getVoiceChannels().stream()</span>
+<span class="fc" id="L146">            .map(this::mapVoiceChannel)</span>
+<span class="fc" id="L147">            .collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Map a JDA Category to a CategoryDTO.
+     *
+     * @param category The JDA Category
+     * @return A CategoryDTO
+     */
+    private CategoryDTO mapCategory(Category category) {
+<span class="fc" id="L157">        CategoryDTO dto = new CategoryDTO();</span>
+<span class="fc" id="L158">        dto.setId(category.getId());</span>
+<span class="fc" id="L159">        dto.setName(category.getName());</span>
+<span class="fc" id="L160">        dto.setPosition(category.getPosition());</span>
+<span class="fc" id="L161">        return dto;</span>
+    }
+
+    /**
+     * Map a JDA TextChannel to a TextChannelDTO.
+     *
+     * @param textChannel The JDA TextChannel
+     * @return A TextChannelDTO
+     */
+    private TextChannelDTO mapTextChannel(TextChannel textChannel) {
+<span class="fc" id="L171">        TextChannelDTO dto = new TextChannelDTO();</span>
+<span class="fc" id="L172">        dto.setId(textChannel.getId());</span>
+<span class="fc" id="L173">        dto.setName(textChannel.getName());</span>
+<span class="fc" id="L174">        dto.setPosition(textChannel.getPosition());</span>
+        
+        // Set category ID if the channel has a parent category
+<span class="fc" id="L177">        Category parent = textChannel.getParentCategory();</span>
+<span class="fc bfc" id="L178" title="All 2 branches covered.">        if (parent != null) {</span>
+<span class="fc" id="L179">            dto.setParentCategoryId(parent.getId());</span>
+        }
+        
+<span class="fc" id="L182">        return dto;</span>
+    }
+
+    /**
+     * Map a JDA VoiceChannel to a VoiceChannelDTO.
+     *
+     * @param voiceChannel The JDA VoiceChannel
+     * @return A VoiceChannelDTO
+     */
+    private VoiceChannelDTO mapVoiceChannel(VoiceChannel voiceChannel) {
+<span class="fc" id="L192">        VoiceChannelDTO dto = new VoiceChannelDTO();</span>
+<span class="fc" id="L193">        dto.setId(voiceChannel.getId());</span>
+<span class="fc" id="L194">        dto.setName(voiceChannel.getName());</span>
+<span class="fc" id="L195">        dto.setPosition(voiceChannel.getPosition());</span>
+<span class="fc" id="L196">        dto.setUserLimit(voiceChannel.getUserLimit());</span>
+<span class="fc" id="L197">        dto.setBitrate(voiceChannel.getBitrate());</span>
+        
+        // Set category ID if the channel has a parent category
+<span class="fc" id="L200">        Category parent = voiceChannel.getParentCategory();</span>
+<span class="fc bfc" id="L201" title="All 2 branches covered.">        if (parent != null) {</span>
+<span class="fc" id="L202">            dto.setParentCategoryId(parent.getId());</span>
+        }
+        
+<span class="fc" id="L205">        return dto;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServerListJdaBot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildlist</a> &gt; <span class="el_source">ServerListJdaBot.java</span></div><h1>ServerListJdaBot.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildlist;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.AbstractJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.BotIdentifier;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.ServerBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.DiscordServer;
+import ch.zhaw.it.pm4.discordmanagerbe.data.repositories.DiscordServerRepository;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ServerDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ServerListDTO;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+/**
+ * Discord bot for managing and retrieving guild/server lists.
+ * Handles server synchronization with database and admin permission checks.
+ */
+@BotIdentifier(category = BotIdentifier.BotCategory.SERVER,
+        server = ServerBotType.GUILD_LIST)
+@Component
+public class ServerListJdaBot extends AbstractJdaBot {
+
+    /** Logger for this class */
+<span class="fc" id="L37">    private static final Logger log = LoggerFactory.getLogger(ServerListJdaBot.class);</span>
+
+    /** Permissions that grant effective admin privileges */
+<span class="fc" id="L40">    private static final EnumSet&lt;Permission&gt; ADMIN_LIKE_PERMISSIONS = EnumSet.of(</span>
+            Permission.MANAGE_SERVER,
+            Permission.MANAGE_ROLES,
+            Permission.MANAGE_CHANNEL,
+            Permission.BAN_MEMBERS,
+            Permission.KICK_MEMBERS
+    );
+
+    /** JSON object mapper for serialization */
+    private final ObjectMapper objectMapper;
+
+    /** Repository for Discord server database operations */
+    private final DiscordServerRepository discordServerRepository;
+
+    /**
+     * Constructs the bot with JDA and repository dependencies.
+     *
+     * @param jdaBean JDA instance for Discord API interactions
+     * @param discordServerRepository repository for server data persistence
+     */
+    @Autowired
+    public ServerListJdaBot(JDA jdaBean, DiscordServerRepository discordServerRepository) {
+<span class="fc" id="L62">        super(jdaBean);</span>
+<span class="fc" id="L63">        this.discordServerRepository = discordServerRepository;</span>
+<span class="fc" id="L64">        this.objectMapper = new ObjectMapper();</span>
+<span class="fc" id="L65">        this.objectMapper.registerModule(new JavaTimeModule());</span>
+<span class="fc" id="L66">    }</span>
+
+    /**
+     * Saves or updates a guild in the database.
+     *
+     * @param guild the Discord guild to save
+     */
+    private void saveGuildToDatabase(Guild guild) {
+        try {
+<span class="fc" id="L75">            log.info(&quot;Explicitly saving guild to database: {} (ID: {})&quot;, guild.getName(), guild.getId());</span>
+
+<span class="fc" id="L77">            DiscordServer server = discordServerRepository.findByServerId(guild.getId())</span>
+<span class="fc" id="L78">                    .map(existing -&gt; updateExistingServer(existing, guild))</span>
+<span class="fc" id="L79">                    .orElseGet(() -&gt; createNewServer(guild));</span>
+
+<span class="fc" id="L81">            discordServerRepository.save(server);</span>
+<span class="fc" id="L82">            log.info(&quot;Successfully saved guild to database: {}&quot;, guild.getId());</span>
+
+<span class="fc" id="L84">        } catch (Exception e) {</span>
+<span class="fc" id="L85">            log.error(&quot;ERROR saving guild to database: {} - {}&quot;, guild.getId(), e.getMessage(), e);</span>
+<span class="fc" id="L86">        }</span>
+<span class="fc" id="L87">    }</span>
+
+    /**
+     * Creates a new DiscordServer entity from a guild.
+     *
+     * @param guild the Discord guild
+     * @return new DiscordServer entity
+     */
+    private DiscordServer createNewServer(Guild guild) {
+<span class="fc" id="L96">        DiscordServer server = new DiscordServer(guild.getId(), guild.getName(), guild.getOwnerId());</span>
+<span class="fc" id="L97">        log.info(&quot;Created new DiscordServer: {}&quot;, server);</span>
+<span class="fc" id="L98">        return server;</span>
+    }
+
+    /**
+     * Updates an existing DiscordServer entity with guild data.
+     *
+     * @param server existing DiscordServer entity
+     * @param guild the Discord guild with updated data
+     * @return updated DiscordServer entity
+     */
+    private DiscordServer updateExistingServer(DiscordServer server, Guild guild) {
+<span class="fc" id="L109">        server.setServerName(guild.getName());</span>
+<span class="fc" id="L110">        server.setOwnerId(guild.getOwnerId());</span>
+<span class="fc" id="L111">        log.info(&quot;Updated existing DiscordServer: {}&quot;, server);</span>
+<span class="fc" id="L112">        return server;</span>
+    }
+
+    /**
+     * Synchronizes guild list with database.
+     *
+     * @param guilds list of guilds to synchronize
+     */
+    private void syncGuildsToDatabase(List&lt;Guild&gt; guilds) {
+<span class="fc" id="L121">        guilds.forEach(this::saveGuildToDatabase);</span>
+<span class="fc" id="L122">    }</span>
+
+    /**
+     * Retrieves a member from a guild by user ID.
+     *
+     * @param guild the Discord guild
+     * @param userId the user ID to search for
+     * @return Optional containing the member if found
+     */
+    private Optional&lt;Member&gt; getMemberFromGuild(Guild guild, String userId) {
+        try {
+<span class="fc" id="L133">            return Optional.ofNullable(guild.retrieveMemberById(userId).complete());</span>
+<span class="fc" id="L134">        } catch (Exception e) {</span>
+<span class="fc" id="L135">            return Optional.empty();</span>
+        }
+    }
+
+    /**
+     * Checks if a member has admin privileges in a guild.
+     *
+     * @param member the guild member
+     * @param guild the Discord guild
+     * @return true if member has admin privileges
+     */
+    private boolean isUserAdmin(Member member, Guild guild) {
+<span class="pc bpc" id="L147" title="1 of 4 branches missed.">        return member.hasPermission(Permission.ADMINISTRATOR) || isEffectiveAdmin(member, guild);</span>
+    }
+
+    /**
+     * Checks if a member has effective admin privileges.
+     *
+     * @param member the guild member
+     * @param guild the Discord guild
+     * @return true if member has effective admin privileges
+     */
+    private boolean isEffectiveAdmin(Member member, Guild guild) {
+<span class="fc bfc" id="L158" title="All 2 branches covered.">        return guild.getOwnerIdLong() == member.getIdLong() ||</span>
+<span class="pc bpc" id="L159" title="1 of 2 branches missed.">                member.hasPermission(ADMIN_LIKE_PERMISSIONS);</span>
+    }
+
+    /**
+     * Gets all guilds where the specified user has admin permissions.
+     *
+     * @param userId the Discord user ID to check
+     * @return list of guilds where user is admin
+     */
+    public List&lt;Guild&gt; getGuildsWhereUserIsAdmin(String userId) {
+<span class="fc" id="L169">        return jdaBean.getGuilds().stream()</span>
+<span class="fc" id="L170">                .filter(guild -&gt; getMemberFromGuild(guild, userId)</span>
+<span class="fc" id="L171">                        .map(member -&gt; isUserAdmin(member, guild))</span>
+<span class="fc" id="L172">                        .orElse(false))</span>
+<span class="fc" id="L173">                .collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Gets all guilds the bot is a member of.
+     *
+     * @return list of all guilds
+     */
+    public List&lt;Guild&gt; getAllGuilds() {
+<span class="fc" id="L182">        return jdaBean.getGuilds();</span>
+    }
+
+    /**
+     * Converts a Guild object to a ServerDTO.
+     *
+     * @param guild the guild to convert
+     * @return ServerDTO with guild information
+     */
+    private ServerDTO convertGuildToServerDTO(Guild guild) {
+<span class="fc" id="L192">        ServerDTO serverDTO = new ServerDTO();</span>
+<span class="fc" id="L193">        serverDTO.setId(guild.getId());</span>
+<span class="fc" id="L194">        serverDTO.setName(guild.getName());</span>
+<span class="fc" id="L195">        serverDTO.setOwnerId(guild.getOwnerId());</span>
+<span class="fc" id="L196">        serverDTO.setMemberCount(guild.getMemberCount());</span>
+<span class="fc" id="L197">        serverDTO.setCreationDate(guild.getTimeCreated());</span>
+<span class="fc" id="L198">        return serverDTO;</span>
+    }
+
+    /**
+     * Converts guild list to ServerListDTO and syncs to database.
+     *
+     * @param guilds list of guilds to convert
+     * @return ServerListDTO containing server information
+     */
+    private ServerListDTO convertGuildsToServerListDTO(List&lt;Guild&gt; guilds) {
+<span class="fc" id="L208">        syncGuildsToDatabase(guilds);</span>
+
+<span class="fc" id="L210">        List&lt;ServerDTO&gt; serverDTOs = guilds.stream()</span>
+<span class="fc" id="L211">                .map(this::convertGuildToServerDTO)</span>
+<span class="fc" id="L212">                .collect(Collectors.toList());</span>
+
+<span class="fc" id="L214">        ServerListDTO serverListDTO = new ServerListDTO();</span>
+<span class="fc" id="L215">        serverListDTO.setServers(serverDTOs);</span>
+<span class="fc" id="L216">        return serverListDTO;</span>
+    }
+
+    /**
+     * Gets all servers the bot is a member of in DTO format.
+     *
+     * @return ServerListDTO containing all servers
+     */
+    public ServerListDTO getAllServersDTO() {
+<span class="fc" id="L225">        return convertGuildsToServerListDTO(getAllGuilds());</span>
+    }
+
+    /**
+     * Gets servers where the specified user has admin permissions in DTO format.
+     *
+     * @param userId the Discord user ID to check
+     * @return ServerListDTO containing admin servers
+     */
+    public ServerListDTO getAdminServersDTO(String userId) {
+<span class="fc" id="L235">        return convertGuildsToServerListDTO(getGuildsWhereUserIsAdmin(userId));</span>
+    }
+
+    /**
+     * Gets admin servers as JSON string.
+     *
+     * @param userId the Discord user ID to check
+     * @return JSON string representation of admin servers
+     * @throws JsonProcessingException if JSON processing fails
+     */
+    public String getAdminServersJson(String userId) throws JsonProcessingException {
+<span class="fc" id="L246">        return objectMapper.writeValueAsString(getAdminServersDTO(userId));</span>
+    }
+
+    /**
+     * Gets all servers as JSON string.
+     *
+     * @return JSON string representation of all servers
+     * @throws JsonProcessingException if JSON processing fails
+     */
+    public String getAllServersJson() throws JsonProcessingException {
+<span class="fc" id="L256">        return objectMapper.writeValueAsString(getAllServersDTO());</span>
+    }
+
+    /**
+     * Gets all servers from database with current sync.
+     *
+     * @return list of DiscordServer entities from database
+     */
+    public List&lt;DiscordServer&gt; getAllServersFromDatabase() {
+<span class="fc" id="L265">        syncGuildsToDatabase(getAllGuilds());</span>
+<span class="fc" id="L266">        return discordServerRepository.findAll();</span>
+    }
+
+    /**
+     * Gets servers owned by a specific user from database.
+     *
+     * @param ownerId the Discord user ID of the owner
+     * @return list of DiscordServer entities owned by user
+     */
+    public List&lt;DiscordServer&gt; getServersByOwner(String ownerId) {
+<span class="fc" id="L276">        syncGuildsToDatabase(getAllGuilds());</span>
+<span class="fc" id="L277">        return discordServerRepository.findByOwnerId(ownerId);</span>
+    }
+
+    /**
+     * Synchronizes all current guilds to database.
+     */
+    public void syncGuildsToDatabase() {
+<span class="fc" id="L284">        List&lt;Guild&gt; currentGuilds = getAllGuilds();</span>
+<span class="fc" id="L285">        log.info(&quot;Syncing {} guilds to database&quot;, currentGuilds.size());</span>
+<span class="fc" id="L286">        syncGuildsToDatabase(currentGuilds);</span>
+<span class="fc" id="L287">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

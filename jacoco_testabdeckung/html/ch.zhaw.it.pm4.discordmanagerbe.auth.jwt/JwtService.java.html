@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JwtService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.auth.jwt</a> &gt; <span class="el_source">JwtService.java</span></div><h1>JwtService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.auth.jwt;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Service for JWT token operations.
+ */
+@Service
+public class JwtService {
+
+    /** Logger instance for logging events and debugging information. */
+<span class="fc" id="L31">    private static final Logger logger = LoggerFactory.getLogger(JwtService.class);</span>
+
+    /** Secret key string used for signing and verifying JWT tokens. */
+    private final String jwtSecretString;
+
+    /** Expiration time for JWT tokens in milliseconds. */
+    private final long jwtExpiration;
+
+    /** Interval for cleaning up expired tokens from the blacklist in milliseconds. */
+    private final long cleanupInterval;
+
+    /** Secret key derived from the secret string for HMAC signing. */
+    private SecretKey jwtSecretKey;
+
+    /** Thread-safe map for storing blacklisted tokens and their expiration dates. */
+<span class="fc" id="L46">    private final Map&lt;String, Date&gt; blacklistedTokens = Collections.synchronizedMap(new HashMap&lt;&gt;());</span>
+
+    /** Scheduler for periodically cleaning up expired tokens from the blacklist. */
+<span class="fc" id="L49">    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);</span>
+
+    /**
+     * Initializes JWT service with configuration.
+     */
+    public JwtService(
+            @Value(&quot;${jwt.secret}&quot;) String jwtSecretString,
+            @Value(&quot;${jwt.expiration}&quot;) long jwtExpiration,
+<span class="fc" id="L57">            @Value(&quot;${jwt.cleanup-interval}&quot;) long cleanupInterval) {</span>
+<span class="fc" id="L58">        this.jwtSecretString = jwtSecretString;</span>
+<span class="fc" id="L59">        this.jwtExpiration = jwtExpiration;</span>
+<span class="fc" id="L60">        this.cleanupInterval = cleanupInterval;</span>
+<span class="fc" id="L61">    }</span>
+
+    /**
+     * Sets up JWT components and cleanup scheduler.
+     */
+    @PostConstruct
+    private void init() {
+<span class="fc" id="L68">        initializeSecretKey();</span>
+<span class="fc" id="L69">        scheduleTokenCleanup();</span>
+<span class="fc" id="L70">        logger.info(&quot;JWT Service initialized with cleanup interval of {} ms&quot;, cleanupInterval);</span>
+<span class="fc" id="L71">    }</span>
+
+    /**
+     * Creates a new JWT token for the user.
+     * @param username User identifier
+     * @param additionalClaims Extra information to include in token
+     * @return Signed JWT token
+     */
+    public String generateToken(String username, Map&lt;String, Object&gt; additionalClaims) {
+<span class="fc" id="L80">        Date now = new Date();</span>
+<span class="fc" id="L81">        Date expiryDate = calculateExpiryDate(now);</span>
+
+<span class="fc" id="L83">        String token = Jwts.builder()</span>
+<span class="fc" id="L84">                .claims(additionalClaims)</span>
+<span class="fc" id="L85">                .subject(username)</span>
+<span class="fc" id="L86">                .issuedAt(now)</span>
+<span class="fc" id="L87">                .expiration(expiryDate)</span>
+<span class="fc" id="L88">                .signWith(jwtSecretKey)</span>
+<span class="fc" id="L89">                .compact();</span>
+
+<span class="fc" id="L91">        logger.debug(&quot;Generated JWT token for user: {}, expires at: {}&quot;, username, expiryDate);</span>
+<span class="fc" id="L92">        return token;</span>
+    }
+
+    /**
+     * Extracts username from token.
+     * @param token JWT token
+     * @return Username from token
+     */
+    public String getUsernameFromToken(String token) {
+<span class="fc" id="L101">        return parseClaims(token).getSubject();</span>
+    }
+
+    /**
+     * Adds token to blacklist.
+     * @param token JWT token to invalidate
+     * @return true if token was invalidated, false otherwise
+     */
+    public boolean invalidateToken(String token) {
+        try {
+<span class="fc" id="L111">            Claims claims = parseClaims(token);</span>
+<span class="fc" id="L112">            Date expiryDate = claims.getExpiration();</span>
+<span class="fc" id="L113">            blacklistedTokens.put(token, expiryDate);</span>
+
+<span class="fc" id="L115">            String username = claims.getSubject();</span>
+<span class="fc" id="L116">            logger.info(&quot;Token invalidated for user: {}&quot;, username);</span>
+<span class="fc" id="L117">            return true;</span>
+<span class="fc" id="L118">        } catch (Exception ex) {</span>
+<span class="fc" id="L119">            logger.warn(&quot;Failed to invalidate token: {}&quot;, ex.getMessage());</span>
+<span class="fc" id="L120">            return false;</span>
+        }
+    }
+
+    /**
+     * Checks if token is valid.
+     * @param token JWT token to validate
+     * @return True if token is valid
+     */
+    public boolean validateToken(String token) {
+        try {
+<span class="fc bfc" id="L131" title="All 2 branches covered.">            if (blacklistedTokens.containsKey(token)) {</span>
+<span class="fc" id="L132">                return false;</span>
+            }
+<span class="fc" id="L134">            Claims claims = parseClaims(token);</span>
+<span class="fc" id="L135">            logger.debug(&quot;Token validated successfully for user: {}&quot;, claims.getSubject());</span>
+<span class="fc" id="L136">            return true;</span>
+<span class="fc" id="L137">        } catch (JwtException | IllegalArgumentException ex) {</span>
+<span class="fc" id="L138">            logger.debug(&quot;Token validation failed: {}&quot;, ex.getMessage());</span>
+<span class="fc" id="L139">            return false;</span>
+        }
+    }
+
+    /**
+     * Extracts claims from token.
+     *
+     * @param token JWT token to parse
+     * @return claims from the token
+     */
+    public Claims parseClaims(String token) {
+<span class="fc" id="L150">        return Jwts.parser()</span>
+<span class="fc" id="L151">                .verifyWith(jwtSecretKey)</span>
+<span class="fc" id="L152">                .build().parseSignedClaims(token)</span>
+<span class="fc" id="L153">                .getPayload();</span>
+    }
+
+    /**
+     * Removes expired tokens from blacklist.
+     */
+    private void cleanUpExpiredTokens() {
+<span class="fc" id="L160">        Date now = new Date();</span>
+<span class="fc" id="L161">        int initialSize = blacklistedTokens.size();</span>
+
+<span class="fc" id="L163">        blacklistedTokens.entrySet().removeIf(entry -&gt; entry.getValue().before(now));</span>
+
+<span class="fc" id="L165">        int removedCount = initialSize - blacklistedTokens.size();</span>
+<span class="pc bpc" id="L166" title="1 of 2 branches missed.">        if (removedCount &gt; 0) {</span>
+<span class="nc" id="L167">            logger.info(&quot;Cleanup completed: removed {} expired tokens from blacklist&quot;, removedCount);</span>
+        }
+<span class="fc" id="L169">    }</span>
+
+    /**
+     * Calculates token expiration date.
+     *
+     * @param issuedAt token issue date
+     * @return calculated expiration date
+     */
+    private Date calculateExpiryDate(Date issuedAt) {
+<span class="fc" id="L178">        return new Date(issuedAt.getTime() + jwtExpiration);</span>
+    }
+
+    /**
+     * Initializes HMAC secret key.
+     */
+    private void initializeSecretKey() {
+<span class="fc" id="L185">        this.jwtSecretKey = Keys.hmacShaKeyFor(jwtSecretString.getBytes(StandardCharsets.UTF_8));</span>
+<span class="fc" id="L186">    }</span>
+
+    /**
+     * Sets up periodic token cleanup.
+     */
+    private void scheduleTokenCleanup() {
+<span class="fc" id="L192">        scheduler.scheduleAtFixedRate(this::cleanUpExpiredTokens, 1,</span>
+<span class="fc" id="L193">                TimeUnit.MICROSECONDS.toSeconds(cleanupInterval), TimeUnit.SECONDS);</span>
+<span class="fc" id="L194">    }</span>
+
+    /**
+     * Shuts down the scheduler.
+     */
+    @PreDestroy
+    private void cleanup() {
+<span class="nc" id="L201">        scheduler.shutdown();</span>
+<span class="nc" id="L202">        logger.info(&quot;JWT Service cleanup scheduler shutdown&quot;);</span>
+<span class="nc" id="L203">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

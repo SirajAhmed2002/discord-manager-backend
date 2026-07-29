@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthenticationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.auth.service</a> &gt; <span class="el_source">AuthenticationService.java</span></div><h1>AuthenticationService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.auth.service;
+
+import ch.zhaw.it.pm4.discordmanagerbe.auth.jwt.JwtService;
+import ch.zhaw.it.pm4.discordmanagerbe.auth.oauth.DiscordAuthService;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.Student;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Service for user authentication operations.
+ */
+@Service
+public class AuthenticationService {
+
+    /** Logger instance for logging events and debugging information. */
+<span class="fc" id="L22">    private static final Logger logger = LoggerFactory.getLogger(AuthenticationService.class);</span>
+
+    /** Service for handling Discord OAuth authentication. */
+    private final DiscordAuthService discordAuthService;
+
+    /** Service for managing and generating JWT tokens. */
+    private final JwtService jwtService;
+
+    /** Service for managing student-related operations. */
+    private final StudentService studentService;
+
+    /**
+     * Constructs an instance of AuthenticationService with required dependencies.
+     *
+     * @param discordAuthService Service for handling Discord OAuth authentication
+     * @param jwtService Service for managing and generating JWT tokens
+     * @param studentService Service for managing student-related operations
+     */
+    @Autowired
+    public AuthenticationService(
+            DiscordAuthService discordAuthService,
+            JwtService jwtService,
+<span class="fc" id="L44">            StudentService studentService) {</span>
+<span class="fc" id="L45">        this.discordAuthService = discordAuthService;</span>
+<span class="fc" id="L46">        this.jwtService = jwtService;</span>
+<span class="fc" id="L47">        this.studentService = studentService;</span>
+<span class="fc" id="L48">    }</span>
+
+    /**
+     * Processes Discord OAuth authentication.
+     * @param code Discord authorization code
+     * @return Authentication details with JWT token
+     * @throws IOException If OAuth communication fails
+     * @throws IllegalArgumentException If the provided code is null or empty
+     * @throws IllegalStateException If required user information is missing from Discord response
+     */
+    public Map&lt;String, String&gt; authenticateWithDiscordCode(String code) throws IOException {
+<span class="pc bpc" id="L59" title="2 of 4 branches missed.">        if (code == null || code.isEmpty()) {</span>
+<span class="nc" id="L60">            throw new IllegalArgumentException(&quot;Discord authorization code cannot be null or empty&quot;);</span>
+        }
+
+<span class="fc" id="L63">        String accessToken = discordAuthService.exchangeCodeForToken(code);</span>
+
+<span class="fc" id="L65">        Map&lt;String, Object&gt; userInfo = discordAuthService.getUserInfo(accessToken);</span>
+
+<span class="pc bpc" id="L67" title="2 of 6 branches missed.">        if (!userInfo.containsKey(&quot;username&quot;) || !userInfo.containsKey(&quot;id&quot;) || !userInfo.containsKey(&quot;email&quot;)) {</span>
+<span class="fc" id="L68">            throw new IllegalStateException(&quot;Required user information missing from Discord response&quot;);</span>
+        }
+
+<span class="fc" id="L71">        String username = (String) userInfo.get(&quot;username&quot;);</span>
+<span class="fc" id="L72">        String userId = (String) userInfo.get(&quot;id&quot;);</span>
+<span class="fc" id="L73">        String email = (String) userInfo.get(&quot;email&quot;);</span>
+
+<span class="fc" id="L75">        Student student = studentService.createStudentIfNotExists(userId, username, email);</span>
+<span class="fc" id="L76">        logger.info(&quot;Student with Discord ID: {} authenticated&quot;, userId);</span>
+
+<span class="fc" id="L78">        Map&lt;String, Object&gt; claims = createJwtClaims(userId);</span>
+<span class="fc" id="L79">        String jwtToken = jwtService.generateToken(username, claims);</span>
+
+<span class="fc" id="L81">        return createResponseMap(username, jwtToken);</span>
+    }
+
+    /**
+     * Creates JWT claims for Discord user.
+     * @param userId Discord user ID
+     * @return JWT claims
+     */
+    private Map&lt;String, Object&gt; createJwtClaims(String userId) {
+<span class="fc" id="L90">        Map&lt;String, Object&gt; claims = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L91">        claims.put(&quot;discordId&quot;, userId);</span>
+<span class="fc" id="L92">        claims.put(&quot;source&quot;, &quot;discord&quot;);</span>
+<span class="fc" id="L93">        return claims;</span>
+    }
+
+    /**
+     * Creates response map with authentication details.
+     * @param username User's name
+     * @param token JWT token
+     * @return Response map
+     */
+    private Map&lt;String, String&gt; createResponseMap(String username, String token) {
+<span class="fc" id="L103">        Map&lt;String, String&gt; response = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L104">        response.put(&quot;token&quot;, token);</span>
+<span class="fc" id="L105">        response.put(&quot;username&quot;, username);</span>
+<span class="fc" id="L106">        return response;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

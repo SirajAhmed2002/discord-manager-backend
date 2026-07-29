@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Task.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.todo</a> &gt; <span class="el_source">Task.java</span></div><h1>Task.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.todo;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Represents a task with a title, description, time to be done, and reminders.
+ */
+public class Task {
+    private String title;
+    private String description;
+    private long timeToBeDone;
+<span class="fc" id="L13">    private final List&lt;Long&gt; reminderDateTime = new ArrayList&lt;&gt;();</span>
+
+    private String reminderValue;
+    private ReminderUnit reminderUnit;
+
+<span class="fc" id="L18">    public Task() {</span>
+<span class="fc" id="L19">    }</span>
+
+    public void setTitle(String title) {
+<span class="fc" id="L22">        this.title = title;</span>
+<span class="fc" id="L23">    }</span>
+
+    public void setDescription(String description) {
+<span class="fc" id="L26">        this.description = description;</span>
+<span class="fc" id="L27">    }</span>
+
+    public void setTimeToBeDone(long timeToBeDone) {
+<span class="fc" id="L30">        this.timeToBeDone = timeToBeDone;</span>
+<span class="fc" id="L31">    }</span>
+
+    public void addReminder(long reminder) {
+<span class="fc" id="L34">        this.reminderDateTime.add(timeToBeDone - reminder);</span>
+<span class="fc" id="L35">    }</span>
+
+    public void setReminderValue(String reminderValue) {
+<span class="fc" id="L38">        this.reminderValue = reminderValue;</span>
+<span class="fc" id="L39">    }</span>
+
+    public void setReminderUnit(ReminderUnit reminderUnit) {
+<span class="fc" id="L42">        this.reminderUnit = reminderUnit;</span>
+<span class="fc" id="L43">    }</span>
+
+    public String getTitle() {
+<span class="fc" id="L46">        return title;</span>
+    }
+
+    public String getDescription() {
+<span class="fc" id="L50">        return description;</span>
+    }
+
+    public long getTimeToBeDone() {
+<span class="fc" id="L54">        return timeToBeDone;</span>
+    }
+
+    public List&lt;Long&gt; getReminderDateTime() {
+<span class="fc" id="L58">        return reminderDateTime;</span>
+    }
+
+    public String getReminderValue() {
+<span class="fc" id="L62">        return reminderValue;</span>
+    }
+
+    public ReminderUnit getReminderUnit() {
+<span class="fc" id="L66">        return reminderUnit;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

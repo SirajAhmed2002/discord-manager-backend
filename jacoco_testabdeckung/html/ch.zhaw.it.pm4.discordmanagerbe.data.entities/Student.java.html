@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Student.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.data.entities</a> &gt; <span class="el_source">Student.java</span></div><h1>Student.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.data.entities;
+import jakarta.persistence.*;
+
+/**
+ * Entity representing a student with Discord integration.
+ * Stores student information including Discord ID, username, and email.
+ */
+@Entity(name = &quot;Student&quot;)
+@Table(name = &quot;student&quot;,
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = &quot;student_email_unique&quot;,
+                        columnNames = &quot;email&quot;
+                ),
+                @UniqueConstraint(
+                        name = &quot;student_discord_id_unique&quot;,
+                        columnNames = &quot;discord_id&quot;
+                )
+        }
+)
+public class Student {
+
+    /** Unique identifier for the student */
+    @Id
+    @SequenceGenerator(
+            name = &quot;student_sequence&quot;,
+            sequenceName = &quot;student_sequence&quot;,
+            allocationSize = 1
+    )
+    @GeneratedValue(
+            strategy = GenerationType.SEQUENCE,
+            generator = &quot;student_sequence&quot;
+    )
+    @Column(
+            name = &quot;id&quot;,
+            updatable = false
+    )
+    private Long id;
+
+    /** Unique Discord ID of the student */
+    @Column(
+            name = &quot;discord_id&quot;,
+            nullable = false,
+            columnDefinition = &quot;TEXT&quot;
+    )
+    private String discordId;
+
+    /** Discord username of the student */
+    @Column(
+            name = &quot;username&quot;,
+            nullable = false,
+            columnDefinition = &quot;TEXT&quot;
+    )
+    private String username;
+
+    /** Email address of the student */
+    @Column(
+            name = &quot;email&quot;,
+            nullable = false,
+            columnDefinition = &quot;TEXT&quot;
+    )
+    private String email;
+
+    /**
+     * Creates a new student with specified details.
+     *
+     * @param discordId unique Discord ID
+     * @param username Discord username
+     * @param email student's email address
+     */
+<span class="fc" id="L71">    public Student(String discordId, String username, String email) {</span>
+<span class="fc" id="L72">        this.discordId = discordId;</span>
+<span class="fc" id="L73">        this.username = username;</span>
+<span class="fc" id="L74">        this.email = email;</span>
+<span class="fc" id="L75">    }</span>
+
+    /**
+     * Default constructor.
+     */
+<span class="fc" id="L80">    public Student() {</span>
+<span class="fc" id="L81">    }</span>
+
+    /**
+     * Gets the student ID.
+     *
+     * @return the student ID
+     */
+    public Long getId() {
+<span class="nc" id="L89">        return id;</span>
+    }
+
+    /**
+     * Sets the student ID.
+     *
+     * @param id the student ID
+     */
+    public void setId(Long id) {
+<span class="nc" id="L98">        this.id = id;</span>
+<span class="nc" id="L99">    }</span>
+
+    /**
+     * Gets the Discord ID.
+     *
+     * @return the Discord ID
+     */
+    public String getDiscordId() {
+<span class="fc" id="L107">        return discordId;</span>
+    }
+
+    /**
+     * Sets the Discord ID.
+     *
+     * @param discordId the Discord ID
+     */
+    public void setDiscordId(String discordId) {
+<span class="nc" id="L116">        this.discordId = discordId;</span>
+<span class="nc" id="L117">    }</span>
+
+    /**
+     * Gets the Discord username.
+     *
+     * @return the username
+     */
+    public String getUsername() {
+<span class="fc" id="L125">        return username;</span>
+    }
+
+    /**
+     * Sets the Discord username.
+     *
+     * @param username the username
+     */
+    public void setUsername(String username) {
+<span class="nc" id="L134">        this.username = username;</span>
+<span class="nc" id="L135">    }</span>
+
+    /**
+     * Gets the email address.
+     *
+     * @return the email address
+     */
+    public String getEmail() {
+<span class="fc" id="L143">        return email;</span>
+    }
+
+    /**
+     * Sets the email address.
+     *
+     * @param email the email address
+     */
+    public void setEmail(String email) {
+<span class="nc" id="L152">        this.email = email;</span>
+<span class="nc" id="L153">    }</span>
+
+    @Override
+    public String toString() {
+<span class="nc" id="L157">        return &quot;Student{&quot; +</span>
+                &quot;id=&quot; + id +
+                &quot;, discordId='&quot; + discordId + '\'' +
+                &quot;, username='&quot; + username + '\'' +
+                &quot;, email='&quot; + email + '\'' +
+                '}';
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

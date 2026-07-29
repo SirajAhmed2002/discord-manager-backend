@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdaBotFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.botmaker</a> &gt; <span class="el_source">JdaBotFactory.java</span></div><h1>JdaBotFactory.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.botmaker;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.BotIdentifier;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.ServerBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.SlashCommandBotType;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Factory for creating JDA Discord bot instances.
+ * Scans for bot implementations and provides type-safe creation methods.
+ */
+@Component
+public class JdaBotFactory {
+
+    /**
+     * Spring application context for bean retrieval.
+     */
+    private final ApplicationContext context;
+
+    /**
+     * Map storing bot classes indexed by category and identifier.
+     */
+<span class="fc" id="L30">    private final Map&lt;BotKey, Class&lt;? extends AbstractJdaBot&gt;&gt; botMap = new HashMap&lt;&gt;();</span>
+
+    /**
+     * Key record for identifying bots by category and identifier.
+     *
+     * @param category the bot category (SLASH_COMMAND or SERVER)
+     * @param identifier the unique bot identifier
+     */
+<span class="fc" id="L38">    private record BotKey(BotIdentifier.BotCategory category, String identifier) {}</span>
+
+    /**
+     * Constructs a JdaBotFactory with the specified application context.
+     *
+     * @param context the Spring application context
+     */
+    @Autowired
+<span class="fc" id="L46">    public JdaBotFactory(@Lazy ApplicationContext context) {</span>
+<span class="fc" id="L47">        this.context = context;</span>
+<span class="fc" id="L48">    }</span>
+
+    /**
+     * Initializes the factory by registering all available bot implementations.
+     */
+    @PostConstruct
+    public void initialize() {
+<span class="fc" id="L55">        registerBots();</span>
+<span class="fc" id="L56">    }</span>
+
+    /**
+     * Scans the application context for bot implementations and registers them.
+     */
+    private void registerBots() {
+<span class="fc" id="L62">        Map&lt;String, Object&gt; annotatedBeans = context.getBeansWithAnnotation(BotIdentifier.class);</span>
+
+<span class="fc bfc" id="L64" title="All 2 branches covered.">        for (Object bean : annotatedBeans.values()) {</span>
+<span class="fc" id="L65">            Class&lt;?&gt; beanClass = bean.getClass();</span>
+<span class="fc" id="L66">            BotIdentifier annotation = beanClass.getAnnotation(BotIdentifier.class);</span>
+
+<span class="fc bfc" id="L68" title="All 2 branches covered.">            if (annotation != null) {</span>
+                @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L70">                Class&lt;? extends AbstractJdaBot&gt; botClazz = (Class&lt;? extends AbstractJdaBot&gt;) beanClass;</span>
+
+<span class="pc bpc" id="L72" title="1 of 3 branches missed.">                String identifier = switch (annotation.category()) {</span>
+<span class="fc" id="L73">                    case SLASH_COMMAND -&gt; annotation.slashCommand().toString();</span>
+<span class="fc" id="L74">                    case SERVER -&gt; annotation.server().toString();</span>
+                };
+
+<span class="fc" id="L77">                BotKey key = new BotKey(annotation.category(), identifier);</span>
+<span class="fc" id="L78">                botMap.put(key, botClazz);</span>
+            }
+<span class="fc" id="L80">        }</span>
+<span class="fc" id="L81">    }</span>
+
+    /**
+     * Creates a slash command bot instance of the specified type.
+     *
+     * @param botType the type of slash command bot to create
+     * @return a JdaBotEntry containing the bot instance
+     */
+    public JdaBotEntry createSlashCommandBot(SlashCommandBotType botType) {
+<span class="fc" id="L90">        return createBot(BotIdentifier.BotCategory.SLASH_COMMAND, botType.toString());</span>
+    }
+
+    /**
+     * Creates a server bot instance of the specified type.
+     *
+     * @param botType the type of server bot to create
+     * @return a JdaBotEntry containing the bot instance
+     */
+    public JdaBotEntry createServerBot(ServerBotType botType) {
+<span class="fc" id="L100">        return createBot(BotIdentifier.BotCategory.SERVER, botType.toString());</span>
+    }
+
+    /**
+     * Creates a bot instance for the given category and identifier.
+     *
+     * @param category the bot category
+     * @param identifier the bot identifier
+     * @return a JdaBotEntry containing the bot instance
+     * @throws IllegalArgumentException if no bot is found for the given parameters
+     */
+    private JdaBotEntry createBot(BotIdentifier.BotCategory category, String identifier) {
+<span class="fc" id="L112">        BotKey key = new BotKey(category, identifier);</span>
+<span class="fc" id="L113">        Class&lt;? extends AbstractJdaBot&gt; botClazz = botMap.get(key);</span>
+
+<span class="fc bfc" id="L115" title="All 2 branches covered.">        if (botClazz == null) {</span>
+<span class="fc" id="L116">            throw new IllegalArgumentException(&quot;No bot found for category: &quot; + category + &quot;, identifier: &quot; + identifier);</span>
+        }
+
+<span class="fc" id="L119">        return new JdaBotEntry(identifier, botClazz, context.getBean(botClazz));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

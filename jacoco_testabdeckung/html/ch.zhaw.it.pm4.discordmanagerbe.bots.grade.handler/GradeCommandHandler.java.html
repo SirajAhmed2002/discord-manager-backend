@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GradeCommandHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.grade.handler</a> &gt; <span class="el_source">GradeCommandHandler.java</span></div><h1>GradeCommandHandler.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.grade.handler;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.grade.factory.EmbedFactory;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.grade.service.NotenrechnerService;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.grade.util.DiscordEventUtils;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.grade.util.NumberParsingUtils;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.Grade;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.AddGradeRequest;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.DiscordIdsDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.GradeDisplayData;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+import static ch.zhaw.it.pm4.discordmanagerbe.bots.grade.GradeBotConstants.*;
+
+/**
+ * Handles grade-related commands for the grade calculator bot
+ */
+@Component
+public class GradeCommandHandler {
+
+    /**
+     * NotenrechnerService for grade calculations and data retrieval
+     */
+    private final NotenrechnerService notenrechnerService;
+
+    /**
+     * Factory for creating Discord embeds
+     */
+    private final EmbedFactory embedFactory;
+
+    /**
+     * Utility class for handling Discord events
+     */
+    private final DiscordEventUtils eventUtils;
+
+    /**
+     * Utility for parsing numbers from strings
+     */
+    private final NumberParsingUtils numberUtils;
+
+    /**
+     * Logger for GradeCommandHandler
+     *
+     * @param notenrechnerService service for grade calculations
+     * @param embedFactory factory for creating embeds
+     * @param eventUtils utility for Discord event handling
+     * @param numberUtils utility for parsing numbers
+     */
+    public GradeCommandHandler(NotenrechnerService notenrechnerService, 
+                              EmbedFactory embedFactory,
+                              DiscordEventUtils eventUtils,
+<span class="fc" id="L56">                              NumberParsingUtils numberUtils) {</span>
+<span class="fc" id="L57">        this.notenrechnerService = notenrechnerService;</span>
+<span class="fc" id="L58">        this.embedFactory = embedFactory;</span>
+<span class="fc" id="L59">        this.eventUtils = eventUtils;</span>
+<span class="fc" id="L60">        this.numberUtils = numberUtils;</span>
+<span class="fc" id="L61">    }</span>
+
+    /**
+     * Handles the add grade command
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    public void handleAddGrade(SlashCommandInteractionEvent event) {
+        try {
+<span class="fc" id="L69">            DiscordIdsDTO discordIds = eventUtils.extractDiscordIds(event);</span>
+<span class="fc" id="L70">            AddGradeRequest request = buildAddGradeRequest(event, discordIds);</span>
+            
+<span class="fc" id="L72">            Grade grade = notenrechnerService.addGrade(request);</span>
+<span class="fc" id="L73">            double average = calculateSubjectAverage(request);</span>
+            
+<span class="fc" id="L75">            EmbedBuilder embed = embedFactory.createGradeAddedEmbed(grade, request, average);</span>
+<span class="nc" id="L76">            event.getHook().sendMessageEmbeds(embed.build()).setEphemeral(true).queue();</span>
+            
+<span class="fc" id="L78">        } catch (Exception e) {</span>
+<span class="fc" id="L79">            eventUtils.sendErrorMessage(event, &quot;Hinzufügen der Note&quot;, e);</span>
+<span class="nc" id="L80">        }</span>
+<span class="fc" id="L81">    }</span>
+
+    /**
+     * Handles the show grades command
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    public void handleShowGrades(SlashCommandInteractionEvent event) {
+        try {
+<span class="fc" id="L89">            DiscordIdsDTO discordIds = eventUtils.extractDiscordIds(event);</span>
+<span class="fc" id="L90">            String subjectName = eventUtils.getRequiredString(event, OPT_FACH);</span>
+<span class="fc" id="L91">            String semester = eventUtils.getOptionalString(event, OPT_SEMESTER);</span>
+
+<span class="fc" id="L93">            GradeDisplayData displayData = prepareGradeDisplay(discordIds, subjectName, semester);</span>
+            
+<span class="fc bfc" id="L95" title="All 2 branches covered.">            if (displayData.isEmpty()) {</span>
+<span class="nc" id="L96">                sendNoGradesMessage(event, subjectName, semester);</span>
+<span class="nc" id="L97">                return;</span>
+            }
+
+<span class="fc" id="L100">            EmbedBuilder embed = embedFactory.createGradesDisplayEmbed(displayData);</span>
+<span class="nc" id="L101">            event.getHook().sendMessageEmbeds(embed.build()).setEphemeral(true).queue();</span>
+            
+<span class="fc" id="L103">        } catch (Exception e) {</span>
+<span class="fc" id="L104">            eventUtils.sendErrorMessage(event, &quot;Anzeigen der Noten&quot;, e);</span>
+<span class="nc" id="L105">        }</span>
+<span class="fc" id="L106">    }</span>
+
+    /**
+     * Builds an AddGradeRequest from the SlashCommandInteractionEvent
+     * @param event the SlashCommandInteractionEvent containing the command data
+     * @param discordIds the DiscordIdsDTO containing server, channel, and user IDs
+     * @return AddGradeRequest with the necessary data for adding a grade
+     */
+    private AddGradeRequest buildAddGradeRequest(SlashCommandInteractionEvent event, DiscordIdsDTO discordIds) {
+<span class="fc" id="L115">        String noteStr = eventUtils.getRequiredString(event, OPT_NOTE);</span>
+<span class="fc" id="L116">        String gewichtungStr = eventUtils.getRequiredString(event, OPT_GEWICHTUNG);</span>
+        
+<span class="fc" id="L118">        double note = numberUtils.parseDouble(noteStr);</span>
+<span class="fc" id="L119">        double gewichtung = numberUtils.parseDouble(gewichtungStr);</span>
+
+<span class="fc" id="L121">        return AddGradeRequest.builder()</span>
+<span class="fc" id="L122">            .serverId(discordIds.getServerId())</span>
+<span class="fc" id="L123">            .channelId(discordIds.getChannelId())</span>
+<span class="fc" id="L124">            .userId(discordIds.getUserId())</span>
+<span class="fc" id="L125">            .subjectName(eventUtils.getRequiredString(event, OPT_FACH))</span>
+<span class="fc" id="L126">            .note(note)</span>
+<span class="fc" id="L127">            .weight(gewichtung)</span>
+<span class="fc" id="L128">            .semester(eventUtils.getOptionalString(event, OPT_SEMESTER))</span>
+<span class="fc" id="L129">            .description(eventUtils.getOptionalString(event, OPT_BESCHREIBUNG))</span>
+<span class="fc" id="L130">            .build();</span>
+    }
+
+    /**
+     * Calculates the average for a subject based on the provided request
+     * @param request the AddGradeRequest containing the subject and user data
+     * @return the calculated average for the subject
+     */
+    private double calculateSubjectAverage(AddGradeRequest request) {
+<span class="fc" id="L139">        return notenrechnerService.calculateSubjectAverage(</span>
+<span class="fc" id="L140">            request.serverId(), </span>
+<span class="fc" id="L141">            request.channelId(), </span>
+<span class="fc" id="L142">            request.userId(),</span>
+<span class="fc" id="L143">            request.subjectName(), </span>
+<span class="fc" id="L144">            request.semester()</span>
+        );
+    }
+
+    /**
+     * Prepares the grade display data for a specific subject and semester
+     * @param discordIds the Discord IDs containing server, channel, and user IDs
+     * @param subjectName the name of the subject for which to retrieve grades
+     * @param semester the semester for which to retrieve grades, or null for overall grades
+     * @return GradeDisplayData containing the grades and average for the subject
+     */
+    private GradeDisplayData prepareGradeDisplay(DiscordIdsDTO discordIds, String subjectName, String semester) {
+<span class="fc" id="L156">        List&lt;Grade&gt; grades = notenrechnerService.getGradesForSubject(</span>
+<span class="fc" id="L157">            discordIds.getServerId(), </span>
+<span class="fc" id="L158">            discordIds.getChannelId(), </span>
+<span class="fc" id="L159">            discordIds.getUserId(),</span>
+            subjectName, 
+            semester
+        );
+
+<span class="fc bfc" id="L164" title="All 2 branches covered.">        if (grades.isEmpty()) {</span>
+<span class="fc" id="L165">            return GradeDisplayData.empty();</span>
+        }
+
+<span class="fc" id="L168">        double average = notenrechnerService.calculateSubjectAverage(</span>
+<span class="fc" id="L169">            discordIds.getServerId(), </span>
+<span class="fc" id="L170">            discordIds.getChannelId(), </span>
+<span class="fc" id="L171">            discordIds.getUserId(),</span>
+            subjectName, 
+            semester
+        );
+
+<span class="fc" id="L176">        return new GradeDisplayData(grades, average, subjectName, semester);</span>
+    }
+
+    /**
+     * Sends a message indicating that no grades were found for the specified subject and semester
+     * @param event the SlashCommandInteractionEvent containing the command data
+     * @param subjectName the name of the subject for which no grades were found
+     * @param semester the semester for which no grades were found, or null if not specified
+     */
+    private void sendNoGradesMessage(SlashCommandInteractionEvent event, String subjectName, String semester) {
+<span class="fc" id="L186">        String message = buildNoGradesMessage(subjectName, semester);</span>
+<span class="nc" id="L187">        event.getHook().sendMessage(message).setEphemeral(true).queue();</span>
+<span class="nc" id="L188">    }</span>
+
+    /**
+     * Builds a message indicating that no grades were found for the specified subject and semester
+     * @param subjectName the name of the subject for which no grades were found
+     * @param semester the semester for which no grades were found, or null if not specified
+     * @return the constructed message string
+     */
+    private String buildNoGradesMessage(String subjectName, String semester) {
+<span class="fc" id="L197">        StringBuilder message = new StringBuilder(&quot;Keine Noten für das Fach '&quot;)</span>
+<span class="fc" id="L198">            .append(subjectName).append(&quot;'&quot;);</span>
+            
+<span class="pc bpc" id="L200" title="2 of 4 branches missed.">        if (semester != null &amp;&amp; !semester.trim().isEmpty()) {</span>
+<span class="fc" id="L201">            message.append(&quot; im Semester &quot;).append(semester);</span>
+        }
+        
+<span class="fc" id="L204">        return message.append(&quot; gefunden.&quot;).toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PermissionOverrideJdaBot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildchannelrolepermission</a> &gt; <span class="el_source">PermissionOverrideJdaBot.java</span></div><h1>PermissionOverrideJdaBot.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildchannelrolepermission;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.AbstractJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.BotIdentifier;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.ServerBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ChannelRolePermissionsDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildchannelrolepermission.service.PermissionOverrideService;
+import net.dv8tion.jda.api.JDA;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+/**
+ * This bot manages permission overrides for roles in specific channels of a Discord server.
+ * It allows setting, retrieving, and removing role permission overrides.
+ */
+@BotIdentifier(category = BotIdentifier.BotCategory.SERVER,
+        server = ServerBotType.GUILD_CHANNEL_ROLE_PERMISSION)
+@Component
+public class PermissionOverrideJdaBot extends AbstractJdaBot {
+
+    /**
+     * Service for managing permission overrides in Discord channels.
+     */
+    private final PermissionOverrideService permissionService;
+
+    /**
+     * Constructor for PermissionOverrideJdaBot.
+     * @param jdaBean the JDA instance used for Discord API interactions
+     * @param permissionService the service for managing permission overrides
+     */
+    @Autowired
+    public PermissionOverrideJdaBot(JDA jdaBean, PermissionOverrideService permissionService) {
+<span class="fc" id="L33">        super(jdaBean);</span>
+<span class="fc" id="L34">        this.permissionService = permissionService;</span>
+<span class="fc" id="L35">    }</span>
+
+    /**
+     * Sets a permission override for a specific role in a channel of a Discord server.
+     * @param serverId the ID of the Discord server
+     * @param channelId the ID of the channel where the override is applied
+     * @param dto the ChannelRolePermissionsDTO containing the role and its permissions to override
+     * @return true if the override was successfully applied, false otherwise
+     */
+    public boolean setRolePermissionOverride(String serverId, String channelId, ChannelRolePermissionsDTO dto) {
+<span class="fc" id="L45">        return permissionService.applyPermissionOverrides(serverId, channelId, dto)</span>
+<span class="fc" id="L46">                .isSuccess();</span>
+    }
+
+    /**
+     * Retrieves all permission overrides for a specific channel in a Discord server.
+     * @param serverId the ID of the Discord server
+     * @param channelId the ID of the channel for which to retrieve permission overrides
+     * @return ChannelRolePermissionsDTO containing all permission overrides for the channel
+     */
+    public ChannelRolePermissionsDTO getAllChannelPermissionOverrides(String serverId, String channelId) {
+<span class="fc" id="L56">        return permissionService.getAllChannelPermissionOverrides(serverId, channelId)</span>
+<span class="fc" id="L57">                .getDataOrThrow();</span>
+    }
+
+    /**
+     * Removes a role permission override for a specific channel in a Discord server.
+     * @param serverId the ID of the Discord server
+     * @param channelId the ID of the channel from which to remove the override
+     * @param roleId the ID of the role for which to remove the permission override
+     * @return true if the override was successfully removed, false otherwise
+     */
+    public boolean removeRolePermissionOverride(String serverId, String channelId, String roleId) {
+<span class="fc" id="L68">        return permissionService.removeRolePermissionOverride(serverId, channelId, roleId)</span>
+<span class="fc" id="L69">                .isSuccess();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

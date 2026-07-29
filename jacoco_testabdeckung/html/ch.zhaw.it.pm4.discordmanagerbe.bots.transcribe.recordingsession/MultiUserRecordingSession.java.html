@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MultiUserRecordingSession.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.recordingsession</a> &gt; <span class="el_source">MultiUserRecordingSession.java</span></div><h1>MultiUserRecordingSession.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.recordingsession;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.TranscribeBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.transcriptionprocessor.TranscriptionProcessor;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility.SpeechSequenceEntry;
+import net.dv8tion.jda.api.audio.AudioReceiveHandler;
+import net.dv8tion.jda.api.audio.CombinedAudio;
+import net.dv8tion.jda.api.audio.UserAudio;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
+import net.dv8tion.jda.api.managers.AudioManager;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+
+import java.io.File;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Handles recording and processing of audio from multiple users in a Discord voice channel.
+ * Implements both AudioReceiveHandler to capture incoming audio and RecordingSession to manage recording lifecycle.
+ */
+@Scope(&quot;prototype&quot;)
+@Component
+public class MultiUserRecordingSession implements AudioReceiveHandler, TranscribeBot.RecordingSession {
+
+    /** Logger instance for logging events and debugging information. */
+<span class="fc" id="L34">    private static final Logger logger = LoggerFactory.getLogger(MultiUserRecordingSession.class);</span>
+
+    /** Threshold in milliseconds to detect silence in audio streams. */
+    private static final long SILENCE_THRESHOLD_MS = 1500;
+
+    /** The Discord audio manager used for handling audio connections. */
+    private AudioManager audioManager;
+
+    /** The Discord voice channel being recorded. */
+    private VoiceChannel channel;
+
+    /** Flag indicating whether the session is currently recording. */
+    private boolean isRecording;
+
+    /** The start time of the recording session in milliseconds since epoch. */
+    private final long startTimeMillis;
+
+    /** Manager for handling and processing speech sequences. */
+    private final SequenceManager sequenceManager;
+
+    /** Manager for saving and handling audio files. */
+    private final AudioFileManager audioFileManager;
+
+    /** Manager for handling transcription processes. */
+    private final TranscriptionManager transcriptionManager;
+
+    /** Manager for handling temporary resources during the session. */
+    private final TemporaryResourceManager tempResourceManager;
+
+    /**
+     * Creates a new recording session with required dependencies.
+     *
+     * @param transcriptionProcessor Processor for audio transcription
+     * @param sequenceManager Manager for handling speech sequences
+     * @param audioFileManager Manager for audio file operations
+     * @param tempResourceManager Manager for temporary resources
+     */
+    @Autowired
+    public MultiUserRecordingSession(
+            TranscriptionProcessor transcriptionProcessor,
+            SequenceManager sequenceManager,
+            AudioFileManager audioFileManager,
+<span class="fc" id="L76">            TemporaryResourceManager tempResourceManager) {</span>
+<span class="fc" id="L77">        this.isRecording = true;</span>
+<span class="fc" id="L78">        this.startTimeMillis = System.currentTimeMillis();</span>
+<span class="fc" id="L79">        this.sequenceManager = sequenceManager;</span>
+<span class="fc" id="L80">        this.audioFileManager = audioFileManager;</span>
+<span class="fc" id="L81">        this.tempResourceManager = tempResourceManager;</span>
+<span class="fc" id="L82">        this.transcriptionManager = new TranscriptionManager(transcriptionProcessor);</span>
+<span class="fc" id="L83">    }</span>
+
+    /**
+     * Sets the audio manager for this recording session.
+     *
+     * @param audioManager The Discord audio manager to use
+     */
+    public void setAudioManager(AudioManager audioManager) {
+<span class="fc" id="L91">        this.audioManager = audioManager;</span>
+<span class="fc" id="L92">    }</span>
+
+    /**
+     * Sets the voice channel for this recording session.
+     *
+     * @param channel The Discord voice channel to record from
+     */
+    public void setChannel(VoiceChannel channel) {
+<span class="fc" id="L100">        this.channel = channel;</span>
+<span class="fc" id="L101">    }</span>
+
+    /**
+     * Stops the recording session and initiates the transcription process.
+     *
+     * @param textChannel The text channel to send transcription results to
+     */
+    @Override
+    public void stopRecording(MessageChannel textChannel) {
+<span class="fc" id="L110">        stopAudioRecording();</span>
+
+        try {
+<span class="fc" id="L113">            sequenceManager.finalizeAllSequences();</span>
+
+<span class="fc" id="L115">            File tempDir = tempResourceManager.createTemporaryDirectory();</span>
+<span class="fc" id="L116">            List&lt;SpeechSequenceEntry&gt; entries = sequenceManager.getSequenceEntries();</span>
+
+<span class="fc" id="L118">            Map&lt;Integer, File&gt; sequenceFiles = audioFileManager.saveTemporaryAudioFiles(entries, tempDir);</span>
+<span class="fc" id="L119">            File timelineFile = audioFileManager.createTemporaryTimelineFile(entries, tempDir);</span>
+
+<span class="fc" id="L121">            transcriptionManager.startAsyncTranscription(textChannel, tempDir, sequenceFiles, timelineFile);</span>
+
+<span class="fc" id="L123">            sequenceManager.reset();</span>
+
+<span class="fc" id="L125">        } catch (Exception e) {</span>
+<span class="fc" id="L126">            logger.error(&quot;Error processing recording&quot;, e);</span>
+<span class="fc" id="L127">        }</span>
+<span class="fc" id="L128">    }</span>
+
+    /**
+     * Stops the audio recording by disabling the receive handler.
+     */
+    private void stopAudioRecording() {
+<span class="fc" id="L134">        isRecording = false;</span>
+<span class="fc" id="L135">        audioManager.setReceivingHandler(null);</span>
+<span class="fc" id="L136">    }</span>
+
+    /**
+     * Indicates whether the handler can receive user audio.
+     *
+     * @return Always returns true to receive audio from all users
+     */
+    @Override
+    public boolean canReceiveUser() {
+<span class="nc" id="L145">        return true;</span>
+    }
+
+    /**
+     * Processes incoming audio data from a user.
+     *
+     * @param userAudio Audio data received from a user
+     */
+    @Override
+    public void handleUserAudio(@NotNull UserAudio userAudio) {
+<span class="fc bfc" id="L155" title="All 2 branches covered.">        if (!shouldProcessAudio(userAudio)) return;</span>
+
+<span class="fc" id="L157">        String userId = userAudio.getUser().getId();</span>
+<span class="fc" id="L158">        byte[] audioData = userAudio.getAudioData(1.0);</span>
+
+<span class="fc bfc" id="L160" title="All 2 branches covered.">        if (isValidAudioData(audioData)) {</span>
+<span class="fc" id="L161">            processAudioForUser(userId, audioData);</span>
+        }
+<span class="fc" id="L163">    }</span>
+
+    /**
+     * Determines if the audio from a user should be processed.
+     *
+     * @param userAudio Audio data to evaluate
+     * @return True if the audio should be processed, false otherwise
+     */
+    private boolean shouldProcessAudio(@NotNull UserAudio userAudio) {
+<span class="fc bfc" id="L172" title="All 2 branches covered.">        if (!isRecording) return false;</span>
+<span class="fc" id="L173">        User user = userAudio.getUser();</span>
+<span class="fc bfc" id="L174" title="All 2 branches covered.">        return !user.isBot();</span>
+    }
+
+    /**
+     * Checks if the audio data is valid for processing.
+     *
+     * @param audioData Audio byte array to validate
+     * @return True if the audio data is valid and non-empty
+     */
+    private boolean isValidAudioData(byte[] audioData) {
+<span class="fc bfc" id="L184" title="All 4 branches covered.">        return audioData != null &amp;&amp; audioData.length &gt; 0;</span>
+    }
+
+    /**
+     * Processes audio data for a specific user.
+     *
+     * @param userId ID of the user who sent the audio
+     * @param audioData The audio data to process
+     */
+    private void processAudioForUser(String userId, byte[] audioData) {
+<span class="fc" id="L194">        long currentTimeMillis = System.currentTimeMillis() - startTimeMillis;</span>
+
+<span class="fc" id="L196">        String username = &quot;Unknown&quot;;</span>
+<span class="fc" id="L197">        Member member = findMemberById(userId);</span>
+<span class="fc bfc" id="L198" title="All 2 branches covered.">        if (member != null) {</span>
+<span class="fc" id="L199">            username = member.getEffectiveName();</span>
+        }
+
+<span class="fc" id="L202">        sequenceManager.processAudioData(userId, username, currentTimeMillis, audioData, SILENCE_THRESHOLD_MS);</span>
+<span class="fc" id="L203">    }</span>
+
+    /**
+     * Finds a member in the current voice channel by their user ID.
+     *
+     * @param userId ID of the user to find
+     * @return The Member object if found, null otherwise
+     */
+    private Member findMemberById(String userId) {
+<span class="fc" id="L212">        return channel.getMembers().stream()</span>
+<span class="fc" id="L213">                .filter(member -&gt; member.getId().equals(userId))</span>
+<span class="fc" id="L214">                .findFirst()</span>
+<span class="fc" id="L215">                .orElse(null);</span>
+    }
+
+    /**
+     * Handles combined audio data from multiple users.
+     * Currently not implemented as individual user audio is processed instead.
+     *
+     * @param combinedAudio The combined audio data
+     */
+    @Override
+<span class="nc" id="L225">    public void handleCombinedAudio(@NotNull CombinedAudio combinedAudio) {}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

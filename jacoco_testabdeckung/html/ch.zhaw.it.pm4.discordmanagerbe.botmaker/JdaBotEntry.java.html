@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdaBotEntry.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.botmaker</a> &gt; <span class="el_source">JdaBotEntry.java</span></div><h1>JdaBotEntry.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.botmaker;
+
+/**
+ * Container class holding information about a JDA Discord bot instance.
+ * Stores the bot's identifier, implementation class, and runtime instance.
+ */
+public class JdaBotEntry {
+
+    /** Unique identifier for the bot */
+    private final String identifier;
+
+    /** Class type of the bot implementation. */
+    private final Class&lt;? extends AbstractJdaBot&gt; botClass;
+
+    /** Runtime instance of the bot. */
+    private final Object botInstance;
+
+    /**
+     * Constructor for the BotEntry class.
+     * @param identifier The identifier for the bot.
+     * @param botClass The class of the bot.
+     * @param botInstance The instance of the bot.
+     */
+<span class="fc" id="L24">    public JdaBotEntry(String identifier, Class&lt;? extends AbstractJdaBot&gt; botClass, Object botInstance) {</span>
+<span class="fc" id="L25">        this.identifier = identifier;</span>
+<span class="fc" id="L26">        this.botClass = botClass;</span>
+<span class="fc" id="L27">        this.botInstance = botInstance;</span>
+<span class="fc" id="L28">    }</span>
+
+    /**
+     * Getter for the identifier.
+     * @return The identifier of the bot.
+     */
+    public String getIdentifier() {
+<span class="fc" id="L35">        return identifier;</span>
+    }
+
+    /**
+     * Getter for the bot class.
+     * @return The class of the bot.
+     */
+    public Class&lt;? extends AbstractJdaBot&gt; getBotClass() {
+<span class="fc" id="L43">        return botClass;</span>
+    }
+
+    /**
+     * Getter for the bot instance.
+     * @return The instance of the bot.
+     */
+    public Object getBotInstance() {
+<span class="fc" id="L51">        return botInstance;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

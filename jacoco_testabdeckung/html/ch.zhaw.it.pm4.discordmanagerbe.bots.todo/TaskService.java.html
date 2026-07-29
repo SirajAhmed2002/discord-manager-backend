@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TaskService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.todo</a> &gt; <span class="el_source">TaskService.java</span></div><h1>TaskService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.todo;
+
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.TaskEntity;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.TaskReminderEntity;
+import ch.zhaw.it.pm4.discordmanagerbe.data.repositories.TaskReminderRepository;
+import ch.zhaw.it.pm4.discordmanagerbe.data.repositories.TaskRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * Service class for managing tasks and task reminders.
+ */
+@Service
+public class TaskService {
+
+    private final TaskRepository taskRepository;
+    private final TaskReminderRepository taskReminderRepository;
+
+    private Task task;
+
+    /**
+     * Constructor for TaskService.
+     * @param taskRepository         Repository for task entities.
+     * @param taskReminderRepository Repository for task reminder entities.
+     */
+<span class="fc" id="L28">    public TaskService(TaskRepository taskRepository, TaskReminderRepository taskReminderRepository) {</span>
+<span class="fc" id="L29">        this.taskRepository = taskRepository;</span>
+<span class="fc" id="L30">        this.taskReminderRepository = taskReminderRepository;</span>
+<span class="fc" id="L31">    }</span>
+
+    public TaskRepository getTaskRepository(){
+<span class="fc" id="L34">        return taskRepository;</span>
+    }
+
+    public TaskReminderRepository getTaskReminderRepository(){
+<span class="fc" id="L38">        return taskReminderRepository;</span>
+    }
+
+    public Task getTask() {
+<span class="fc" id="L42">        return task;</span>
+    }
+
+    public void setTask(Task task) {
+<span class="fc" id="L46">        this.task = task;</span>
+<span class="fc" id="L47">    }</span>
+
+    /**
+     * Saves a task entity to the database.
+     * @param userId The ID of the user associated with the task.
+     */
+    public void saveTask(String userId) {
+<span class="fc" id="L54">        TaskEntity taskEntity = new TaskEntity();</span>
+<span class="fc" id="L55">        taskEntity.setUserId(userId);</span>
+<span class="fc" id="L56">        taskEntity.setTitle(task.getTitle());</span>
+<span class="fc" id="L57">        taskEntity.setDescription(task.getDescription());</span>
+<span class="fc" id="L58">        taskEntity.setTimeToBeDone(task.getTimeToBeDone());</span>
+<span class="fc" id="L59">        taskRepository.save(taskEntity);</span>
+<span class="fc" id="L60">    }</span>
+
+    /**
+     * Saves a task reminder entity to the database.
+     * @param taskId The ID of the task associated with the reminder.
+     * @param reminderTime The time for the reminder.
+     */
+    public void saveTaskReminder(Long taskId, long reminderTime){
+<span class="fc" id="L68">        TaskReminderEntity taskReminder = new TaskReminderEntity();</span>
+<span class="fc" id="L69">        taskReminder.setTask(taskRepository.findById(taskId).orElseThrow(() -&gt; new RuntimeException(&quot;Task not found&quot;)));</span>
+<span class="fc" id="L70">        taskReminder.setReminderTime(reminderTime);</span>
+<span class="fc" id="L71">        taskReminderRepository.save(taskReminder);</span>
+<span class="fc" id="L72">    }</span>
+
+    public TaskEntity getNewestTaskByUserId(String userId) {
+<span class="fc" id="L75">        return taskRepository.findNewestTaskByUserId(userId);</span>
+    }
+
+    public List&lt;TaskEntity&gt; getAllTasksByUserId(String userId) {
+<span class="fc" id="L79">        return taskRepository.findAllTaskByUserId(userId);</span>
+    }
+
+    /**
+     * Retrieves a task entity by its ID.
+     * @param taskId The ID of the task.
+     * @return The task entity.
+     */
+    @Transactional
+    public void deleteTaskById(long taskId) {
+<span class="fc" id="L89">        TaskEntity task = taskRepository.findById(taskId)</span>
+<span class="fc" id="L90">                .orElseThrow(() -&gt; new RuntimeException(&quot;Task not found&quot;));</span>
+<span class="fc" id="L91">        taskRepository.delete(task);</span>
+<span class="fc" id="L92">    }</span>
+
+    /**
+     * Retrieves a task reminder entity by its ID.
+     * @param taskReminderId The ID of the task reminder.
+     * @return The task reminder entity.
+     */
+    @Transactional
+    public void deleteTaskReminderById(long taskReminderId) {
+<span class="fc" id="L101">        taskReminderRepository.deleteTaskReminderById(taskReminderId);</span>
+<span class="fc" id="L102">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

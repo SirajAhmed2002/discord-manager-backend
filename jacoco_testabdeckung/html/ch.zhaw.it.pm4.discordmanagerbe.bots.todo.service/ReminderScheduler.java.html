@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReminderScheduler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.todo.service</a> &gt; <span class="el_source">ReminderScheduler.java</span></div><h1>ReminderScheduler.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.todo.service;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.JdaBotEntry;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.JdaBotService;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.SlashCommandBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.todo.ToDoTrackerJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.TaskEntity;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.TaskReminderEntity;
+import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+import static ch.zhaw.it.pm4.discordmanagerbe.bots.todo.constant.ToDoConstants.*;
+
+/**
+ * Clean scheduler service for processing task reminders and expirations.
+ */
+@Service
+public class ReminderScheduler {
+
+    /**
+     * Logger for this class
+     */
+<span class="fc" id="L30">    private static final Logger logger = LoggerFactory.getLogger(ReminderScheduler.class);</span>
+
+    /**
+     * Service for task management operations.
+     */
+    private final TaskService taskService;
+
+    /**
+     * Service for managing JDA bot instances.
+     */
+    private final JdaBotService jdaBotService;
+
+    /**
+     * Constructor for ReminderScheduler.
+     * @param jdaBotService Service for managing JDA bot instances
+     * @param taskService Service for task management operations
+     */
+    @Autowired
+<span class="fc" id="L48">    public ReminderScheduler(JdaBotService jdaBotService, TaskService taskService) {</span>
+<span class="fc" id="L49">        this.jdaBotService = jdaBotService;</span>
+<span class="fc" id="L50">        this.taskService = taskService;</span>
+<span class="fc" id="L51">    }</span>
+
+    /**
+     * Scheduled method to process task reminders and expired tasks.
+     */
+    @Scheduled(fixedRate = Config.SCHEDULER_INTERVAL_MS)
+    @Transactional
+    public void processScheduledNotifications() {
+<span class="fc" id="L59">        long currentTime = System.currentTimeMillis();</span>
+        
+        try {
+<span class="fc" id="L62">            int reminderCount = processAllDueReminders(currentTime);</span>
+<span class="fc" id="L63">            int expiredCount = processAllExpiredTasks(currentTime);</span>
+            
+<span class="fc" id="L65">            logSchedulerRun(reminderCount, expiredCount);</span>
+<span class="fc" id="L66">        } catch (Exception e) {</span>
+<span class="fc" id="L67">            logger.error(&quot;Scheduler execution failed: {}&quot;, e.getMessage(), e);</span>
+<span class="fc" id="L68">        }</span>
+<span class="fc" id="L69">    }</span>
+
+    /**
+     * Processes all task reminders that are due.
+     * @param currentTime the current system time in milliseconds
+     * @return the number of successfully processed reminders
+     */
+    private int processAllDueReminders(long currentTime) {
+<span class="fc" id="L77">        List&lt;TaskReminderEntity&gt; dueReminders = taskService.findDueReminders(currentTime);</span>
+        
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        if (dueReminders.isEmpty()) {</span>
+<span class="fc" id="L80">            return 0;</span>
+        }
+        
+<span class="fc" id="L83">        logger.debug(&quot;Processing {} due reminders&quot;, dueReminders.size());</span>
+<span class="fc" id="L84">        return processReminderList(dueReminders);</span>
+    }
+
+    /**
+     * Processes a list of task reminders with error isolation.
+     * @param reminders the list of TaskReminderEntity objects to process
+     * @return the number of successfully processed reminders
+     */
+    private int processReminderList(List&lt;TaskReminderEntity&gt; reminders) {
+<span class="fc" id="L93">        int successCount = 0;</span>
+        
+<span class="fc bfc" id="L95" title="All 2 branches covered.">        for (TaskReminderEntity reminder : reminders) {</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">            if (processSingleReminder(reminder)) {</span>
+<span class="fc" id="L97">                successCount++;</span>
+            }
+<span class="fc" id="L99">        }</span>
+        
+<span class="fc" id="L101">        return successCount;</span>
+    }
+
+    /**
+     * Processes a single task reminder.
+     * @param reminder the TaskReminderEntity to process
+     * @return true if the reminder was successfully processed, false otherwise
+     */
+    private boolean processSingleReminder(TaskReminderEntity reminder) {
+        try {
+<span class="fc" id="L111">            sendReminderNotification(reminder);</span>
+<span class="fc" id="L112">            taskService.removeTaskReminder(reminder.getId());</span>
+            
+<span class="fc" id="L114">            logReminderSuccess(reminder);</span>
+<span class="fc" id="L115">            return true;</span>
+<span class="fc" id="L116">        } catch (Exception e) {</span>
+<span class="fc" id="L117">            logReminderFailure(reminder, e);</span>
+<span class="fc" id="L118">            return false;</span>
+        }
+    }
+
+    /**
+     * Processes all expired tasks.
+     * @param currentTime the current system time in milliseconds
+     * @return the number of successfully processed expired tasks
+     */
+    private int processAllExpiredTasks(long currentTime) {
+<span class="fc" id="L128">        List&lt;TaskEntity&gt; expiredTasks = taskService.findExpiredTasks(currentTime);</span>
+        
+<span class="fc bfc" id="L130" title="All 2 branches covered.">        if (expiredTasks.isEmpty()) {</span>
+<span class="fc" id="L131">            return 0;</span>
+        }
+        
+<span class="fc" id="L134">        logger.debug(&quot;Processing {} expired tasks&quot;, expiredTasks.size());</span>
+<span class="fc" id="L135">        return processExpiredTaskList(expiredTasks);</span>
+    }
+
+    /**
+     * Processes a list of expired tasks with error isolation.
+     * @param expiredTasks the list of TaskEntity objects representing expired tasks
+     * @return the number of successfully processed expired tasks
+     */
+    private int processExpiredTaskList(List&lt;TaskEntity&gt; expiredTasks) {
+<span class="fc" id="L144">        int successCount = 0;</span>
+        
+<span class="fc bfc" id="L146" title="All 2 branches covered.">        for (TaskEntity task : expiredTasks) {</span>
+<span class="pc bpc" id="L147" title="1 of 2 branches missed.">            if (processSingleExpiredTask(task)) {</span>
+<span class="fc" id="L148">                successCount++;</span>
+            }
+<span class="fc" id="L150">        }</span>
+        
+<span class="fc" id="L152">        return successCount;</span>
+    }
+
+    /**
+     * Processes a single expired task.
+     * @param task the TaskEntity representing the expired task
+     * @return true if the task was successfully processed, false otherwise
+     */
+    private boolean processSingleExpiredTask(TaskEntity task) {
+        try {
+<span class="fc" id="L162">            sendExpirationNotification(task);</span>
+<span class="fc" id="L163">            taskService.removeTask(task.getTaskId());</span>
+            
+<span class="fc" id="L165">            logTaskExpirationSuccess(task);</span>
+<span class="fc" id="L166">            return true;</span>
+<span class="nc" id="L167">        } catch (Exception e) {</span>
+<span class="nc" id="L168">            logTaskExpirationFailure(task, e);</span>
+<span class="nc" id="L169">            return false;</span>
+        }
+    }
+
+    /**
+     * Send reminder notification to user.
+     * @param reminder the TaskReminderEntity containing reminder details
+     */
+    private void sendReminderNotification(TaskReminderEntity reminder) {
+<span class="fc" id="L178">        TaskEntity task = reminder.getTask();</span>
+<span class="fc" id="L179">        String message = buildReminderMessage(task);</span>
+        
+<span class="fc" id="L181">        dispatchNotificationToUser(task.getUserId(), task.getTitle(), message);</span>
+<span class="fc" id="L182">    }</span>
+
+    /**
+     * Send expiration notification to user.
+     * @param task the TaskEntity representing the expired task
+     */
+    private void sendExpirationNotification(TaskEntity task) {
+<span class="fc" id="L189">        String message = buildExpirationMessage(task);</span>
+        
+<span class="fc" id="L191">        dispatchNotificationToUser(task.getUserId(), task.getTitle(), message);</span>
+<span class="fc" id="L192">    }</span>
+
+    /**
+     * Dispatches a notification to a user via the ToDoTrackerJdaBot.
+     * @param userId the ID of the user to notify
+     * @param title the title of the notification
+     * @param message the message content of the notification
+     */
+    private void dispatchNotificationToUser(String userId, String title, String message) {
+<span class="fc" id="L201">        ToDoTrackerJdaBot bot = retrieveToDoBot();</span>
+<span class="fc" id="L202">        bot.sendPrivateMessage(userId, title, message);</span>
+<span class="fc" id="L203">    }</span>
+
+    /**
+     * Build the reminder message for a task.
+     * @param task the TaskEntity for which the reminder is being built
+     * @return the formatted reminder message
+     */
+    private String buildReminderMessage(TaskEntity task) {
+<span class="fc" id="L211">        return Notifications.REMINDER_PREFIX + task.getDescription();</span>
+    }
+
+    /**
+     * Build the expiration message for a task.
+     * @param task the TaskEntity for which the expiration message is being built
+     * @return the formatted expiration message
+     */
+    private String buildExpirationMessage(TaskEntity task) {
+<span class="fc" id="L220">        return Notifications.TASK_EXPIRED_PREFIX + task.getDescription();</span>
+    }
+
+    /**
+     * Retrieves the ToDoTrackerJdaBot instance.
+     * @return the ToDoTrackerJdaBot instance
+     */
+    private ToDoTrackerJdaBot retrieveToDoBot() {
+<span class="fc" id="L228">        Optional&lt;JdaBotEntry&gt; botEntry = jdaBotService.getBot(SlashCommandBotType.TODO);</span>
+        
+<span class="fc bfc" id="L230" title="All 2 branches covered.">        if (botEntry.isEmpty()) {</span>
+<span class="fc" id="L231">            throw new BotUnavailableException(&quot;ToDoTrackerJdaBot not found&quot;);</span>
+        }
+        
+        try {
+<span class="fc" id="L235">            return (ToDoTrackerJdaBot) botEntry.get().getBotInstance();</span>
+<span class="fc" id="L236">        } catch (ClassCastException e) {</span>
+<span class="fc" id="L237">            throw new BotUnavailableException(&quot;Invalid bot instance type&quot;, e);</span>
+        }
+    }
+
+    /**
+     * Logs the scheduler run details.
+     * @param reminderCount the number of reminders processed
+     * @param expiredCount the number of expired tasks processed
+     */
+    private void logSchedulerRun(int reminderCount, int expiredCount) {
+<span class="fc bfc" id="L247" title="All 4 branches covered.">        if (reminderCount &gt; 0 || expiredCount &gt; 0) {</span>
+<span class="fc" id="L248">            logger.info(&quot;Scheduler processed {} reminders and {} expired tasks&quot;, </span>
+<span class="fc" id="L249">                       reminderCount, expiredCount);</span>
+        }
+<span class="fc" id="L251">    }</span>
+
+    /**
+     * Logs a successful reminder notification.
+     * @param reminder the TaskReminderEntity for which the notification was sent
+     */
+    private void logReminderSuccess(TaskReminderEntity reminder) {
+<span class="fc" id="L258">        TaskEntity task = reminder.getTask();</span>
+<span class="fc" id="L259">        logger.debug(&quot;Sent reminder notification for task '{}' to user {}&quot;, </span>
+<span class="fc" id="L260">                    task.getTitle(), task.getUserId());</span>
+<span class="fc" id="L261">    }</span>
+
+    /**
+     * Logs a failure when processing a reminder.
+     * @param reminder the TaskReminderEntity that failed to process
+     * @param e the exception that occurred
+     */
+    private void logReminderFailure(TaskReminderEntity reminder, Exception e) {
+<span class="fc" id="L269">        logger.error(&quot;Failed to process reminder with ID {}: {}&quot;, </span>
+<span class="fc" id="L270">                    reminder.getId(), e.getMessage());</span>
+<span class="fc" id="L271">    }</span>
+
+    /**
+     * Logs a successful task expiration notification.
+     * @param task the TaskEntity for which the expiration notification was sent
+     */
+    private void logTaskExpirationSuccess(TaskEntity task) {
+<span class="fc" id="L278">        logger.debug(&quot;Sent expiration notification for task '{}' to user {}&quot;, </span>
+<span class="fc" id="L279">                    task.getTitle(), task.getUserId());</span>
+<span class="fc" id="L280">    }</span>
+
+    /**
+     * Logs a failure when processing an expired task.
+     * @param task the TaskEntity that failed to process
+     * @param e the exception that occurred
+     */
+    private void logTaskExpirationFailure(TaskEntity task, Exception e) {
+<span class="nc" id="L288">        logger.error(&quot;Failed to process expired task with ID {}: {}&quot;, </span>
+<span class="nc" id="L289">                    task.getTaskId(), e.getMessage());</span>
+<span class="nc" id="L290">    }</span>
+
+    /**
+     * Exception thrown when the ToDoTrackerJdaBot is unavailable.
+     */
+    public static class BotUnavailableException extends RuntimeException {
+        public BotUnavailableException(String message) {
+<span class="fc" id="L297">            super(message);</span>
+<span class="fc" id="L298">        }</span>
+        
+        public BotUnavailableException(String message, Throwable cause) {
+<span class="fc" id="L301">            super(message, cause);</span>
+<span class="fc" id="L302">        }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

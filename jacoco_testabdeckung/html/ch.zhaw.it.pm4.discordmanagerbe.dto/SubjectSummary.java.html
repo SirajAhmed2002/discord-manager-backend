@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SubjectSummary.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.dto</a> &gt; <span class="el_source">SubjectSummary.java</span></div><h1>SubjectSummary.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.dto;
+
+/**
+ * DTO for subject summary data.
+ * Contains subject statistics including name, average, credits, and grade count.
+ */
+public class SubjectSummary {
+    /** The name of the subject */
+    private final String name;
+    /** The average grade for the subject */
+    private final double average;
+    /** The number of credits for the subject */
+    private final int credits;
+    /** The number of grades recorded for the subject */
+    private final int gradeCount;
+
+    /**
+     * Constructor for subject summary.
+     * @param name The subject name
+     * @param average The average grade for the subject
+     * @param credits The number of credits
+     * @param gradeCount The number of grades recorded
+     */
+<span class="fc" id="L24">    public SubjectSummary(String name, double average, int credits, int gradeCount) {</span>
+<span class="fc" id="L25">        this.name = name;</span>
+<span class="fc" id="L26">        this.average = average;</span>
+<span class="fc" id="L27">        this.credits = credits;</span>
+<span class="fc" id="L28">        this.gradeCount = gradeCount;</span>
+<span class="fc" id="L29">    }</span>
+
+    /**
+     * Gets the subject name.
+     * @return The subject name
+     */
+    public String getName() {
+<span class="fc" id="L36">        return name;</span>
+    }
+
+    /**
+     * Gets the subject average grade.
+     * @return The average grade for the subject
+     */
+    public double getAverage() {
+<span class="fc" id="L44">        return average;</span>
+    }
+
+    /**
+     * Gets the number of credits.
+     * @return The number of credits for the subject
+     */
+    public int getCredits() {
+<span class="fc" id="L52">        return credits;</span>
+    }
+
+    /**
+     * Gets the grade count.
+     * @return The number of grades recorded for the subject
+     */
+    public int getGradeCount() {
+<span class="fc" id="L60">        return gradeCount;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

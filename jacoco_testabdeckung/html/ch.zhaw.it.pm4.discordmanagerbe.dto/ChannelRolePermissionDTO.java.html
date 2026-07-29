@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ChannelRolePermissionDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.dto</a> &gt; <span class="el_source">ChannelRolePermissionDTO.java</span></div><h1>ChannelRolePermissionDTO.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.dto;
+
+import java.util.List;
+
+/**
+ * DTO representing permission overrides for a specific role in a channel.
+ * Contains allowed and denied permissions for the role.
+ */
+public class ChannelRolePermissionDTO {
+    /** The ID of the channel */
+    private String channelId;
+    /** The ID of the role */
+    private String roleId;
+    /** List of permissions that are explicitly allowed */
+    private List&lt;String&gt; allowedPermissions;
+    /** List of permissions that are explicitly denied */
+    private List&lt;String&gt; deniedPermissions;
+
+    /**
+     * Default constructor.
+     */
+<span class="fc" id="L22">    public ChannelRolePermissionDTO() {</span>
+        // Default constructor
+<span class="fc" id="L24">    }</span>
+
+    /**
+     * Gets the channel ID.
+     * @return The channel ID
+     */
+    public String getChannelId() {
+<span class="fc" id="L31">        return channelId;</span>
+    }
+
+    /**
+     * Sets the channel ID.
+     * @param channelId The channel ID to set
+     */
+    public void setChannelId(String channelId) {
+<span class="fc" id="L39">        this.channelId = channelId;</span>
+<span class="fc" id="L40">    }</span>
+
+    /**
+     * Gets the role ID.
+     * @return The role ID
+     */
+    public String getRoleId() {
+<span class="fc" id="L47">        return roleId;</span>
+    }
+
+    /**
+     * Sets the role ID.
+     * @param roleId The role ID to set
+     */
+    public void setRoleId(String roleId) {
+<span class="fc" id="L55">        this.roleId = roleId;</span>
+<span class="fc" id="L56">    }</span>
+
+    /**
+     * Gets the list of allowed permissions.
+     * @return List of allowed permission names
+     */
+    public List&lt;String&gt; getAllowedPermissions() {
+<span class="fc" id="L63">        return allowedPermissions;</span>
+    }
+
+    /**
+     * Sets the list of allowed permissions.
+     * @param allowedPermissions List of allowed permission names to set
+     */
+    public void setAllowedPermissions(List&lt;String&gt; allowedPermissions) {
+<span class="fc" id="L71">        this.allowedPermissions = allowedPermissions;</span>
+<span class="fc" id="L72">    }</span>
+
+    /**
+     * Gets the list of denied permissions.
+     * @return List of denied permission names
+     */
+    public List&lt;String&gt; getDeniedPermissions() {
+<span class="fc" id="L79">        return deniedPermissions;</span>
+    }
+
+    /**
+     * Sets the list of denied permissions.
+     * @param deniedPermissions List of denied permission names to set
+     */
+    public void setDeniedPermissions(List&lt;String&gt; deniedPermissions) {
+<span class="fc" id="L87">        this.deniedPermissions = deniedPermissions;</span>
+<span class="fc" id="L88">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OpenAITranscriptionService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.transcriptionprocessor.transcriptionservice</a> &gt; <span class="el_source">OpenAITranscriptionService.java</span></div><h1>OpenAITranscriptionService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.transcriptionprocessor.transcriptionservice;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * Implementation of TranscriptionService that uses OpenAI's audio transcription API.
+ * Handles sending audio files to OpenAI and processing the transcription responses.
+ */
+@Service
+public class OpenAITranscriptionService implements TranscriptionService {
+
+    /**
+     * Logger instance for logging events and debugging information.
+     */
+<span class="fc" id="L37">    private static final Logger logger = LoggerFactory.getLogger(OpenAITranscriptionService.class);</span>
+
+    /**
+     * The URL of the OpenAI transcription API.
+     */
+    @Value(&quot;${openai.api.url:https://api.openai.com/v1/audio/transcriptions}&quot;)
+    private String apiUrl;
+
+    /**
+     * The API key used for authenticating requests to the OpenAI API.
+     */
+    @Value(&quot;${openai.api.key}&quot;)
+    private String apiKey;
+
+    /**
+     * The transcription model to use for processing audio files.
+     */
+    @Value(&quot;${openai.transcription.model:gpt-4o-transcribe}&quot;)
+    private String transcriptionModel;
+
+    /**
+     * The HTTP client used for making requests to the OpenAI API.
+     */
+    private final HttpClient httpClient;
+
+    /**
+     * Default constructor that initializes a new HTTP client.
+     */
+<span class="fc" id="L65">    public OpenAITranscriptionService() {</span>
+<span class="fc" id="L66">        this.httpClient = HttpClient.newHttpClient();</span>
+<span class="fc" id="L67">    }</span>
+
+    /**
+     * Constructor with custom parameters for testing and configuration.
+     *
+     * @param httpClient The HTTP client to use for API requests
+     * @param apiUrl The URL of the OpenAI transcription API
+     * @param apiKey The API key for authentication
+     * @param transcriptionModel The model to use for transcription
+     */
+<span class="fc" id="L77">    public OpenAITranscriptionService(HttpClient httpClient, String apiUrl, String apiKey, String transcriptionModel) {</span>
+<span class="fc" id="L78">        this.httpClient = httpClient;</span>
+<span class="fc" id="L79">        this.apiUrl = apiUrl;</span>
+<span class="fc" id="L80">        this.apiKey = apiKey;</span>
+<span class="fc" id="L81">        this.transcriptionModel = transcriptionModel;</span>
+<span class="fc" id="L82">    }</span>
+
+    /**
+     * Transcribes multiple audio files concurrently using a thread pool.
+     * Returns a map of sequence IDs to their transcribed text.
+     *
+     * @param sequenceFiles Map of sequence IDs to their corresponding audio files
+     * @return Map of sequence IDs to their transcribed text
+     */
+    @Override
+    public Map&lt;Integer, String&gt; transcribeSequenceFiles(Map&lt;Integer, File&gt; sequenceFiles) {
+<span class="nc" id="L93">        ExecutorService executor = Executors.newFixedThreadPool(</span>
+<span class="nc" id="L94">                Math.min(3, Runtime.getRuntime().availableProcessors()));</span>
+
+<span class="nc" id="L96">        Map&lt;Integer, String&gt; transcriptions = new ConcurrentHashMap&lt;&gt;();</span>
+
+<span class="nc" id="L98">        List&lt;CompletableFuture&lt;Void&gt;&gt; futures = sequenceFiles.entrySet().stream()</span>
+<span class="nc" id="L99">                .map(entry -&gt; CompletableFuture.runAsync(() -&gt; {</span>
+                    try {
+<span class="nc" id="L101">                        String transcription = transcribeSingleFile(entry.getValue());</span>
+<span class="nc" id="L102">                        transcriptions.put(entry.getKey(), transcription);</span>
+<span class="nc" id="L103">                        logger.info(&quot;Transcribed sequence {}: {}&quot;, entry.getKey(), transcription);</span>
+<span class="nc" id="L104">                    } catch (Exception e) {</span>
+<span class="nc" id="L105">                        logger.error(&quot;Error transcribing sequence {}: {}&quot;, entry.getKey(), e.getMessage());</span>
+<span class="nc" id="L106">                        transcriptions.put(entry.getKey(), &quot;[Transcription failed]&quot;);</span>
+<span class="nc" id="L107">                    }</span>
+<span class="nc" id="L108">                }, executor))</span>
+<span class="nc" id="L109">                .toList();</span>
+
+<span class="nc" id="L111">        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();</span>
+
+<span class="nc" id="L113">        executor.shutdown();</span>
+<span class="nc" id="L114">        return transcriptions;</span>
+    }
+
+    /**
+     * Transcribes a single audio file using the OpenAI API.
+     *
+     * @param audioFile The audio file to transcribe
+     * @return The transcribed text
+     * @throws Exception If an error occurs during the API request or response processing
+     */
+    @Override
+    public String transcribeSingleFile(File audioFile) throws Exception {
+<span class="fc" id="L126">        String boundary = &quot;Boundary-&quot; + UUID.randomUUID().toString().replace(&quot;-&quot;, &quot;&quot;);</span>
+<span class="fc" id="L127">        byte[] requestBody = createMultipartBody(audioFile, boundary);</span>
+
+<span class="fc" id="L129">        HttpResponse&lt;String&gt; response = sendTranscriptionRequest(requestBody, boundary);</span>
+
+<span class="fc" id="L131">        return parseTranscriptionResponse(response);</span>
+    }
+
+    /**
+     * Creates a multipart form-data body for the API request.
+     *
+     * @param audioFile The audio file to include in the request
+     * @param boundary The boundary string for multipart separation
+     * @return Byte array containing the complete request body
+     * @throws IOException If an error occurs while reading the file or creating the body
+     */
+    private byte[] createMultipartBody(File audioFile, String boundary) throws IOException {
+<span class="fc" id="L143">        ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="fc" id="L144">        writeFormField(baos, boundary, &quot;model&quot;, transcriptionModel);</span>
+<span class="fc" id="L145">        writeFileField(baos, boundary, &quot;file&quot;, audioFile.getName(), &quot;audio/wav&quot;,</span>
+<span class="fc" id="L146">                Files.readAllBytes(audioFile.toPath()));</span>
+<span class="fc" id="L147">        baos.write((&quot;\r\n--&quot; + boundary + &quot;--\r\n&quot;).getBytes(StandardCharsets.UTF_8));</span>
+<span class="fc" id="L148">        return baos.toByteArray();</span>
+    }
+
+    /**
+     * Writes a form field to the multipart request body.
+     *
+     * @param os The output stream to write to
+     * @param boundary The boundary string for multipart separation
+     * @param name The name of the form field
+     * @param value The value of the form field
+     * @throws IOException If an error occurs while writing to the output stream
+     */
+    private void writeFormField(OutputStream os, String boundary, String name, String value) throws IOException {
+<span class="fc" id="L161">        String fieldHeader = &quot;--&quot; + boundary + &quot;\r\n&quot; +</span>
+                &quot;Content-Disposition: form-data; name=\&quot;&quot; + name + &quot;\&quot;\r\n\r\n&quot;;
+<span class="fc" id="L163">        os.write(fieldHeader.getBytes(StandardCharsets.UTF_8));</span>
+<span class="fc" id="L164">        os.write(value.getBytes(StandardCharsets.UTF_8));</span>
+<span class="fc" id="L165">        os.write(&quot;\r\n&quot;.getBytes(StandardCharsets.UTF_8));</span>
+<span class="fc" id="L166">    }</span>
+
+    /**
+     * Writes a file field to the multipart request body.
+     *
+     * @param os The output stream to write to
+     * @param boundary The boundary string for multipart separation
+     * @param name The name of the form field
+     * @param filename The name of the file
+     * @param contentType The MIME type of the file
+     * @param fileData The binary content of the file
+     * @throws IOException If an error occurs while writing to the output stream
+     */
+    private void writeFileField(OutputStream os,
+                                String boundary,
+                                String name,
+                                String filename,
+                                String contentType,
+                                byte[] fileData) throws IOException {
+<span class="fc" id="L185">        String fileHeader = &quot;--&quot; + boundary + &quot;\r\n&quot; +</span>
+                &quot;Content-Disposition: form-data; name=\&quot;&quot; + name + &quot;\&quot;; filename=\&quot;&quot; + filename + &quot;\&quot;\r\n&quot; +
+                &quot;Content-Type: &quot; + contentType + &quot;\r\n\r\n&quot;;
+<span class="fc" id="L188">        os.write(fileHeader.getBytes(StandardCharsets.UTF_8));</span>
+<span class="fc" id="L189">        os.write(fileData);</span>
+<span class="fc" id="L190">    }</span>
+
+    /**
+     * Sends a transcription request to the OpenAI API.
+     *
+     * @param requestBody The prepared multipart request body
+     * @param boundary The boundary string used in the multipart request
+     * @return The HTTP response from the API
+     * @throws IOException If an error occurs during the HTTP request
+     * @throws InterruptedException If the HTTP request is interrupted
+     */
+    private HttpResponse&lt;String&gt; sendTranscriptionRequest(byte[] requestBody, String boundary)
+            throws IOException, InterruptedException {
+<span class="fc" id="L203">        HttpRequest request = HttpRequest.newBuilder()</span>
+<span class="fc" id="L204">                .uri(URI.create(apiUrl))</span>
+<span class="fc" id="L205">                .header(&quot;Authorization&quot;, &quot;Bearer &quot; + apiKey)</span>
+<span class="fc" id="L206">                .header(&quot;Content-Type&quot;, &quot;multipart/form-data; boundary=&quot; + boundary)</span>
+<span class="fc" id="L207">                .POST(HttpRequest.BodyPublishers.ofByteArray(requestBody))</span>
+<span class="fc" id="L208">                .build();</span>
+
+<span class="fc" id="L210">        HttpResponse&lt;String&gt; response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());</span>
+
+<span class="fc bfc" id="L212" title="All 2 branches covered.">        if (response.statusCode() != 200) {</span>
+<span class="fc" id="L213">            logger.error(&quot;API call error: {} - {}&quot;, response.statusCode(), response.body());</span>
+        }
+
+<span class="fc" id="L216">        return response;</span>
+    }
+
+    /**
+     * Parses the JSON response from the OpenAI API to extract the transcribed text.
+     *
+     * @param response The HTTP response from the API
+     * @return The transcribed text
+     * @throws IOException If an error occurs while parsing the response
+     */
+    private String parseTranscriptionResponse(HttpResponse&lt;String&gt; response) throws IOException {
+<span class="fc" id="L227">        int statusCode = response.statusCode();</span>
+<span class="fc" id="L228">        String responseBody = response.body();</span>
+
+<span class="fc bfc" id="L230" title="All 2 branches covered.">        if (statusCode == 200) {</span>
+<span class="fc" id="L231">            ObjectMapper mapper = new ObjectMapper();</span>
+<span class="fc" id="L232">            Map&lt;String, Object&gt; responseMap = mapper.readValue(responseBody, Map.class);</span>
+<span class="fc" id="L233">            return (String) responseMap.get(&quot;text&quot;);</span>
+        } else {
+<span class="fc" id="L235">            throw new IOException(&quot;OpenAI API error: &quot; + statusCode + &quot; - &quot; + responseBody);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

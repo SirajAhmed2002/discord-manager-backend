@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ButtonDelegationHandlerImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.handlers</a> &gt; <span class="el_source">ButtonDelegationHandlerImpl.java</span></div><h1>ButtonDelegationHandlerImpl.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.handlers;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.error.InteractionErrorHandler;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.core.AbstractDelegationHandler;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import org.springframework.stereotype.Component;
+
+import java.util.function.Consumer;
+
+/**
+ * Specialized delegation handler for Discord button interactions.
+ * Extends the abstract delegation handler with button-specific behavior and prefix matching support.
+ */
+@Component
+public class ButtonDelegationHandlerImpl extends AbstractDelegationHandler&lt;ButtonInteractionEvent&gt; {
+
+    /**
+     * Constructs a new ButtonDelegationHandlerImpl with error handling capabilities.
+     *
+     * @param errorHandler the error handler for managing interaction failures
+     */
+    public ButtonDelegationHandlerImpl(InteractionErrorHandler errorHandler) {
+<span class="fc" id="L23">        super(errorHandler);</span>
+<span class="fc" id="L24">    }</span>
+
+    /**
+     * Extracts the unique identifier from a button interaction event.
+     *
+     * @param event the button interaction event
+     * @return the component ID as the identifier
+     */
+    @Override
+    protected String extractIdentifier(ButtonInteractionEvent event) {
+<span class="nc" id="L34">        return event.getComponentId();</span>
+    }
+
+    /**
+     * Provides the handler type name for logging and debugging purposes.
+     *
+     * @return the string &quot;button&quot; identifying this handler type
+     */
+    @Override
+    protected String getHandlerTypeName() {
+<span class="fc" id="L44">        return &quot;button&quot;;</span>
+    }
+
+    /**
+     * Handles errors that occur during button interaction processing.
+     *
+     * @param event the button interaction event that caused the error
+     * @param identifier the component identifier where the error occurred
+     * @param e the exception that was thrown
+     */
+    @Override
+    protected void handleError(ButtonInteractionEvent event, String identifier, Exception e) {
+<span class="nc" id="L56">        errorHandler.handleInteractionError(event, identifier, e);</span>
+<span class="nc" id="L57">    }</span>
+
+    /**
+     * Handles cases where no handler is registered for a button interaction.
+     * Buttons typically don't require a response when no handler is found.
+     *
+     * @param event the button interaction event with no registered handler
+     * @param identifier the component identifier that has no handler
+     */
+    @Override
+    protected void handleNoHandlerFound(ButtonInteractionEvent event, String identifier) {
+<span class="nc" id="L68">        log.debug(&quot;No handler found for button interaction: {}&quot;, identifier);</span>
+        // Buttons typically don't need a response when no handler is found
+<span class="nc" id="L70">    }</span>
+
+    /**
+     * Finds a handler for the given custom ID with support for prefix matching.
+     * First attempts exact matching, then falls back to prefix matching for dynamic button IDs.
+     *
+     * @param customId the custom ID to find a handler for
+     * @return the matching handler, or null if no handler is found
+     */
+    @Override
+    protected Consumer&lt;ButtonInteractionEvent&gt; findHandler(String customId) {
+<span class="fc" id="L81">        Consumer&lt;ButtonInteractionEvent&gt; handler = handlers.get(customId);</span>
+
+<span class="fc bfc" id="L83" title="All 2 branches covered.">        if (handler == null) {</span>
+<span class="fc bfc" id="L84" title="All 2 branches covered.">            for (String key : handlers.keySet()) {</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">                if (customId.startsWith(key)) {</span>
+<span class="fc" id="L86">                    return handlers.get(key);</span>
+                }
+<span class="fc" id="L88">            }</span>
+        }
+
+<span class="fc" id="L91">        return handler;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

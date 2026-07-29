@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SequenceManager.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.recordingsession</a> &gt; <span class="el_source">SequenceManager.java</span></div><h1>SequenceManager.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.recordingsession;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility.SpeechSequenceEntry;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility.UserSpeechSequence;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * Manages speech sequences for multiple users during a recording session.
+ * Handles the creation, tracking, and finalization of audio sequences.
+ */
+@Component
+<span class="fc" id="L22">public class SequenceManager {</span>
+
+    /** Logger instance for logging events and debugging information. */
+<span class="fc" id="L25">    private static final Logger logger = LoggerFactory.getLogger(SequenceManager.class);</span>
+
+    /** Map for managing speech sequences for multiple users during a recording session. */
+<span class="fc" id="L28">    private final Map&lt;String, UserSpeechSequence&gt; userSpeechSequences = new ConcurrentHashMap&lt;&gt;();</span>
+
+    /** List for storing all finalized speech sequence entries. */
+<span class="fc" id="L31">    private final List&lt;SpeechSequenceEntry&gt; sequenceEntries = Collections.synchronizedList(new ArrayList&lt;&gt;());</span>
+
+    /** Counter for generating unique sequence IDs. */
+<span class="fc" id="L34">    private final AtomicInteger sequenceIdCounter = new AtomicInteger(1);</span>
+
+    /**
+     * Resets all sequence data and counters.
+     * Clears all user speech sequences, sequence entries, and resets the ID counter.
+     */
+    public void reset() {
+<span class="fc" id="L41">        userSpeechSequences.clear();</span>
+<span class="fc" id="L42">        sequenceEntries.clear();</span>
+<span class="fc" id="L43">        sequenceIdCounter.set(1);</span>
+<span class="fc" id="L44">        logger.info(&quot;SequenceManager reset - all sequences cleared and ID counter reset&quot;);</span>
+<span class="fc" id="L45">    }</span>
+
+    /**
+     * Generates and returns the next unique sequence ID.
+     *
+     * @return A unique integer ID for a new sequence
+     */
+    public int getNextSequenceId() {
+<span class="fc" id="L53">        return sequenceIdCounter.getAndIncrement();</span>
+    }
+
+    /**
+     * Processes incoming audio data for a specific user.
+     * Creates a new sequence if the user was inactive for longer than the silence threshold.
+     *
+     * @param userId User identifier
+     * @param username User's display name
+     * @param currentTimeMillis Current timestamp in milliseconds
+     * @param audioData Raw audio data bytes
+     * @param silenceThresholdMs Duration in milliseconds to consider silence as a sequence break
+     */
+    public void processAudioData(String userId, String username, long currentTimeMillis,
+                                 byte[] audioData, long silenceThresholdMs) {
+<span class="fc" id="L68">        UserSpeechSequence sequence = getUserSpeechSequence(userId, username);</span>
+
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        if (sequence.isInactive(currentTimeMillis, silenceThresholdMs)) {</span>
+<span class="fc" id="L71">            finalizeSequence(sequence);</span>
+<span class="fc" id="L72">            sequence.startNewSequence(currentTimeMillis);</span>
+        }
+
+<span class="fc" id="L75">        sequence.addAudioData(audioData, currentTimeMillis);</span>
+<span class="fc" id="L76">    }</span>
+
+    /**
+     * Finalizes all active user speech sequences.
+     * Should be called when recording ends to ensure all sequences are properly stored.
+     */
+    public void finalizeAllSequences() {
+<span class="fc bfc" id="L83" title="All 2 branches covered.">        for (UserSpeechSequence sequence : userSpeechSequences.values()) {</span>
+<span class="fc" id="L84">            finalizeSequence(sequence);</span>
+<span class="fc" id="L85">        }</span>
+<span class="fc" id="L86">    }</span>
+
+    /**
+     * Retrieves or creates a speech sequence for a user.
+     *
+     * @param userId User identifier
+     * @param username User's display name
+     * @return The user's speech sequence object
+     */
+    private UserSpeechSequence getUserSpeechSequence(String userId, String username) {
+<span class="fc" id="L96">        return userSpeechSequences.computeIfAbsent(userId,</span>
+                id -&gt; {
+<span class="fc" id="L98">                    UserSpeechSequence sequence = new UserSpeechSequence(userId, username);</span>
+                    // Setze die Sequenz-ID auf einen garantiert einzigartigen Wert
+<span class="fc" id="L100">                    sequence.setCustomSequenceIdGenerator(this::getNextSequenceId);</span>
+<span class="fc" id="L101">                    return sequence;</span>
+                });
+    }
+
+    /**
+     * Finalizes a speech sequence and adds it to the sequence entries list.
+     * Creates a SpeechSequenceEntry with the audio data and metadata.
+     *
+     * @param sequence The sequence to finalize
+     */
+    public void finalizeSequence(UserSpeechSequence sequence) {
+<span class="fc bfc" id="L112" title="All 4 branches covered.">        if (sequence == null || !sequence.hasData()) return;</span>
+
+<span class="fc" id="L114">        byte[] audioData = sequence.getAudioBuffer().toByteArray();</span>
+
+<span class="fc" id="L116">        SpeechSequenceEntry entry = new SpeechSequenceEntry(</span>
+<span class="fc" id="L117">                sequence.getSequenceId(),</span>
+<span class="fc" id="L118">                sequence.getUserId(),</span>
+<span class="fc" id="L119">                sequence.getUsername(),</span>
+<span class="fc" id="L120">                sequence.getStartTime(),</span>
+<span class="fc" id="L121">                sequence.getLastUpdateTime(),</span>
+                audioData
+        );
+
+<span class="fc" id="L125">        sequenceEntries.add(entry);</span>
+
+<span class="fc" id="L127">        logger.info(&quot;Finalized speech sequence {} for user {} ({}) with duration {}ms&quot;,</span>
+<span class="fc" id="L128">                sequence.getSequenceId(), sequence.getUsername(), sequence.getUserId(),</span>
+<span class="fc" id="L129">                entry.getEndTime() - entry.getStartTime());</span>
+<span class="fc" id="L130">    }</span>
+
+    /**
+     * Returns a copy of all finalized speech sequence entries.
+     *
+     * @return List of all speech sequence entries
+     */
+    public List&lt;SpeechSequenceEntry&gt; getSequenceEntries() {
+<span class="fc" id="L138">        return new ArrayList&lt;&gt;(sequenceEntries);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

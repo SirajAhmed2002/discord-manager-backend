@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServerRoleListDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.dto</a> &gt; <span class="el_source">ServerRoleListDTO.java</span></div><h1>ServerRoleListDTO.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.dto;
+
+import java.util.List;
+
+/**
+ * DTO for server role list responses.
+ * Contains all roles available on a Discord server.
+ */
+public class ServerRoleListDTO {
+    /** List of extended roles with full information */
+    private final List&lt;ExtendedRoleDTO&gt; roles;
+
+    /**
+     * Constructor with roles list.
+     * @param roles List of extended role DTOs
+     */
+<span class="fc" id="L17">    public ServerRoleListDTO(List&lt;ExtendedRoleDTO&gt; roles) {</span>
+<span class="fc" id="L18">        this.roles = roles;</span>
+<span class="fc" id="L19">    }</span>
+
+    /**
+     * Gets the list of roles.
+     * @return List of extended role DTOs with full role information
+     */
+    public List&lt;ExtendedRoleDTO&gt; getRoles() {
+<span class="fc" id="L26">        return roles;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

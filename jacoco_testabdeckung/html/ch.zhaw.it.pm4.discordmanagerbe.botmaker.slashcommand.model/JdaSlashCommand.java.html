@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdaSlashCommand.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.model</a> &gt; <span class="el_source">JdaSlashCommand.java</span></div><h1>JdaSlashCommand.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.model;
+
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+
+import java.util.function.Consumer;
+
+/**
+ * Represents a Discord slash command with its metadata, execution handler, and bot type association.
+ * Encapsulates all necessary information for command registration and execution within the JDA framework.
+ */
+public class JdaSlashCommand {
+
+    /**
+     * The unique name identifier of the slash command.
+     */
+    private final String name;
+
+    /**
+     * The descriptive text explaining what the command does.
+     */
+    private final String description;
+
+    /**
+     * The JDA command data structure containing command definition and parameters.
+     */
+    private final SlashCommandData commandData;
+
+    /**
+     * The functional handler that executes when the command is invoked.
+     */
+    private final Consumer&lt;SlashCommandInteractionEvent&gt; handler;
+
+    /**
+     * The bot type this command belongs to for organizational purposes.
+     */
+    private final String botType;
+
+    /**
+     * Creates a new JdaSlashCommand with all required components.
+     *
+     * @param name the unique command name
+     * @param description the command description shown to users
+     * @param commandData the JDA command data structure
+     * @param handler the function to execute when command is invoked
+     * @param botType the bot type this command belongs to
+     */
+    public JdaSlashCommand(String name,
+                           String description,
+                           SlashCommandData commandData,
+                           Consumer&lt;SlashCommandInteractionEvent&gt; handler,
+<span class="fc" id="L52">                           String botType) {</span>
+<span class="fc" id="L53">        this.name = name;</span>
+<span class="fc" id="L54">        this.description = description;</span>
+<span class="fc" id="L55">        this.commandData = commandData;</span>
+<span class="fc" id="L56">        this.handler = handler;</span>
+<span class="fc" id="L57">        this.botType = botType;</span>
+<span class="fc" id="L58">    }</span>
+
+    /**
+     * Gets the unique name of the slash command.
+     *
+     * @return the command name
+     */
+    public String getName() {
+<span class="fc" id="L66">        return name;</span>
+    }
+
+    /**
+     * Gets the description of the slash command.
+     *
+     * @return the command description
+     */
+    public String getDescription() {
+<span class="nc" id="L75">        return description;</span>
+    }
+
+    /**
+     * Gets the JDA command data structure for Discord registration.
+     *
+     * @return the command data
+     */
+    public SlashCommandData getCommandData() {
+<span class="nc" id="L84">        return commandData;</span>
+    }
+
+    /**
+     * Gets the execution handler for this command.
+     *
+     * @return the command handler function
+     */
+    public Consumer&lt;SlashCommandInteractionEvent&gt; getHandler() {
+<span class="fc" id="L93">        return handler;</span>
+    }
+
+    /**
+     * Gets the bot type this command is associated with.
+     *
+     * @return the bot type name
+     */
+    public String getBotType() {
+<span class="nc" id="L102">        return botType;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

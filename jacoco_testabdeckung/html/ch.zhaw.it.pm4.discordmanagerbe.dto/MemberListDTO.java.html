@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MemberListDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.dto</a> &gt; <span class="el_source">MemberListDTO.java</span></div><h1>MemberListDTO.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.dto;
+
+import java.util.List;
+
+/**
+ * DTO representing a list of Discord server members.
+ * Contains server ID and the list of members.
+ */
+public class MemberListDTO {
+    /** The ID of the Discord server */
+    private String id;
+    /** List of members in the server */
+    private List&lt;MemberDTO&gt; members;
+
+    /**
+     * Constructor with server ID and members list.
+     * @param id The Discord server ID
+     * @param members List of server members
+     */
+<span class="fc" id="L20">    public MemberListDTO(String id, List&lt;MemberDTO&gt; members) {</span>
+<span class="fc" id="L21">        this.id = id;</span>
+<span class="fc" id="L22">        this.members = members;</span>
+<span class="fc" id="L23">    }</span>
+
+    /**
+     * Gets the server ID.
+     * @return The Discord server ID
+     */
+    public String getId() {
+<span class="fc" id="L30">        return id;</span>
+    }
+
+    /**
+     * Sets the server ID.
+     * @param id The Discord server ID to set
+     */
+    public void setId(String id) {
+<span class="nc" id="L38">        this.id = id;</span>
+<span class="nc" id="L39">    }</span>
+
+    /**
+     * Gets the list of members.
+     * @return List of server members
+     */
+    public List&lt;MemberDTO&gt; getMembers() {
+<span class="fc" id="L46">        return members;</span>
+    }
+
+    /**
+     * Sets the list of members.
+     * @param members List of server members to set
+     */
+    public void setMembers(List&lt;MemberDTO&gt; members) {
+<span class="nc" id="L54">        this.members = members;</span>
+<span class="nc" id="L55">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

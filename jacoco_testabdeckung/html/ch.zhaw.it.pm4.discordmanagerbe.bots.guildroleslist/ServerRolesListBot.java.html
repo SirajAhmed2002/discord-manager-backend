@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServerRolesListBot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildroleslist</a> &gt; <span class="el_source">ServerRolesListBot.java</span></div><h1>ServerRolesListBot.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildroleslist;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.AbstractJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.BotIdentifier;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.ServerBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ExtendedRoleDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ServerRoleListDTO;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Role;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Discord bot for retrieving comprehensive role information from Discord guilds.
+ * This bot provides functionality to fetch all roles from a specified guild
+ * with complete Discord role properties including permissions and colors.
+ */
+@BotIdentifier(category = BotIdentifier.BotCategory.SERVER,
+        server = ServerBotType.GUILD_ROLES_LIST)
+@Component
+public class ServerRolesListBot extends AbstractJdaBot {
+
+    /**
+     * Logger instance for this class to handle logging operations.
+     */
+<span class="fc" id="L36">    private static final Logger logger = LoggerFactory.getLogger(ServerRolesListBot.class);</span>
+
+    /**
+     * JSON mapper for converting objects to JSON format with pretty printing enabled.
+     */
+    private final ObjectMapper jsonMapper;
+
+    /**
+     * Constructs a new ServerRolesListBot with the provided JDA instance.
+     * Initializes the JSON mapper with indented output for better readability.
+     *
+     * @param jdaBean the JDA instance used for Discord API interactions
+     */
+    public ServerRolesListBot(JDA jdaBean) {
+<span class="fc" id="L50">        super(jdaBean);</span>
+<span class="fc" id="L51">        this.jsonMapper = new ObjectMapper();</span>
+<span class="fc" id="L52">        this.jsonMapper.enable(SerializationFeature.INDENT_OUTPUT);</span>
+<span class="fc" id="L53">    }</span>
+
+    /**
+     * Fetches all roles from the specified Discord guild with complete role information.
+     * This method validates the guild ID, retrieves the guild, and processes all roles
+     * to return comprehensive role data.
+     *
+     * @param guildId the Discord guild ID as a string
+     * @return ServerRoleListDTO containing all roles with their complete properties
+     * @throws IllegalArgumentException if guildId is null, empty, or guild not found
+     */
+    public ServerRoleListDTO fetchGuildRoles(String guildId) {
+<span class="fc" id="L65">        validateGuildId(guildId);</span>
+<span class="fc" id="L66">        Guild guild = retrieveGuild(guildId);</span>
+<span class="fc" id="L67">        List&lt;ExtendedRoleDTO&gt; rolesList = processGuildRoles(guild);</span>
+<span class="fc" id="L68">        ServerRoleListDTO response = new ServerRoleListDTO(rolesList);</span>
+<span class="fc" id="L69">        logFetchResult(guild, rolesList, response);</span>
+<span class="fc" id="L70">        return response;</span>
+    }
+
+    /**
+     * Validates the provided guild ID to ensure it is not null or empty.
+     *
+     * @param guildId the guild ID to validate
+     * @throws IllegalArgumentException if guildId is null or empty
+     */
+    private void validateGuildId(String guildId) {
+<span class="fc bfc" id="L80" title="All 4 branches covered.">        if (guildId == null || guildId.isEmpty()) {</span>
+<span class="fc" id="L81">            logger.error(&quot;Guild ID is not set.&quot;);</span>
+<span class="fc" id="L82">            throw new IllegalArgumentException(&quot;Guild ID must be set.&quot;);</span>
+        }
+<span class="fc" id="L84">    }</span>
+
+    /**
+     * Retrieves the Discord guild by its ID.
+     *
+     * @param guildId the Discord guild ID
+     * @return the Guild object
+     * @throws IllegalArgumentException if guild is not found
+     */
+    private Guild retrieveGuild(String guildId) {
+<span class="fc" id="L94">        Guild guild = jdaBean.getGuildById(guildId);</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">        if (guild == null) {</span>
+<span class="fc" id="L96">            logger.error(&quot;Guild not found: {}&quot;, guildId);</span>
+<span class="fc" id="L97">            throw new IllegalArgumentException(&quot;Guild not found: &quot; + guildId);</span>
+        }
+<span class="fc" id="L99">        return guild;</span>
+    }
+
+    /**
+     * Processes all roles from the given guild and converts them to ExtendedRoleDTO objects.
+     * Roles are processed in their natural Discord order (highest position first).
+     *
+     * @param guild the Discord guild containing the roles
+     * @return list of ExtendedRoleDTO objects with complete role information
+     */
+    private List&lt;ExtendedRoleDTO&gt; processGuildRoles(Guild guild) {
+<span class="fc" id="L110">        List&lt;ExtendedRoleDTO&gt; rolesList = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L111">        List&lt;Role&gt; roles = guild.getRoles();</span>
+
+<span class="fc bfc" id="L113" title="All 2 branches covered.">        for (Role role : roles) {</span>
+<span class="fc" id="L114">            ExtendedRoleDTO roleDTO = convertRoleToDTO(role);</span>
+<span class="fc" id="L115">            rolesList.add(roleDTO);</span>
+<span class="fc" id="L116">        }</span>
+
+<span class="fc" id="L118">        return rolesList;</span>
+    }
+
+    /**
+     * Converts a Discord Role object to an ExtendedRoleDTO with all relevant properties.
+     * This includes basic role information, color, and permissions.
+     *
+     * @param role the Discord Role object to convert
+     * @return ExtendedRoleDTO containing all role properties
+     */
+    private ExtendedRoleDTO convertRoleToDTO(Role role) {
+<span class="fc" id="L129">        ExtendedRoleDTO roleDTO = new ExtendedRoleDTO();</span>
+
+<span class="fc" id="L131">        setBasicRoleProperties(roleDTO, role);</span>
+<span class="fc" id="L132">        setRoleColor(roleDTO, role);</span>
+<span class="fc" id="L133">        setRolePermissions(roleDTO, role);</span>
+
+<span class="fc" id="L135">        return roleDTO;</span>
+    }
+
+    /**
+     * Sets the basic properties of a role DTO (ID and name).
+     *
+     * @param roleDTO the DTO to populate
+     * @param role the Discord role containing the data
+     */
+    private void setBasicRoleProperties(ExtendedRoleDTO roleDTO, Role role) {
+<span class="fc" id="L145">        roleDTO.setId(role.getId());</span>
+<span class="fc" id="L146">        roleDTO.setName(role.getName());</span>
+<span class="fc" id="L147">    }</span>
+
+    /**
+     * Sets the color property of a role DTO.
+     * Converts the Discord role color to a hexadecimal string format.
+     *
+     * @param roleDTO the DTO to populate
+     * @param role the Discord role containing the color data
+     */
+    private void setRoleColor(ExtendedRoleDTO roleDTO, Role role) {
+<span class="fc" id="L157">        String colorHex = convertColorToHex(role.getColor());</span>
+<span class="fc" id="L158">        roleDTO.setColor(colorHex);</span>
+<span class="fc" id="L159">    }</span>
+
+    /**
+     * Converts a Color object to its hexadecimal string representation.
+     *
+     * @param color the Color object to convert, may be null
+     * @return hexadecimal color string (e.g., &quot;#FF5733&quot;) or null if color is null
+     */
+    private String convertColorToHex(Color color) {
+<span class="fc bfc" id="L168" title="All 2 branches covered.">        if (color == null) {</span>
+<span class="fc" id="L169">            return null;</span>
+        }
+<span class="fc" id="L171">        return &quot;#&quot; + Integer.toHexString(color.getRGB()).substring(2).toUpperCase();</span>
+    }
+
+    /**
+     * Sets the permissions list for a role DTO.
+     * Converts Discord Permission enums to their string representations.
+     *
+     * @param roleDTO the DTO to populate
+     * @param role the Discord role containing the permissions
+     */
+    private void setRolePermissions(ExtendedRoleDTO roleDTO, Role role) {
+<span class="fc" id="L182">        List&lt;String&gt; permissions = role.getPermissions().stream()</span>
+<span class="fc" id="L183">                .map(Permission::toString)</span>
+<span class="fc" id="L184">                .collect(Collectors.toList());</span>
+<span class="fc" id="L185">        roleDTO.setPermissions(permissions);</span>
+<span class="fc" id="L186">    }</span>
+
+    /**
+     * Logs the result of the role fetching operation.
+     * Includes summary information and detailed JSON output in debug mode.
+     *
+     * @param guild the Discord guild that was processed
+     * @param rolesList the list of roles that were fetched
+     * @param response the complete response object
+     */
+    private void logFetchResult(Guild guild, List&lt;ExtendedRoleDTO&gt; rolesList, ServerRoleListDTO response) {
+<span class="fc" id="L197">        logger.info(&quot;Fetched {} roles from guild {} ({})&quot;,</span>
+<span class="fc" id="L198">                rolesList.size(), guild.getName(), guild.getId());</span>
+
+<span class="fc" id="L200">        logDetailedResponse(response);</span>
+<span class="fc" id="L201">    }</span>
+
+    /**
+     * Logs the detailed JSON response in debug mode.
+     * If JSON serialization fails, logs an error instead.
+     *
+     * @param response the response object to serialize and log
+     */
+    private void logDetailedResponse(ServerRoleListDTO response) {
+        try {
+<span class="fc" id="L211">            String jsonResponse = jsonMapper.writeValueAsString(response);</span>
+<span class="fc" id="L212">            logger.debug(&quot;Role fetch response: {}&quot;, jsonResponse);</span>
+<span class="nc" id="L213">        } catch (Exception ex) {</span>
+<span class="nc" id="L214">            logger.error(&quot;Error generating JSON for logging&quot;, ex);</span>
+<span class="fc" id="L215">        }</span>
+<span class="fc" id="L216">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

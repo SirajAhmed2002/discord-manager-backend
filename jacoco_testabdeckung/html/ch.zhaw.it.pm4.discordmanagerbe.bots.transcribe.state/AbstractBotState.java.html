@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractBotState.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.state</a> &gt; <span class="el_source">AbstractBotState.java</span></div><h1>AbstractBotState.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.state;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.TranscribeBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility.BotMessages;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility.MessageKey;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.GuildVoiceState;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.managers.channel.concrete.VoiceChannelManager;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Abstract implementation of the BotState interface that provides default behavior
+ * and common utility methods for concrete state implementations.
+ */
+public abstract class AbstractBotState implements BotState {
+
+    /** the bot instance */
+    protected final TranscribeBot bot;
+
+    /**
+     * Constructs a new AbstractBotState with the specified bot.
+     * @param bot The TranscribeBot instance
+     */
+<span class="fc" id="L30">    public AbstractBotState(TranscribeBot bot) {</span>
+<span class="fc" id="L31">        this.bot = bot;</span>
+<span class="fc" id="L32">    }</span>
+
+    /**
+     * Default implementation for joining a voice channel.
+     * @param event The slash command event
+     */
+    @Override
+    public void joinVoiceChannel(SlashCommandInteractionEvent event) {
+<span class="nc" id="L40">        event.getHook().sendMessage(BotMessages.get(MessageKey.COMMAND_NOT_AVAILABLE)).queue();</span>
+<span class="nc" id="L41">    }</span>
+
+    /**
+     * Default implementation for leaving a voice channel.
+     * @param event The slash command event
+     */
+    @Override
+    public void leaveVoiceChannel(SlashCommandInteractionEvent event) {
+<span class="nc" id="L49">        event.getHook().sendMessage(BotMessages.get(MessageKey.COMMAND_NOT_AVAILABLE)).queue();</span>
+<span class="nc" id="L50">    }</span>
+
+    /**
+     * Default implementation for locking a voice channel.
+     * @param event The slash command event
+     */
+    @Override
+    public void lockVoiceChannel(SlashCommandInteractionEvent event) {
+<span class="nc" id="L58">        event.getHook().sendMessage(BotMessages.get(MessageKey.COMMAND_NOT_AVAILABLE)).queue();</span>
+<span class="nc" id="L59">    }</span>
+
+    /**
+     * Default implementation for unlocking a voice channel.
+     * @param event The slash command event
+     */
+    @Override
+    public void unlockVoiceChannel(SlashCommandInteractionEvent event) {
+<span class="nc" id="L67">        event.getHook().sendMessage(BotMessages.get(MessageKey.COMMAND_NOT_AVAILABLE)).queue();</span>
+<span class="nc" id="L68">    }</span>
+
+    /**
+     * Default implementation for handling recording acceptance.
+     * @param event The slash command event
+     */
+    @Override
+    public void handleAcceptRecording(SlashCommandInteractionEvent event) {
+<span class="nc" id="L76">        event.getHook().sendMessage(BotMessages.get(MessageKey.COMMAND_NOT_AVAILABLE)).queue();</span>
+<span class="nc" id="L77">    }</span>
+
+    /**
+     * Default implementation for starting a recording.
+     * @param event The slash command event
+     */
+    @Override
+    public void startRecording(SlashCommandInteractionEvent event) {
+<span class="nc" id="L85">        event.getHook().sendMessage(BotMessages.get(MessageKey.COMMAND_NOT_AVAILABLE)).queue();</span>
+<span class="nc" id="L86">    }</span>
+
+    /**
+     * Default implementation for stopping a recording.
+     * @param event The slash command event
+     */
+    @Override
+    public void stopRecording(SlashCommandInteractionEvent event) {
+<span class="nc" id="L94">        event.getHook().sendMessage(BotMessages.get(MessageKey.COMMAND_NOT_AVAILABLE)).queue();</span>
+<span class="nc" id="L95">    }</span>
+
+    /**
+     * Locks a voice channel by denying CONNECT permission for @everyone role.
+     * @param channel The voice channel to lock
+     */
+    protected void lockChannel(VoiceChannel channel) {
+<span class="nc" id="L102">        Role everyoneRole = channel.getGuild().getPublicRole();</span>
+<span class="nc" id="L103">        VoiceChannelManager manager = channel.getManager();</span>
+
+<span class="nc" id="L105">        manager.putPermissionOverride(everyoneRole, null, EnumSet.of(Permission.VOICE_CONNECT)).queue();</span>
+<span class="nc" id="L106">    }</span>
+
+    /**
+     * Unlocks a voice channel by removing the permission override for @everyone role.
+     * This restores the default permissions.
+     * @param channel The voice channel to unlock
+     */
+    protected void unlockChannel(VoiceChannel channel) {
+<span class="fc" id="L114">        Role everyoneRole = channel.getGuild().getPublicRole();</span>
+<span class="fc" id="L115">        Objects.requireNonNull(channel.getPermissionOverride(everyoneRole))</span>
+<span class="fc" id="L116">                .delete()</span>
+<span class="fc" id="L117">                .queue();</span>
+<span class="fc" id="L118">    }</span>
+
+    /**
+     * Requests recording permission from all users in the voice channel.
+     * @param event The slash command event
+     * @param channel The voice channel where recording will take place
+     */
+    protected void requestRecordingPermission(SlashCommandInteractionEvent event, VoiceChannel channel) {
+<span class="nc" id="L126">        String channelId = channel.getId();</span>
+<span class="nc" id="L127">        clearPreviousRequests(channelId);</span>
+<span class="nc" id="L128">        collectChannelUsers(channel, event.getJDA().getSelfUser().getId());</span>
+
+<span class="nc" id="L130">        String userList = buildUserList(channel, event.getJDA().getSelfUser().getId());</span>
+<span class="nc" id="L131">        event.getHook().sendMessage(BotMessages.get(MessageKey.CHANNEL_LOCKED_APPROVAL_NEEDED, userList)).queue();</span>
+<span class="nc" id="L132">    }</span>
+
+    /**
+     * Clears any previous recording permission requests for the specified channel.
+     * Removes the channel from pending acceptances and accepted users, and initializes
+     * a new set of pending users for the channel.
+     *
+     * @param channelId The ID of the voice channel to clear requests for
+     */
+    private void clearPreviousRequests(String channelId) {
+<span class="nc" id="L142">        bot.getPendingAcceptances().remove(channelId);</span>
+<span class="nc" id="L143">        bot.getAcceptedUsers().remove(channelId);</span>
+
+<span class="nc" id="L145">        Set&lt;String&gt; pendingUsers = new HashSet&lt;&gt;();</span>
+<span class="nc" id="L146">        bot.getPendingAcceptances().put(channelId, pendingUsers);</span>
+<span class="nc" id="L147">    }</span>
+
+    /**
+     * Builds a comma-separated list of user display names in the specified voice channel,
+     * excluding the bot itself.
+     *
+     * @param channel The voice channel to retrieve user names from
+     * @param botId The ID of the bot to exclude from the list
+     */
+    private void collectChannelUsers(VoiceChannel channel, String botId) {
+<span class="nc" id="L157">        Set&lt;String&gt; pendingUsers = bot.getPendingAcceptances().get(channel.getId());</span>
+
+<span class="nc" id="L159">        channel.getMembers().stream()</span>
+<span class="nc" id="L160">                .map(Member::getId)</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">                .filter(id -&gt; !id.equals(botId))</span>
+<span class="nc" id="L162">                .forEach(pendingUsers::add);</span>
+<span class="nc" id="L163">    }</span>
+
+    /**
+     * Builds a comma-separated list of user display names in the specified voice channel,
+     * excluding the bot itself.
+     *
+     * @param channel The voice channel to retrieve usernames from
+     * @param botId The ID of the bot to exclude from the list
+     * @return A comma-separated string of user display names
+     */
+    private String buildUserList(VoiceChannel channel, String botId) {
+<span class="nc" id="L174">        return channel.getMembers().stream()</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">                .filter(member -&gt; !member.getId().equals(botId))</span>
+<span class="nc" id="L176">                .map(Member::getEffectiveName)</span>
+<span class="nc" id="L177">                .collect(Collectors.joining(&quot;, &quot;));</span>
+    }
+
+    /**
+     * Validates if a member is currently in a voice channel.
+     * @param member The member to check
+     * @param event The slash command event
+     * @return True if member is in a voice channel, false otherwise
+     */
+    protected boolean validateMemberInVoiceChannel(Member member, SlashCommandInteractionEvent event) {
+<span class="fc" id="L187">        boolean isValid = Optional.ofNullable(member)</span>
+<span class="fc" id="L188">                .map(Member::getVoiceState)</span>
+<span class="fc" id="L189">                .filter(GuildVoiceState::inAudioChannel)</span>
+<span class="fc" id="L190">                .isPresent();</span>
+
+<span class="fc bfc" id="L192" title="All 2 branches covered.">        if (!isValid) {</span>
+<span class="fc" id="L193">            event.getHook().sendMessage(BotMessages.get(MessageKey.NOT_IN_VOICE_CHANNEL))</span>
+<span class="fc" id="L194">                    .setEphemeral(true).queue();</span>
+        }
+<span class="fc" id="L196">        return isValid;</span>
+    }
+
+    /**
+     * Gets the voice channel a member is connected to.
+     * Validates if the member is in a voice channel first and sends an error message if not.
+     *
+     * @param member The member to get the voice channel for
+     * @param event The slash command event, used for sending error replies
+     * @return The voice channel the member is in, or null if the member is not in a voice channel
+     */
+    protected VoiceChannel getAndValidateMemberVoiceChannel(Member member, SlashCommandInteractionEvent event) {
+<span class="fc bfc" id="L208" title="All 2 branches covered.">        if (!validateMemberInVoiceChannel(member, event)) {</span>
+<span class="fc" id="L209">            return null;</span>
+        }
+
+<span class="fc" id="L212">        return Objects.requireNonNull(Objects.requireNonNull(member.getVoiceState()).getChannel()).asVoiceChannel();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

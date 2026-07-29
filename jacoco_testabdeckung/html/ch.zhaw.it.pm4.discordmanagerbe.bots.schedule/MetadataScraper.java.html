@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MetadataScraper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.schedule</a> &gt; <span class="el_source">MetadataScraper.java</span></div><h1>MetadataScraper.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.schedule;
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Diese Klasse ist verantwortlich für das Scrapen von Metadaten von der ZHAW Stundenplan-Webseite.
+ * Sie verwendet Selenium WebDriver, um die Webseite zu laden und die benötigten Informationen zu extrahieren.
+ */
+@Component
+public class MetadataScraper {
+<span class="fc" id="L24">    private static final Logger logger = LoggerFactory.getLogger(MetadataScraper.class);</span>
+    private final WebDriverFactory webDriverFactory;
+<span class="fc" id="L26">    private final String websiteUrl = &quot;https://stundenplan.zhaw.ch/&quot;;</span>
+
+    /**
+     * Konstruktor für die MetadataScraper-Klasse.
+     * Initialisiert den WebDriverFactory, der für die Erstellung von WebDriver-Instanzen verwendet wird.
+     *
+     * @param webDriverFactory Die Factory, die WebDriver-Instanzen erstellt.
+     */
+<span class="fc" id="L34">    public MetadataScraper(WebDriverFactory webDriverFactory) {</span>
+<span class="fc" id="L35">        this.webDriverFactory = webDriverFactory;</span>
+<span class="fc" id="L36">    }</span>
+
+    /**
+     * Holt die Liste der Departments von der Webseite.
+     *
+     * @return Eine Liste von Strings, die die Departments repräsentieren.
+     */
+    public List&lt;String&gt; fetchDepartments(){
+<span class="fc" id="L44">        List&lt;String&gt; departments = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L45">        WebDriver driver = new ChromeDriver(webDriverFactory.getChromeOptions());</span>
+<span class="fc" id="L46">        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));</span>
+
+        try{
+<span class="fc" id="L49">            driver.get(websiteUrl);</span>
+
+<span class="fc" id="L51">            WebElement departmentSelect = wait.until(ExpectedConditions.presenceOfElementLocated(</span>
+<span class="fc" id="L52">                    By.cssSelector(&quot;select[name='ctl00$SelectionContent$selDepartment']&quot;)));</span>
+<span class="fc" id="L53">            List&lt;WebElement&gt; departmentOptions = departmentSelect.findElements(By.tagName(&quot;option&quot;));</span>
+
+<span class="fc bfc" id="L55" title="All 2 branches covered.">            for(WebElement option : departmentOptions){</span>
+<span class="fc" id="L56">                departments.add(option.getText());</span>
+<span class="fc" id="L57">            }</span>
+
+<span class="fc" id="L59">        } catch(Exception e){</span>
+<span class="fc" id="L60">            logger.error(&quot;Failed to find department as select: {}&quot;, e.getMessage());</span>
+        } finally{
+<span class="fc" id="L62">            driver.quit();</span>
+        }
+
+<span class="fc" id="L65">        return departments;</span>
+    }
+
+    /**
+     * Holt die Liste der Semester für ein bestimmtes Department.
+     *
+     * @param department Das Department, für das die Semester abgerufen werden sollen.
+     * @return Eine Liste von Strings, die die Semester repräsentieren.
+     */
+    public List&lt;String&gt; fetchSemesters(String department){
+<span class="fc" id="L75">        List&lt;String&gt; semesters = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L76">        WebDriver driver = new ChromeDriver(webDriverFactory.getChromeOptions());</span>
+<span class="fc" id="L77">        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));</span>
+
+        try{
+<span class="fc" id="L80">            driver.get(websiteUrl);</span>
+
+            // Department auswählen
+<span class="fc" id="L83">            WebElement departmentSelect = wait.until(ExpectedConditions.presenceOfElementLocated(</span>
+<span class="fc" id="L84">                    By.cssSelector(&quot;select[name='ctl00$SelectionContent$selDepartment']&quot;)));</span>
+<span class="fc" id="L85">            Select deptDropdown = new Select(departmentSelect);</span>
+<span class="fc" id="L86">            deptDropdown.selectByVisibleText(department);</span>
+
+            // Warten, bis die Seite das Department-Update verarbeitet hat
+<span class="fc" id="L89">            Thread.sleep(1000);</span>
+
+            // Semester-Select finden und Optionen auslesen
+<span class="fc" id="L92">            WebElement semesterSelect = wait.until(ExpectedConditions.presenceOfElementLocated(</span>
+<span class="fc" id="L93">                    By.cssSelector(&quot;select[name='ctl00$SelectionContent$selPeriodVersion']&quot;)));</span>
+<span class="fc" id="L94">            Select semDropdown = new Select(semesterSelect);</span>
+
+<span class="fc bfc" id="L96" title="All 2 branches covered.">            for(WebElement option : semDropdown.getOptions()){</span>
+<span class="fc" id="L97">                semesters.add(option.getText().trim());</span>
+<span class="fc" id="L98">            }</span>
+
+<span class="fc" id="L100">        } catch(Exception e){</span>
+<span class="fc" id="L101">            logger.error(&quot;Fehler beim Abrufen der Semester: {}&quot;, e.getMessage());</span>
+        } finally{
+<span class="fc" id="L103">            driver.quit();</span>
+        }
+
+<span class="fc" id="L106">        return semesters;</span>
+    }
+
+    /**
+     * Holt die Liste der Wochen für ein bestimmtes Department und Semester.
+     *
+     * @param department Das Department, für das die Wochen abgerufen werden sollen.
+     * @param semester   Das Semester, für das die Wochen abgerufen werden sollen.
+     * @return Eine Liste von Strings, die die Wochen repräsentieren.
+     */
+    public List&lt;String&gt; fetchWeeks(String department, String semester){
+<span class="fc" id="L117">        List&lt;String&gt; weeks = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L118">        WebDriver driver = new ChromeDriver(webDriverFactory.getChromeOptions());</span>
+<span class="fc" id="L119">        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));</span>
+
+        try{
+<span class="fc" id="L122">            driver.get(websiteUrl);</span>
+
+            // Department auswählen
+<span class="fc" id="L125">            WebElement departmentSelect = wait.until(ExpectedConditions.presenceOfElementLocated(</span>
+<span class="fc" id="L126">                    By.cssSelector(&quot;select[name='ctl00$SelectionContent$selDepartment']&quot;)));</span>
+<span class="fc" id="L127">            Select deptDropdown = new Select(departmentSelect);</span>
+<span class="fc" id="L128">            deptDropdown.selectByVisibleText(department);</span>
+
+            // Warten auf Aktualisierung
+<span class="fc" id="L131">            Thread.sleep(1000);</span>
+
+            // Semester auswählen
+<span class="fc" id="L134">            WebElement semesterSelect = wait.until(ExpectedConditions.presenceOfElementLocated(</span>
+<span class="fc" id="L135">                    By.cssSelector(&quot;select[name='ctl00$SelectionContent$selPeriodVersion']&quot;)));</span>
+<span class="fc" id="L136">            Select semDropdown = new Select(semesterSelect);</span>
+<span class="fc" id="L137">            semDropdown.selectByVisibleText(semester);</span>
+
+            // Warten auf Aktualisierung
+<span class="fc" id="L140">            Thread.sleep(1000);</span>
+
+            // Wochen erst jetzt laden, nachdem Department und Semester ausgewählt wurden
+<span class="fc" id="L143">            WebElement weekSelect = wait.until(ExpectedConditions.presenceOfElementLocated(</span>
+<span class="fc" id="L144">                    By.cssSelector(&quot;select[name='ctl00$SelectionContent$selWeek']&quot;)));</span>
+<span class="fc" id="L145">            List&lt;WebElement&gt; weekOptions = weekSelect.findElements(By.tagName(&quot;option&quot;));</span>
+
+<span class="fc bfc" id="L147" title="All 2 branches covered.">            for(WebElement option : weekOptions){</span>
+<span class="fc" id="L148">                weeks.add(option.getText());</span>
+<span class="fc" id="L149">            }</span>
+
+<span class="fc" id="L151">        } catch(Exception e){</span>
+<span class="fc" id="L152">            logger.error(&quot;Fehler beim Abrufen der Wochen: {}&quot;, e.getMessage());</span>
+        } finally{
+<span class="fc" id="L154">            driver.quit();</span>
+        }
+
+<span class="fc" id="L157">        return weeks;</span>
+    }
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

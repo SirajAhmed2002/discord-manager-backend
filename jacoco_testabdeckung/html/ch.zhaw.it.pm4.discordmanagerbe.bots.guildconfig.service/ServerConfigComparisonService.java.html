@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServerConfigComparisonService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildconfig.service</a> &gt; <span class="el_source">ServerConfigComparisonService.java</span></div><h1>ServerConfigComparisonService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildconfig.service;
+
+import ch.zhaw.it.pm4.discordmanagerbe.dto.CategoryDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ServerConfigDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.TextChannelDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.VoiceChannelDTO;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.channel.concrete.Category;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+/**
+ * Service for comparing server configurations with actual Discord server state.
+ * Identifies differences between configured and existing channels and categories.
+ */
+@Component
+public class ServerConfigComparisonService {
+
+    /**
+     * JDA instance for Discord API interactions.
+     */
+    private final JDA jdaBean;
+
+    /**
+     * Constructs a new ServerConfigComparisonService.
+     *
+     * @param jdaBean the JDA instance for Discord API access
+     */
+    @Autowired
+<span class="fc" id="L38">    public ServerConfigComparisonService(JDA jdaBean) {</span>
+<span class="fc" id="L39">        this.jdaBean = jdaBean;</span>
+<span class="fc" id="L40">    }</span>
+
+    /**
+     * Compares a server configuration with the actual Discord server state.
+     *
+     * @param serverId the Discord server ID
+     * @param config the server configuration to compare
+     * @return a map containing differences between configuration and actual state
+     * @throws IllegalArgumentException if the guild is not found
+     */
+    public Map&lt;String, Object&gt; compareWithDiscordServer(String serverId, ServerConfigDTO config) {
+<span class="fc" id="L51">        Guild guild = Optional.ofNullable(jdaBean.getGuildById(serverId))</span>
+<span class="fc" id="L52">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Guild not found: &quot; + serverId));</span>
+
+<span class="fc" id="L54">        Map&lt;String, Object&gt; diff = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L55">        addDiffIfNotEmpty(diff, &quot;categories&quot;, compareEntities(</span>
+<span class="fc" id="L56">                guild.getCategories(), config.getCategories(), Category::getId,</span>
+                this::createCategoryDiff, this::updateCategoryDiff));
+<span class="fc" id="L58">        addDiffIfNotEmpty(diff, &quot;textChannels&quot;, compareEntities(</span>
+<span class="fc" id="L59">                guild.getTextChannels(), config.getTextChannels(), TextChannel::getId,</span>
+                this::createTextChannelDiff, this::updateTextChannelDiff));
+<span class="fc" id="L61">        addDiffIfNotEmpty(diff, &quot;voiceChannels&quot;, compareEntities(</span>
+<span class="fc" id="L62">                guild.getVoiceChannels(), config.getVoiceChannels(), VoiceChannel::getId,</span>
+                this::createVoiceChannelDiff, this::updateVoiceChannelDiff));
+
+<span class="fc" id="L65">        return diff;</span>
+    }
+
+    /**
+     * Compares lists of existing and configured entities to identify differences.
+     *
+     * @param &lt;T&gt; the type of existing entities
+     * @param &lt;D&gt; the type of configuration DTOs
+     * @param existing list of existing entities from Discord
+     * @param config list of configured entities
+     * @param idExtractor function to extract ID from existing entities
+     * @param createDiffFunc function to create diff for new entities
+     * @param updateDiffFunc function to create diff for updated entities
+     * @return list of differences between existing and configured entities
+     */
+    private &lt;T, D&gt; List&lt;Map&lt;String, Object&gt;&gt; compareEntities(List&lt;T&gt; existing, List&lt;D&gt; config,
+                                                             Function&lt;T, String&gt; idExtractor, Function&lt;D, Map&lt;String, Object&gt;&gt; createDiffFunc,
+                                                             Function2&lt;T, D, Map&lt;String, Object&gt;&gt; updateDiffFunc) {
+
+<span class="fc" id="L84">        Map&lt;String, T&gt; existingById = existing.stream().collect(Collectors.toMap(idExtractor, Function.identity()));</span>
+<span class="fc" id="L85">        Set&lt;String&gt; existingIds = new HashSet&lt;&gt;(existingById.keySet());</span>
+
+<span class="fc" id="L87">        List&lt;Map&lt;String, Object&gt;&gt; configDiffs = Optional.ofNullable(config).orElse(Collections.emptyList())</span>
+<span class="fc" id="L88">                .stream()</span>
+<span class="fc" id="L89">                .map(dto -&gt; processConfigEntity(dto, existingById, createDiffFunc, updateDiffFunc))</span>
+<span class="fc" id="L90">                .filter(Objects::nonNull)</span>
+<span class="fc" id="L91">                .toList();</span>
+
+<span class="fc" id="L93">        Set&lt;String&gt; configIds = Optional.ofNullable(config).orElse(Collections.emptyList())</span>
+<span class="fc" id="L94">                .stream()</span>
+<span class="fc" id="L95">                .map(this::getId)</span>
+<span class="fc" id="L96">                .filter(id -&gt; id.matches(&quot;\\d+&quot;))</span>
+<span class="fc" id="L97">                .collect(Collectors.toSet());</span>
+
+<span class="fc" id="L99">        existingIds.removeAll(configIds);</span>
+<span class="fc" id="L100">        List&lt;Map&lt;String, Object&gt;&gt; deleteDiffs = existingIds.stream()</span>
+<span class="fc" id="L101">                .map(id -&gt; Map.&lt;String, Object&gt;of(&quot;action&quot;, &quot;delete&quot;, &quot;id&quot;, id))</span>
+<span class="fc" id="L102">                .toList();</span>
+
+<span class="fc" id="L104">        return Stream.concat(configDiffs.stream(), deleteDiffs.stream())</span>
+<span class="fc" id="L105">                .collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Processes a single configuration entity to determine if it needs creation or update.
+     *
+     * @param &lt;T&gt; the type of existing entity
+     * @param &lt;D&gt; the type of configuration DTO
+     * @param dto the configuration DTO to process
+     * @param existingById map of existing entities by ID
+     * @param createDiffFunc function to create diff for new entities
+     * @param updateDiffFunc function to create diff for updated entities
+     * @return diff map for the entity, or null if no changes needed
+     */
+    private &lt;T, D&gt; Map&lt;String, Object&gt; processConfigEntity(D dto, Map&lt;String, T&gt; existingById,
+                                                           Function&lt;D, Map&lt;String, Object&gt;&gt; createDiffFunc,
+                                                           Function2&lt;T, D, Map&lt;String, Object&gt;&gt; updateDiffFunc) {
+
+<span class="fc" id="L123">        String id = getId(dto);</span>
+<span class="fc bfc" id="L124" title="All 2 branches covered.">        if (!id.matches(&quot;\\d+&quot;)) {</span>
+<span class="fc" id="L125">            return createDiffFunc.apply(dto);</span>
+        }
+
+<span class="fc" id="L128">        T existingEntity = existingById.get(id);</span>
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">        if (existingEntity == null) {</span>
+<span class="nc" id="L130">            return createDiffFunc.apply(dto);</span>
+        }
+
+<span class="fc" id="L133">        return updateDiffFunc.apply(existingEntity, dto);</span>
+    }
+
+    /**
+     * Creates a diff for a new category.
+     *
+     * @param dto the category DTO
+     * @return diff map for category creation
+     */
+    private Map&lt;String, Object&gt; createCategoryDiff(CategoryDTO dto) {
+<span class="fc" id="L143">        return Map.of(&quot;action&quot;, &quot;create&quot;, &quot;data&quot;, dto);</span>
+    }
+
+    /**
+     * Creates a diff for a new text channel.
+     *
+     * @param dto the text channel DTO
+     * @return diff map for text channel creation
+     */
+    private Map&lt;String, Object&gt; createTextChannelDiff(TextChannelDTO dto) {
+<span class="fc" id="L153">        return Map.of(&quot;action&quot;, &quot;create&quot;, &quot;data&quot;, dto);</span>
+    }
+
+    /**
+     * Creates a diff for a new voice channel.
+     *
+     * @param dto the voice channel DTO
+     * @return diff map for voice channel creation
+     */
+    private Map&lt;String, Object&gt; createVoiceChannelDiff(VoiceChannelDTO dto) {
+<span class="fc" id="L163">        return Map.of(&quot;action&quot;, &quot;create&quot;, &quot;data&quot;, dto);</span>
+    }
+
+    /**
+     * Creates a diff for an updated category.
+     *
+     * @param existing the existing Discord category
+     * @param dto the desired category configuration
+     * @return diff map for category update, or null if no changes needed
+     */
+    private Map&lt;String, Object&gt; updateCategoryDiff(Category existing, CategoryDTO dto) {
+<span class="fc" id="L174">        Map&lt;String, Object&gt; changes = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L175">        addChangeIfDifferent(changes, &quot;name&quot;, existing.getName(), dto.getName());</span>
+<span class="fc" id="L176">        addChangeIfDifferent(changes, &quot;position&quot;, existing.getPosition(), dto.getPosition());</span>
+<span class="fc bfc" id="L177" title="All 2 branches covered.">        return changes.isEmpty() ? null : Map.of(&quot;action&quot;, &quot;update&quot;, &quot;id&quot;, dto.getId(), &quot;changes&quot;, changes);</span>
+    }
+
+    /**
+     * Creates a diff for an updated text channel.
+     *
+     * @param existing the existing Discord text channel
+     * @param dto the desired text channel configuration
+     * @return diff map for text channel update, or null if no changes needed
+     */
+    private Map&lt;String, Object&gt; updateTextChannelDiff(TextChannel existing, TextChannelDTO dto) {
+<span class="fc" id="L188">        Map&lt;String, Object&gt; changes = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L189">        addChangeIfDifferent(changes, &quot;name&quot;, existing.getName(), dto.getName());</span>
+<span class="fc" id="L190">        addChangeIfDifferent(changes, &quot;parentCategoryId&quot;,</span>
+<span class="pc bpc" id="L191" title="1 of 2 branches missed.">                existing.getParentCategory() != null ? existing.getParentCategory().getId() : null,</span>
+<span class="fc" id="L192">                dto.getParentCategoryId());</span>
+<span class="fc" id="L193">        addChangeIfDifferent(changes, &quot;topic&quot;, existing.getTopic(), dto.getTopic());</span>
+<span class="fc" id="L194">        addChangeIfDifferent(changes, &quot;nsfw&quot;, existing.isNSFW(), dto.isNsfw());</span>
+<span class="fc" id="L195">        addChangeIfDifferent(changes, &quot;position&quot;, existing.getPosition(), dto.getPosition());</span>
+<span class="pc bpc" id="L196" title="1 of 2 branches missed.">        return changes.isEmpty() ? null : Map.of(&quot;action&quot;, &quot;update&quot;, &quot;id&quot;, dto.getId(), &quot;changes&quot;, changes);</span>
+    }
+
+    /**
+     * Creates a diff for an updated voice channel.
+     *
+     * @param existing the existing Discord voice channel
+     * @param dto the desired voice channel configuration
+     * @return diff map for voice channel update, or null if no changes needed
+     */
+    private Map&lt;String, Object&gt; updateVoiceChannelDiff(VoiceChannel existing, VoiceChannelDTO dto) {
+<span class="fc" id="L207">        Map&lt;String, Object&gt; changes = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L208">        addChangeIfDifferent(changes, &quot;name&quot;, existing.getName(), dto.getName());</span>
+<span class="fc" id="L209">        addChangeIfDifferent(changes, &quot;parentCategoryId&quot;,</span>
+<span class="pc bpc" id="L210" title="1 of 2 branches missed.">                existing.getParentCategory() != null ? existing.getParentCategory().getId() : null,</span>
+<span class="fc" id="L211">                dto.getParentCategoryId());</span>
+<span class="fc" id="L212">        addChangeIfDifferent(changes, &quot;userLimit&quot;, existing.getUserLimit(), dto.getUserLimit());</span>
+<span class="fc" id="L213">        addChangeIfDifferent(changes, &quot;bitrate&quot;, existing.getBitrate() / 1000, dto.getBitrate());</span>
+<span class="fc" id="L214">        addChangeIfDifferent(changes, &quot;position&quot;, existing.getPosition(), dto.getPosition());</span>
+<span class="fc bfc" id="L215" title="All 2 branches covered.">        return changes.isEmpty() ? null : Map.of(&quot;action&quot;, &quot;update&quot;, &quot;id&quot;, dto.getId(), &quot;changes&quot;, changes);</span>
+    }
+
+    /**
+     * Adds a change to the changes map if current and desired values differ.
+     *
+     * @param &lt;T&gt; the type of values being compared
+     * @param changes the map to add changes to
+     * @param key the property key
+     * @param current the current value
+     * @param desired the desired value
+     */
+    private &lt;T&gt; void addChangeIfDifferent(Map&lt;String, Object&gt; changes, String key, T current, T desired) {
+<span class="fc bfc" id="L228" title="All 2 branches covered.">        if (!Objects.equals(current, desired)) {</span>
+<span class="fc" id="L229">            Map&lt;String, Object&gt; changeMap = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L230">            changeMap.put(&quot;current&quot;, current);</span>
+<span class="fc" id="L231">            changeMap.put(&quot;desired&quot;, desired);</span>
+<span class="fc" id="L232">            changes.put(key, changeMap);</span>
+        }
+<span class="fc" id="L234">    }</span>
+
+    /**
+     * Adds a diff list to the main diff map if the list is not empty.
+     *
+     * @param diff the main diff map
+     * @param key the key for the diff type
+     * @param diffs the list of diffs to add
+     */
+    private void addDiffIfNotEmpty(Map&lt;String, Object&gt; diff, String key, List&lt;Map&lt;String, Object&gt;&gt; diffs) {
+<span class="fc bfc" id="L244" title="All 2 branches covered.">        if (!diffs.isEmpty()) diff.put(key, diffs);</span>
+<span class="fc" id="L245">    }</span>
+
+    /**
+     * Extracts the ID from a DTO using reflection.
+     *
+     * @param dto the DTO object
+     * @return the ID as a string, or empty string if extraction fails
+     */
+    private String getId(Object dto) {
+<span class="fc" id="L254">        try { return (String) dto.getClass().getMethod(&quot;getId&quot;).invoke(dto); }</span>
+<span class="nc" id="L255">        catch (Exception e) { return &quot;&quot;; }</span>
+    }
+
+    /**
+     * Functional interface for functions that take two parameters and return a result.
+     *
+     * @param &lt;T&gt; the type of the first parameter
+     * @param &lt;U&gt; the type of the second parameter
+     * @param &lt;R&gt; the type of the result
+     */
+    @FunctionalInterface
+    private interface Function2&lt;T, U, R&gt; {
+        R apply(T t, U u);
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

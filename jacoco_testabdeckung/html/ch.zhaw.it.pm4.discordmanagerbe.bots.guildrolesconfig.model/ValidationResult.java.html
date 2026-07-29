@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ValidationResult.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model</a> &gt; <span class="el_source">ValidationResult.java</span></div><h1>ValidationResult.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model;
+
+import net.dv8tion.jda.api.entities.Guild;
+
+/**
+ * Result of role sync validation.
+ */
+public class ValidationResult {
+
+    /**
+     * Indicates whether the validation was successful.
+     */
+    private final boolean valid;
+
+    /**
+     * Error message if validation failed.
+     */
+    private final String errorMessage;
+
+    /**
+     * The guild associated with the validation result.
+     */
+    private final Guild guild;
+
+    /**
+     * Private constructor to create a ValidationResult instance.
+     * @param valid indicates whether the validation was successful
+     * @param errorMessage provides additional information about the validation result
+     * @param guild the guild associated with the validation result
+     */
+<span class="fc" id="L31">    private ValidationResult(boolean valid, String errorMessage, Guild guild) {</span>
+<span class="fc" id="L32">        this.valid = valid;</span>
+<span class="fc" id="L33">        this.errorMessage = errorMessage;</span>
+<span class="fc" id="L34">        this.guild = guild;</span>
+<span class="fc" id="L35">    }</span>
+
+    /**
+     * Checks if the validation was successful.
+     * @return true if validation was successful, false otherwise
+     */
+    public boolean isValid() { 
+<span class="fc" id="L42">        return valid; </span>
+    }
+
+    /**
+     * Gets the error message if validation failed.
+     * @return the error message, or null if validation was successful
+     */
+    public String getErrorMessage() { 
+<span class="fc" id="L50">        return errorMessage; </span>
+    }
+
+    /**
+     * Gets the guild associated with the validation result.
+     * @return the guild, or null if not applicable
+     */
+    public Guild getGuild() { 
+<span class="fc" id="L58">        return guild; </span>
+    }
+
+    /**
+     * Creates a successful ValidationResult.
+     * @param guild the guild associated with the validation result
+     * @return a new ValidationResult instance indicating success
+     */
+    public static ValidationResult success(Guild guild) {
+<span class="fc" id="L67">        return new ValidationResult(true, null, guild);</span>
+    }
+
+    /**
+     * Creates a failed ValidationResult with an error message.
+     * @param message the error message to include in the result
+     * @return a new ValidationResult instance indicating failure
+     */
+    public static ValidationResult failure(String message) {
+<span class="fc" id="L76">        return new ValidationResult(false, message, null);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

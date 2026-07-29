@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotenrechnerService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.grade</a> &gt; <span class="el_source">NotenrechnerService.java</span></div><h1>NotenrechnerService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.grade;
+
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.Grade;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.Subject;
+import ch.zhaw.it.pm4.discordmanagerbe.data.repositories.GradeRepository;
+import ch.zhaw.it.pm4.discordmanagerbe.data.repositories.SubjectRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@Service
+public class NotenrechnerService {
+    
+<span class="nc" id="L21">    private static final Logger log = LoggerFactory.getLogger(NotenrechnerService.class);</span>
+    
+    private final SubjectRepository subjectRepository;
+    private final GradeRepository gradeRepository;
+    
+    @Autowired
+    public NotenrechnerService(
+        SubjectRepository subjectRepository,
+        GradeRepository gradeRepository
+<span class="nc" id="L30">    ) {</span>
+<span class="nc" id="L31">        this.subjectRepository = subjectRepository;</span>
+<span class="nc" id="L32">        this.gradeRepository = gradeRepository;</span>
+<span class="nc" id="L33">    }</span>
+    
+    /**
+     * Erstellt ein neues Fach für eine Server/Channel/User-Kombination
+     */
+    @Transactional
+    public Subject createSubject(String serverId, String channelId, String userId, 
+                               String subjectName, int credits, String semester) {
+<span class="nc" id="L41">        log.info(&quot;Creating subject {} with {} credits for semester {} and server/channel/user: {}/{}/{}&quot;, </span>
+<span class="nc" id="L42">                 subjectName, credits, semester, serverId, channelId, userId);</span>
+        
+        // Prüfen, ob das Fach bereits existiert
+<span class="nc" id="L45">        Optional&lt;Subject&gt; existingSubject = subjectRepository.findByServerIdAndChannelIdAndUserIdAndNameAndSemester(</span>
+            serverId, channelId, userId, subjectName, semester);
+            
+<span class="nc bnc" id="L48" title="All 2 branches missed.">        if (existingSubject.isPresent()) {</span>
+<span class="nc" id="L49">            throw new IllegalArgumentException(&quot;Fach &quot; + subjectName + &quot; existiert bereits im Semester &quot; + semester + &quot;!&quot;);</span>
+        }
+        
+        // Neues Fach erstellen
+<span class="nc" id="L53">        Subject subject = new Subject(subjectName, credits, semester, serverId, channelId, userId);</span>
+<span class="nc" id="L54">        return subjectRepository.save(subject);</span>
+    }
+    
+    /**
+     * Fügt eine Note zu einem Fach hinzu
+     */
+    @Transactional
+    public Grade addGrade(String serverId, String channelId, String userId, 
+                         String subjectName, String semester,
+                         double value, double weight, String description) {
+<span class="nc" id="L64">        log.info(&quot;Adding grade {} with weight {} to subject {} (semester {}) for server/channel/user: {}/{}/{}&quot;, </span>
+<span class="nc" id="L65">                 value, weight, subjectName, semester, serverId, channelId, userId);</span>
+        
+        // Validierung und Korrektur der Note
+<span class="nc bnc" id="L68" title="All 2 branches missed.">        if (value &gt; 6.0) {</span>
+<span class="nc" id="L69">            value = value / 10.0;</span>
+<span class="nc bnc" id="L70" title="All 4 branches missed.">            if (value &gt; 6.0 || value &lt; 1.0) {</span>
+<span class="nc" id="L71">                throw new IllegalArgumentException(&quot;Note muss zwischen 1 und 6 liegen!&quot;);</span>
+            }
+<span class="nc bnc" id="L73" title="All 2 branches missed.">        } else if (value &lt; 1.0) {</span>
+<span class="nc" id="L74">            throw new IllegalArgumentException(&quot;Note muss zwischen 1 und 6 liegen!&quot;);</span>
+        }
+        
+        // Validierung und Korrektur des Gewichts
+<span class="nc bnc" id="L78" title="All 2 branches missed.">        if (weight &gt; 1.0) {</span>
+<span class="nc" id="L79">            weight = weight / 100.0;</span>
+<span class="nc bnc" id="L80" title="All 4 branches missed.">            if (weight &gt; 1.0 || weight &lt; 0.0) {</span>
+<span class="nc" id="L81">                throw new IllegalArgumentException(&quot;Gewichtung muss zwischen 0 und 1 liegen!&quot;);</span>
+            }
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        } else if (weight &lt; 0.0) {</span>
+<span class="nc" id="L84">            throw new IllegalArgumentException(&quot;Gewichtung muss zwischen 0 und 1 liegen!&quot;);</span>
+        }
+        
+        // Fach suchen
+<span class="nc" id="L88">        Subject subject = subjectRepository.findByServerIdAndChannelIdAndUserIdAndNameAndSemester(</span>
+            serverId, channelId, userId, subjectName, semester)
+<span class="nc" id="L90">            .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Fach &quot; + subjectName + &quot; im Semester &quot; + semester + &quot; nicht gefunden!&quot;));</span>
+        
+        // Note hinzufügen
+<span class="nc" id="L93">        Grade grade = new Grade(value, weight, description, subject);</span>
+<span class="nc" id="L94">        subject.addGrade(grade);</span>
+        
+<span class="nc" id="L96">        return gradeRepository.save(grade);</span>
+    }
+    
+    /**
+     * Gibt eine Liste aller verfügbaren Semester zurück
+     */
+    @Transactional(readOnly = true)
+    public List&lt;String&gt; getSemesters(String serverId, String channelId, String userId) {
+<span class="nc" id="L104">        return subjectRepository.findSemestersByServerIdAndChannelIdAndUserId(serverId, channelId, userId);</span>
+    }
+    
+    /**
+     * Gibt eine Übersicht aller Fächer für eine Server/Channel/User-Kombination
+     */
+    @Transactional(readOnly = true)
+    public List&lt;Subject&gt; getSubjects(String serverId, String channelId, String userId) {
+<span class="nc" id="L112">        log.info(&quot;Fetching subjects for server/channel/user: {}/{}/{}&quot;, serverId, channelId, userId);</span>
+<span class="nc" id="L113">        return subjectRepository.findByServerIdAndChannelIdAndUserId(serverId, channelId, userId);</span>
+    }
+    
+    /**
+     * Gibt eine Übersicht aller Fächer für ein bestimmtes Semester
+     */
+    @Transactional(readOnly = true)
+    public List&lt;Subject&gt; getSubjectsForSemester(String serverId, String channelId, String userId, String semester) {
+<span class="nc" id="L121">        log.info(&quot;Fetching subjects for semester {} and server/channel/user: {}/{}/{}&quot;, </span>
+                 semester, serverId, channelId, userId);
+<span class="nc" id="L123">        return subjectRepository.findByServerIdAndChannelIdAndUserIdAndSemester(serverId, channelId, userId, semester);</span>
+    }
+    
+    /**
+     * Holt die Noten für ein bestimmtes Fach
+     */
+    @Transactional(readOnly = true)
+    public List&lt;Grade&gt; getGradesForSubject(String serverId, String channelId, String userId, 
+                                          String subjectName, String semester) {
+<span class="nc" id="L132">        log.info(&quot;Fetching grades for subject {} (semester {}) of server/channel/user: {}/{}/{}&quot;, </span>
+                 subjectName, semester, serverId, channelId, userId);
+        
+<span class="nc" id="L135">        Subject subject = subjectRepository.findByServerIdAndChannelIdAndUserIdAndNameAndSemester(</span>
+            serverId, channelId, userId, subjectName, semester)
+<span class="nc" id="L137">            .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Fach &quot; + subjectName + &quot; im Semester &quot; + semester + &quot; nicht gefunden!&quot;));</span>
+            
+<span class="nc" id="L139">        return gradeRepository.findBySubjectOrderByCreatedAtDesc(subject);</span>
+    }
+    
+    /**
+     * Berechnet den gewichteten Durchschnitt für ein Fach
+     */
+    @Transactional(readOnly = true)
+    public double calculateSubjectAverage(String serverId, String channelId, String userId, 
+                                         String subjectName, String semester) {
+<span class="nc" id="L148">        Subject subject = subjectRepository.findByServerIdAndChannelIdAndUserIdAndNameAndSemester(</span>
+            serverId, channelId, userId, subjectName, semester)
+<span class="nc" id="L150">            .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Fach &quot; + subjectName + &quot; im Semester &quot; + semester + &quot; nicht gefunden!&quot;));</span>
+            
+<span class="nc" id="L152">        return subject.calculateAverage();</span>
+    }
+    
+    /**
+     * Berechnet den gewichteten Gesamtdurchschnitt (mit Credits gewichtet) für ein Semester
+     */
+    @Transactional(readOnly = true)
+    public double calculateSemesterAverage(String serverId, String channelId, String userId, String semester) {
+<span class="nc" id="L160">        List&lt;Subject&gt; subjects = subjectRepository.findByServerIdAndChannelIdAndUserIdAndSemester(</span>
+            serverId, channelId, userId, semester);
+        
+<span class="nc" id="L163">        return calculateAverageForSubjects(subjects);</span>
+    }
+    
+    /**
+     * Berechnet den gewichteten Gesamtdurchschnitt (mit Credits gewichtet) für alle Semester
+     */
+    @Transactional(readOnly = true)
+    public double calculateOverallAverage(String serverId, String channelId, String userId) {
+<span class="nc" id="L171">        List&lt;Subject&gt; subjects = subjectRepository.findByServerIdAndChannelIdAndUserId(serverId, channelId, userId);</span>
+        
+<span class="nc" id="L173">        return calculateAverageForSubjects(subjects);</span>
+    }
+    
+    /**
+     * Hilfsmethode zum Berechnen des gewichteten Durchschnitts für eine Liste von Fächern
+     */
+    private double calculateAverageForSubjects(List&lt;Subject&gt; subjects) {
+<span class="nc" id="L180">        double totalWeightedAverage = 0.0;</span>
+<span class="nc" id="L181">        int totalCredits = 0;</span>
+        
+<span class="nc bnc" id="L183" title="All 2 branches missed.">        for (Subject subject : subjects) {</span>
+<span class="nc" id="L184">            double average = subject.calculateAverage();</span>
+<span class="nc bnc" id="L185" title="All 2 branches missed.">            if (average &gt; 0) { // Nur Fächer mit Noten berücksichtigen</span>
+<span class="nc" id="L186">                totalWeightedAverage += average * subject.getCredits();</span>
+<span class="nc" id="L187">                totalCredits += subject.getCredits();</span>
+            }
+<span class="nc" id="L189">        }</span>
+        
+<span class="nc bnc" id="L191" title="All 2 branches missed.">        if (totalCredits == 0) {</span>
+<span class="nc" id="L192">            return 0.0;</span>
+        }
+        
+<span class="nc" id="L195">        return totalWeightedAverage / totalCredits;</span>
+    }
+    
+    /**
+     * Gibt eine Übersicht aller Fächer mit ihren Durchschnitten, gruppiert nach Semester
+     */
+    @Transactional(readOnly = true)
+    public Map&lt;String, Object&gt; getSummary(String serverId, String channelId, String userId) {
+<span class="nc" id="L203">        List&lt;Subject&gt; allSubjects = subjectRepository.findByServerIdAndChannelIdAndUserId(serverId, channelId, userId);</span>
+<span class="nc" id="L204">        List&lt;String&gt; semesters = subjectRepository.findSemestersByServerIdAndChannelIdAndUserId(serverId, channelId, userId);</span>
+        
+        // Fächer ohne Semester auch berücksichtigen
+<span class="nc bnc" id="L207" title="All 6 branches missed.">        if (allSubjects.stream().anyMatch(s -&gt; s.getSemester() == null || s.getSemester().isEmpty())) {</span>
+<span class="nc" id="L208">            semesters.add(&quot;Ohne Semester&quot;);</span>
+        }
+        
+<span class="nc" id="L211">        Map&lt;String, Object&gt; summary = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L212">        Map&lt;String, Object&gt; semesterMap = new HashMap&lt;&gt;();</span>
+        
+        // Für jedes Semester einen Eintrag erstellen
+<span class="nc bnc" id="L215" title="All 2 branches missed.">        for (String semester : semesters) {</span>
+            List&lt;Subject&gt; semesterSubjects;
+            
+<span class="nc bnc" id="L218" title="All 2 branches missed.">            if (semester.equals(&quot;Ohne Semester&quot;)) {</span>
+<span class="nc" id="L219">                semesterSubjects = allSubjects.stream()</span>
+<span class="nc bnc" id="L220" title="All 4 branches missed.">                    .filter(s -&gt; s.getSemester() == null || s.getSemester().isEmpty())</span>
+<span class="nc" id="L221">                    .toList();</span>
+            } else {
+<span class="nc" id="L223">                semesterSubjects = allSubjects.stream()</span>
+<span class="nc" id="L224">                    .filter(s -&gt; semester.equals(s.getSemester()))</span>
+<span class="nc" id="L225">                    .toList();</span>
+            }
+            
+<span class="nc" id="L228">            double semesterAverage = calculateAverageForSubjects(semesterSubjects);</span>
+            
+<span class="nc" id="L230">            Map&lt;String, Object&gt; semesterInfo = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L231">            semesterInfo.put(&quot;average&quot;, semesterAverage);</span>
+            
+<span class="nc" id="L233">            Map&lt;String, Object&gt; subjectMap = new HashMap&lt;&gt;();</span>
+            
+<span class="nc bnc" id="L235" title="All 2 branches missed.">            for (Subject subject : semesterSubjects) {</span>
+<span class="nc" id="L236">                double average = subject.calculateAverage();</span>
+<span class="nc" id="L237">                Map&lt;String, Object&gt; subjectInfo = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L238">                subjectInfo.put(&quot;average&quot;, average);</span>
+<span class="nc" id="L239">                subjectInfo.put(&quot;credits&quot;, subject.getCredits());</span>
+<span class="nc" id="L240">                subjectInfo.put(&quot;gradeCount&quot;, subject.getGrades().size());</span>
+                
+<span class="nc" id="L242">                subjectMap.put(subject.getName(), subjectInfo);</span>
+<span class="nc" id="L243">            }</span>
+            
+<span class="nc" id="L245">            semesterInfo.put(&quot;subjects&quot;, subjectMap);</span>
+<span class="nc" id="L246">            semesterMap.put(semester, semesterInfo);</span>
+<span class="nc" id="L247">        }</span>
+        
+<span class="nc" id="L249">        summary.put(&quot;semesters&quot;, semesterMap);</span>
+<span class="nc" id="L250">        summary.put(&quot;overallAverage&quot;, calculateAverageForSubjects(allSubjects));</span>
+        
+<span class="nc" id="L252">        return summary;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

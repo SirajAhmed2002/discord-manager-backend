@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleUpdateInfo.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model</a> &gt; <span class="el_source">RoleUpdateInfo.java</span></div><h1>RoleUpdateInfo.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model;
+
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ExtendedRoleDTO;
+import net.dv8tion.jda.api.entities.Role;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Information about the current and desired state of a role during the sync process.
+ * Contains flags to indicate which properties have changed.
+ */
+<span class="fc" id="L13">public class RoleUpdateInfo {</span>
+    /**
+     * The current state of the role in the Discord server.
+     */
+    private Role currentRole;
+
+    /**
+     * The desired state of the role as defined in the configuration.
+     */
+    private ExtendedRoleDTO desiredRole;
+
+    /**
+     * Flag indicating if the name of the role has changed.
+     */
+    private boolean nameChanged;
+
+    /**
+     * Flag indicating if the color of the role has changed.
+     */
+    private boolean colorChanged;
+
+    /**
+     * Flag indicating if the mentionable status of the role has changed.
+     */
+    private boolean mentionableChanged;
+
+    /**
+     * Flag indicating if the hoisted status of the role has changed.
+     */
+    private boolean hoistedChanged;
+
+    /**
+     * Flag indicating if the permissions of the role have changed.
+     */
+    private boolean permissionsChanged;
+
+    /**
+     * List of changes made to the role.
+     */
+<span class="fc" id="L52">    private final List&lt;String&gt; changes = new ArrayList&lt;&gt;();</span>
+
+    /**
+     * Constructor for creating a RoleUpdateInfo instance.
+     * @return a new instance of RoleUpdateInfo
+     */
+    public boolean hasChanges() {
+<span class="pc bpc" id="L59" title="2 of 10 branches missed.">        return nameChanged || colorChanged || mentionableChanged || hoistedChanged || permissionsChanged;</span>
+    }
+
+    /**
+     * Adds a change description to the list of changes.
+     * @param change the description of the change made to the role
+     */
+    public void addChange(String change) {
+<span class="fc" id="L67">        changes.add(change);</span>
+<span class="fc" id="L68">    }</span>
+
+    /**
+     * Gets the current state of the role in the Discord server.
+     * @return the current Role object representing the role
+     */
+    public Role getCurrentRole() {
+<span class="fc" id="L75">        return currentRole;</span>
+    }
+
+    /**
+     * Sets the current state of the role in the Discord server.
+     * @param currentRole the Role object representing the current state of the role
+     */
+    public void setCurrentRole(Role currentRole) {
+<span class="fc" id="L83">        this.currentRole = currentRole;</span>
+<span class="fc" id="L84">    }</span>
+
+    /**
+     * Gets the desired state of the role as defined in the configuration.
+     * @return the ExtendedRoleDTO object representing the desired role state
+     */
+    public ExtendedRoleDTO getDesiredRole() {
+<span class="fc" id="L91">        return desiredRole;</span>
+    }
+
+    /**
+     * Sets the desired state of the role as defined in the configuration.
+     * @param desiredRole the ExtendedRoleDTO object representing the desired role state
+     */
+    public void setDesiredRole(ExtendedRoleDTO desiredRole) {
+<span class="fc" id="L99">        this.desiredRole = desiredRole;</span>
+<span class="fc" id="L100">    }</span>
+
+    /**
+     * Checks if the name of the role has changed.
+     * @return true if the name has changed, false otherwise
+     */
+    public boolean isNameChanged() {
+<span class="fc" id="L107">        return nameChanged;</span>
+    }
+
+    /**
+     * Sets the flag indicating if the name of the role has changed.
+     * @param nameChanged true if the name has changed, false otherwise
+     */
+    public void setNameChanged(boolean nameChanged) {
+<span class="fc" id="L115">        this.nameChanged = nameChanged;</span>
+<span class="fc" id="L116">    }</span>
+
+    /**
+     * Checks if the color of the role has changed.
+     * @return true if the color has changed, false otherwise
+     */
+    public boolean isColorChanged() {
+<span class="fc" id="L123">        return colorChanged;</span>
+    }
+
+    /**
+     * Sets the flag indicating if the color of the role has changed.
+     * @param colorChanged true if the color has changed, false otherwise
+     */
+    public void setColorChanged(boolean colorChanged) {
+<span class="fc" id="L131">        this.colorChanged = colorChanged;</span>
+<span class="fc" id="L132">    }</span>
+
+    /**
+     * Checks if the mentionable status of the role has changed.
+     * @return true if the mentionable status has changed, false otherwise
+     */
+    public boolean isPermissionsChanged() {
+<span class="fc" id="L139">        return permissionsChanged;</span>
+    }
+
+    /**
+     * Sets the flag indicating if the permissions of the role have changed.
+     * @param permissionsChanged true if the permissions have changed, false otherwise
+     */
+    public void setPermissionsChanged(boolean permissionsChanged) {
+<span class="fc" id="L147">        this.permissionsChanged = permissionsChanged;</span>
+<span class="fc" id="L148">    }</span>
+
+    /**
+     * Gets the list of changes made to the role.
+     * @return the list of changes made to the role
+     */
+    public List&lt;String&gt; getChanges() {
+<span class="fc" id="L155">        return changes;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

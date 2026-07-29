@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TranscriptionManager.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.recordingsession</a> &gt; <span class="el_source">TranscriptionManager.java</span></div><h1>TranscriptionManager.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.recordingsession;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.transcriptionprocessor.TranscriptionProcessor;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+/**
+ * Manages the transcription process of recorded audio files.
+ * Handles asynchronous transcription and cleanup of temporary resources.
+ */
+public class TranscriptionManager {
+
+    /** Logger instance for logging events and debugging information. */
+<span class="fc" id="L19">    private static final Logger logger = LoggerFactory.getLogger(TranscriptionManager.class);</span>
+
+    /** Processor responsible for handling the transcription of audio files. */
+    private final TranscriptionProcessor transcriptionProcessor;
+
+    /** Manager for handling temporary resources during the transcription process. */
+    private final TemporaryResourceManager tempResourceManager;
+
+    /**
+     * Creates a new transcription manager with the specified transcription processor.
+     * Initializes a new temporary resource manager.
+     *
+     * @param transcriptionProcessor The processor to use for transcription
+     */
+<span class="fc" id="L33">    public TranscriptionManager(TranscriptionProcessor transcriptionProcessor) {</span>
+<span class="fc" id="L34">        this.transcriptionProcessor = transcriptionProcessor;</span>
+<span class="fc" id="L35">        this.tempResourceManager = new TemporaryResourceManager();</span>
+<span class="fc" id="L36">    }</span>
+
+    /**
+     * Creates a new transcription manager with the specified components.
+     *
+     * @param transcriptionProcessor The processor to use for transcription
+     * @param tempResourceManager The manager for temporary resources
+     */
+    public TranscriptionManager(TranscriptionProcessor transcriptionProcessor,
+<span class="nc" id="L45">                                TemporaryResourceManager tempResourceManager) {</span>
+<span class="nc" id="L46">        this.transcriptionProcessor = transcriptionProcessor;</span>
+<span class="nc" id="L47">        this.tempResourceManager = tempResourceManager;</span>
+<span class="nc" id="L48">    }</span>
+
+    /**
+     * Starts an asynchronous transcription process.
+     * The results will be sent to the specified text channel when complete.
+     *
+     * @param textChannel Discord text channel to send results to
+     * @param tempDir Directory containing temporary files
+     * @param sequenceFiles Map of sequence IDs to their corresponding audio files
+     * @param timelineFile CSV file containing timeline information
+     */
+    public void startAsyncTranscription(
+            MessageChannel textChannel,
+            File tempDir,
+            Map&lt;Integer, File&gt; sequenceFiles,
+            File timelineFile) {
+
+<span class="fc" id="L65">        CompletableFuture.runAsync(() -&gt; {</span>
+            try {
+<span class="fc" id="L67">                processTranscription(textChannel, tempDir, sequenceFiles, timelineFile);</span>
+<span class="fc" id="L68">            } catch (Exception e) {</span>
+<span class="nc" id="L69">                handleTranscriptionError(textChannel, tempDir, e);</span>
+<span class="fc" id="L70">            }</span>
+<span class="fc" id="L71">        });</span>
+<span class="fc" id="L72">    }</span>
+
+    /**
+     * Processes the transcription and cleans up temporary resources.
+     *
+     * @param textChannel Discord text channel to send results to
+     * @param tempDir Directory containing temporary files
+     * @param sequenceFiles Map of sequence IDs to their corresponding audio files
+     * @param timelineFile CSV file containing timeline information
+     */
+    private void processTranscription(
+            MessageChannel textChannel,
+            File tempDir,
+            Map&lt;Integer, File&gt; sequenceFiles,
+            File timelineFile) {
+
+<span class="fc" id="L88">        transcriptionProcessor.transcribeTemporaryFiles(timelineFile, sequenceFiles, textChannel);</span>
+<span class="fc" id="L89">        tempResourceManager.cleanupTempDirectory(tempDir);</span>
+<span class="fc" id="L90">        logger.info(&quot;Transcription completed and temporary files cleaned up&quot;);</span>
+<span class="fc" id="L91">    }</span>
+
+    private void handleTranscriptionError(MessageChannel textChannel, File tempDir, Exception e) {
+<span class="fc" id="L94">        logger.error(&quot;Error during transcription process&quot;, e);</span>
+<span class="nc" id="L95">        textChannel.sendMessage(&quot;Error creating transcription: &quot; + e.getMessage()).queue();</span>
+<span class="nc" id="L96">        tempResourceManager.cleanupTempDirectory(tempDir);</span>
+<span class="nc" id="L97">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

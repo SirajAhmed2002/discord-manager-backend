@@ -1,0 +1,3 @@
+[submodule "api-documentation"]
+	path = api-documentation
+	url = git@github.zhaw.ch:PM4-Gruppe3/api-documentation.git

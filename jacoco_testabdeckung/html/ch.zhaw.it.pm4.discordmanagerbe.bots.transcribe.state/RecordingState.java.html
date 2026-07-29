@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RecordingState.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.state</a> &gt; <span class="el_source">RecordingState.java</span></div><h1>RecordingState.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.state;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.TranscribeBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility.BotMessages;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility.MessageKey;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Represents the state when the bot is actively recording audio in a voice channel.
+ * Handles commands related to this state and manages the recording session.
+ */
+public class RecordingState extends AbstractBotState {
+
+<span class="fc" id="L19">    private static final Logger logger = LoggerFactory.getLogger(RecordingState.class);</span>
+
+    /**
+     * Constructs a new RecordingState with the specified bot.
+     * @param bot The TranscribeBot instance
+     */
+    public RecordingState(TranscribeBot bot) {
+<span class="fc" id="L26">        super(bot);</span>
+<span class="fc" id="L27">    }</span>
+
+    /**
+     * Stops the recording before leaving the voice channel.
+     * @param event The slash command event
+     */
+    @Override
+    public void leaveVoiceChannel(SlashCommandInteractionEvent event) {
+<span class="nc" id="L35">        stopRecording(event);</span>
+<span class="nc" id="L36">        super.leaveVoiceChannel(event);</span>
+<span class="nc" id="L37">    }</span>
+
+    /**
+     * Informs the user that recording is already active.
+     * @param event The slash command event
+     */
+    @Override
+    public void startRecording(SlashCommandInteractionEvent event) {
+<span class="nc" id="L45">        event.getHook().sendMessage(BotMessages.get(MessageKey.RECORDING_ACTIVE)).queue();</span>
+<span class="nc" id="L46">    }</span>
+
+    /**
+     * Stops the active recording, saves the files, and transitions to ConnectedState.
+     * @param event The slash command event
+     */
+    @Override
+    public void stopRecording(SlashCommandInteractionEvent event) {
+<span class="fc" id="L54">        Member member = event.getMember();</span>
+<span class="fc" id="L55">        VoiceChannel channel = getAndValidateMemberVoiceChannel(member, event);</span>
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        if (channel == null) {</span>
+<span class="fc" id="L57">            return;</span>
+        }
+
+<span class="fc" id="L60">        String channelId = channel.getId();</span>
+
+<span class="fc bfc" id="L62" title="All 2 branches covered.">        if (!validateActiveRecording(channelId, event)) {</span>
+<span class="fc" id="L63">            return;</span>
+        }
+
+        try {
+<span class="fc" id="L67">            processStopRecording(channelId, event.getChannel());</span>
+<span class="fc" id="L68">            cleanupRecordingResources(channelId);</span>
+<span class="fc" id="L69">            bot.setState(bot.getPendingApprovalState());</span>
+<span class="fc" id="L70">            event.getHook().sendMessage(BotMessages.get(MessageKey.RECORDING_STOPPED)).queue();</span>
+<span class="fc" id="L71">        } catch (Exception e) {</span>
+<span class="fc" id="L72">            logger.error(&quot;Error stopping recording&quot;, e);</span>
+<span class="fc" id="L73">            event.getHook().sendMessage(&quot;Fehler beim Beenden der Aufnahme: &quot; + e.getMessage())</span>
+<span class="fc" id="L74">                    .setEphemeral(true).queue();</span>
+<span class="fc" id="L75">        }</span>
+<span class="fc" id="L76">    }</span>
+
+    /**
+     * Validates that there is an active recording for the channel.
+     * @param channelId The ID of the channel to check
+     * @param event The slash command event
+     * @return True if there is an active recording, false otherwise
+     */
+    private boolean validateActiveRecording(String channelId, SlashCommandInteractionEvent event) {
+<span class="fc" id="L85">        TranscribeBot.RecordingSession session = bot.getActiveSessions().get(channelId);</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">        if (session == null) {</span>
+<span class="fc" id="L87">            event.getHook().sendMessage(BotMessages.get(MessageKey.NO_ACTIVE_RECORDING))</span>
+<span class="fc" id="L88">                    .setEphemeral(true).queue();</span>
+<span class="fc" id="L89">            return false;</span>
+        }
+<span class="fc" id="L91">        return true;</span>
+    }
+
+    /**
+     * Processes the stop recording request and returns the result.
+     * @param channelId The ID of the channel
+     * @param textChannel The text channel for output
+     */
+    private void processStopRecording(String channelId, MessageChannel textChannel) {
+<span class="fc" id="L100">        TranscribeBot.RecordingSession session = bot.getActiveSessions().get(channelId);</span>
+<span class="fc" id="L101">        session.stopRecording(textChannel);</span>
+<span class="fc" id="L102">    }</span>
+
+    /**
+     * Cleans up resources associated with the recording session.
+     * @param channelId The ID of the channel
+     */
+    private void cleanupRecordingResources(String channelId) {
+<span class="fc" id="L109">        bot.getActiveSessions().remove(channelId);</span>
+<span class="fc" id="L110">        removeChannelData(channelId);</span>
+<span class="fc" id="L111">    }</span>
+
+    /**
+     * Removes all data associated with a specific channel.
+     * @param channelId The ID of the channel to remove data for
+     */
+    private void removeChannelData(String channelId) {
+<span class="fc" id="L118">        bot.getPendingAcceptances().remove(channelId);</span>
+<span class="fc" id="L119">        bot.getAcceptedUsers().remove(channelId);</span>
+<span class="fc" id="L120">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

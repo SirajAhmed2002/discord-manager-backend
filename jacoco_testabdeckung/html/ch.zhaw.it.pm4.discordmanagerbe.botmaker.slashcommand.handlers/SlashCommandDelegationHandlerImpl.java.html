@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SlashCommandDelegationHandlerImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.handlers</a> &gt; <span class="el_source">SlashCommandDelegationHandlerImpl.java</span></div><h1>SlashCommandDelegationHandlerImpl.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.handlers;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.error.InteractionErrorHandler;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.model.JdaSlashCommand;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.core.AbstractDelegationHandler;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.core.SlashCommandDelegationHandler;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Specialized delegation handler for Discord slash command interactions.
+ * Implements enhanced slash command functionality with bulk registration and command management.
+ */
+@Component
+public class SlashCommandDelegationHandlerImpl extends AbstractDelegationHandler&lt;SlashCommandInteractionEvent&gt;
+        implements SlashCommandDelegationHandler {
+
+    /**
+     * Constructs a new SlashCommandDelegationHandlerImpl with error handling capabilities.
+     *
+     * @param errorHandler the error handler for managing interaction failures
+     */
+    public SlashCommandDelegationHandlerImpl(InteractionErrorHandler errorHandler) {
+<span class="fc" id="L27">        super(errorHandler);</span>
+<span class="fc" id="L28">    }</span>
+
+    /**
+     * Registers multiple slash commands with their handlers in a thread-safe manner.
+     *
+     * @param commands the list of slash commands to register
+     */
+    @Override
+    public synchronized void registerCommands(List&lt;JdaSlashCommand&gt; commands) {
+<span class="fc" id="L37">        int newCommands = 0;</span>
+<span class="fc" id="L38">        int updatedCommands = 0;</span>
+
+<span class="fc bfc" id="L40" title="All 2 branches covered.">        for (JdaSlashCommand command : commands) {</span>
+<span class="fc" id="L41">            String commandName = command.getName();</span>
+
+<span class="fc bfc" id="L43" title="All 2 branches covered.">            if (handlers.containsKey(commandName)) {</span>
+<span class="fc" id="L44">                log.debug(&quot;Updating existing handler for command: {}&quot;, commandName);</span>
+<span class="fc" id="L45">                updatedCommands++;</span>
+            } else {
+<span class="fc" id="L47">                log.debug(&quot;Adding new handler for command: {}&quot;, commandName);</span>
+<span class="fc" id="L48">                newCommands++;</span>
+            }
+
+<span class="fc" id="L51">            handlers.put(commandName, command.getHandler());</span>
+<span class="fc" id="L52">        }</span>
+
+<span class="fc" id="L54">        log.info(&quot;Registered slash commands: {} new, {} updated, {} total&quot;,</span>
+<span class="fc" id="L55">                newCommands, updatedCommands, handlers.size());</span>
+<span class="fc" id="L56">    }</span>
+
+    /**
+     * Removes a single slash command by name in a thread-safe manner.
+     *
+     * @param commandName the name of the command to remove
+     * @return true if the command was successfully removed, false otherwise
+     */
+    @Override
+    public synchronized boolean removeCommand(String commandName) {
+<span class="nc" id="L66">        return removeHandler(commandName);</span>
+    }
+
+    /**
+     * Removes multiple slash commands in a thread-safe manner.
+     *
+     * @param commands the list of commands to remove
+     */
+    @Override
+    public synchronized void removeCommands(List&lt;JdaSlashCommand&gt; commands) {
+<span class="fc" id="L76">        int removed = 0;</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        for (JdaSlashCommand command : commands) {</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">            if (handlers.remove(command.getName()) != null) {</span>
+<span class="fc" id="L79">                removed++;</span>
+            }
+<span class="fc" id="L81">        }</span>
+<span class="fc" id="L82">        log.info(&quot;Removed {} slash commands, {} remaining&quot;, removed, handlers.size());</span>
+<span class="fc" id="L83">    }</span>
+
+    /**
+     * Gets the names of all currently registered slash commands.
+     *
+     * @return a new list containing all registered command names
+     */
+    @Override
+    public List&lt;String&gt; getRegisteredCommandNames() {
+<span class="fc" id="L92">        return new ArrayList&lt;&gt;(handlers.keySet());</span>
+    }
+
+    /**
+     * Checks if a specific slash command is currently registered.
+     *
+     * @param commandName the name of the command to check
+     * @return true if the command is registered, false otherwise
+     */
+    @Override
+    public boolean isCommandRegistered(String commandName) {
+<span class="fc" id="L103">        return handlers.containsKey(commandName);</span>
+    }
+
+    /**
+     * Extracts the unique identifier from a slash command interaction event.
+     *
+     * @param event the slash command interaction event
+     * @return the command name as the identifier
+     */
+    @Override
+    protected String extractIdentifier(SlashCommandInteractionEvent event) {
+<span class="fc" id="L114">        return event.getName();</span>
+    }
+
+    /**
+     * Provides the handler type name for logging and debugging purposes.
+     *
+     * @return the string &quot;slash command&quot; identifying this handler type
+     */
+    @Override
+    protected String getHandlerTypeName() {
+<span class="fc" id="L124">        return &quot;slash command&quot;;</span>
+    }
+
+    /**
+     * Handles errors that occur during slash command interaction processing.
+     *
+     * @param event the slash command interaction event that caused the error
+     * @param identifier the command name where the error occurred
+     * @param e the exception that was thrown
+     */
+    @Override
+    protected void handleError(SlashCommandInteractionEvent event, String identifier, Exception e) {
+<span class="nc" id="L136">        errorHandler.handleInteractionError(event, identifier, e);</span>
+<span class="nc" id="L137">    }</span>
+
+    /**
+     * Handles cases where no handler is registered for a slash command.
+     * Responds to the user with an error message about the unknown command.
+     *
+     * @param event the slash command interaction event with no registered handler
+     * @param identifier the command name that has no handler
+     */
+    @Override
+    protected void handleNoHandlerFound(SlashCommandInteractionEvent event, String identifier) {
+<span class="fc" id="L148">        log.warn(&quot;No handler found for slash command: {}&quot;, identifier);</span>
+<span class="fc bfc" id="L149" title="All 2 branches covered.">        if (!event.isAcknowledged()) {</span>
+<span class="fc" id="L150">            event.reply(&quot;Unknown command: &quot; + identifier)</span>
+<span class="fc" id="L151">                    .setEphemeral(true)</span>
+<span class="fc" id="L152">                    .queue();</span>
+        }
+<span class="fc" id="L154">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

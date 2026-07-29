@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TextChannelDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.dto</a> &gt; <span class="el_source">TextChannelDTO.java</span></div><h1>TextChannelDTO.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.dto;
+
+/**
+ * Data Transfer Object for Discord text channels.
+ * Extends ChannelCategorizableDTO with text channel specific properties.
+ */
+public class TextChannelDTO extends ChannelCategorizableDTO {
+
+    /** The topic description of the text channel */
+    private String topic;
+    /** Whether the channel is marked as NSFW (Not Safe For Work) */
+    private boolean nsfw;
+
+    /**
+     * Default constructor.
+     * Sets the channel type to TEXT.
+     */
+<span class="fc" id="L18">    public TextChannelDTO() {</span>
+<span class="fc" id="L19">        this.setChannelType(ChannelType.TEXT);</span>
+<span class="fc" id="L20">    }</span>
+
+    /**
+     * Gets the channel topic.
+     * @return The topic description of the text channel
+     */
+    public String getTopic() {
+<span class="fc" id="L27">        return topic;</span>
+    }
+
+    /**
+     * Sets the channel topic.
+     * @param topic The topic description to set
+     */
+    public void setTopic(String topic) {
+<span class="fc" id="L35">        this.topic = topic;</span>
+<span class="fc" id="L36">    }</span>
+
+    /**
+     * Checks if the channel is NSFW.
+     * @return true if the channel is marked as NSFW
+     */
+    public boolean isNsfw() {
+<span class="fc" id="L43">        return nsfw;</span>
+    }
+
+    /**
+     * Sets the NSFW flag.
+     * @param nsfw Whether the channel should be marked as NSFW
+     */
+    public void setNsfw(boolean nsfw) {
+<span class="fc" id="L51">        this.nsfw = nsfw;</span>
+<span class="fc" id="L52">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleSyncAnalysis.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model</a> &gt; <span class="el_source">RoleSyncAnalysis.java</span></div><h1>RoleSyncAnalysis.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model;
+
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ExtendedRoleDTO;
+import net.dv8tion.jda.api.entities.Role;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * Analysis result containing the changes needed for role sync.
+ */
+<span class="fc" id="L13">public class RoleSyncAnalysis {</span>
+    /**
+     * List of roles to be created.
+     */
+<span class="fc" id="L17">    private final List&lt;ExtendedRoleDTO&gt; rolesToCreate = new ArrayList&lt;&gt;();</span>
+
+    /**
+     * List of roles to be updated, containing information about current and desired state.
+     */
+<span class="fc" id="L22">    private final List&lt;RoleUpdateInfo&gt; rolesToUpdate = new ArrayList&lt;&gt;();</span>
+
+    /**
+     * List of roles to be deleted, containing the current state of the roles.
+     */
+<span class="fc" id="L27">    private final List&lt;Role&gt; rolesToDelete = new ArrayList&lt;&gt;();</span>
+
+
+    /**
+     * Adds a role to the list of roles to be created.
+     * @param role the role to be created
+     */
+    public void addRoleToCreate(ExtendedRoleDTO role) {
+<span class="fc" id="L35">        rolesToCreate.add(role);</span>
+<span class="fc" id="L36">    }</span>
+
+    /**
+     * Adds a role update information to the list of roles to be updated.
+     * @param updateInfo the information about the role update
+     */
+    public void addRoleToUpdate(RoleUpdateInfo updateInfo) {
+<span class="fc" id="L43">        rolesToUpdate.add(updateInfo);</span>
+<span class="fc" id="L44">    }</span>
+
+    /**
+     * Adds a list of roles to the list of roles to be deleted.
+     * @param roles the list of roles to be deleted
+     */
+    public void addRolesToDelete(List&lt;Role&gt; roles) {
+<span class="fc" id="L51">        rolesToDelete.addAll(roles);</span>
+<span class="fc" id="L52">    }</span>
+
+    /**
+     * Gets the list of roles to be created. Read-only access.
+     * @return unmodifiable list of roles to be created
+     */
+    public List&lt;ExtendedRoleDTO&gt; getRolesToCreate() {
+<span class="fc" id="L59">        return Collections.unmodifiableList(rolesToCreate);</span>
+    }
+
+    /**
+     * Gets the list of roles to be updated. Read-only access.
+     * @return unmodifiable list of role update information
+     */
+    public List&lt;RoleUpdateInfo&gt; getRolesToUpdate() {
+<span class="fc" id="L67">        return Collections.unmodifiableList(rolesToUpdate);</span>
+    }
+
+    /**
+     * Gets the list of roles to be deleted. Read-only access.
+     * @return unmodifiable list of roles to be deleted
+     */
+    public List&lt;Role&gt; getRolesToDelete() {
+<span class="fc" id="L75">        return Collections.unmodifiableList(rolesToDelete);</span>
+    }
+
+    /**
+     * Checks if there are any roles to be created.
+     * @return true if there are roles to be created, false otherwise
+     */
+    public boolean hasChanges() {
+<span class="pc bpc" id="L83" title="5 of 6 branches missed.">        return !rolesToCreate.isEmpty() || !rolesToUpdate.isEmpty() || !rolesToDelete.isEmpty();</span>
+    }
+
+    /**
+     * Checks if there are any roles to be created.
+     * @return true if there are roles to be created, false otherwise
+     */
+    public String getSummary() {
+<span class="fc" id="L91">        return String.format(&quot;Analysis: %d to create, %d to update, %d to delete&quot;,</span>
+<span class="fc" id="L92">                rolesToCreate.size(), rolesToUpdate.size(), rolesToDelete.size());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

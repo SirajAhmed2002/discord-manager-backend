@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OpenAIConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.transcriptionprocessor</a> &gt; <span class="el_source">OpenAIConfig.java</span></div><h1>OpenAIConfig.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.transcriptionprocessor;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * Configuration properties for OpenAI API integration.
+ * Maps application.properties entries with the 'openai' prefix.
+ */
+@Configuration
+@ConfigurationProperties(prefix = &quot;openai&quot;)
+<span class="fc" id="L12">public class OpenAIConfig {</span>
+
+    /** API configuration settings. */
+<span class="fc" id="L15">    private Api api = new Api();</span>
+
+    /** Transcription service configuration settings. */
+<span class="fc" id="L18">    private Transcription transcription = new Transcription();</span>
+
+    /**
+     * Configuration properties for the OpenAI API connection.
+     */
+<span class="fc" id="L23">    public static class Api {</span>
+        /** The OpenAI API base URL. */
+        private String url;
+
+        /** The OpenAI API authentication key. */
+        private String key;
+
+        /** @return the API base URL */
+        public String getUrl() {
+<span class="nc" id="L32">            return url;</span>
+        }
+
+        /** @param url the API base URL */
+        public void setUrl(String url) {
+<span class="fc" id="L37">            this.url = url;</span>
+<span class="fc" id="L38">        }</span>
+
+        /** @return the API authentication key */
+        public String getKey() {
+<span class="nc" id="L42">            return key;</span>
+        }
+
+        /** @param key the API authentication key */
+        public void setKey(String key) {
+<span class="fc" id="L47">            this.key = key;</span>
+<span class="fc" id="L48">        }</span>
+    }
+
+    /**
+     * Configuration properties for OpenAI transcription service.
+     */
+<span class="fc" id="L54">    public static class Transcription {</span>
+
+        /** The OpenAI model for transcription operations. */
+        private String model;
+
+        /** @return the transcription model name */
+        public String getModel() {
+<span class="nc" id="L61">            return model;</span>
+        }
+
+        /** @param model the transcription model name */
+        public void setModel(String model) {
+<span class="fc" id="L66">            this.model = model;</span>
+<span class="fc" id="L67">        }</span>
+    }
+
+    /** @return the API configuration */
+    public Api getApi() {
+<span class="fc" id="L72">        return api;</span>
+    }
+
+    /** @param api the API configuration */
+    public void setApi(Api api) {
+<span class="fc" id="L77">        this.api = api;</span>
+<span class="fc" id="L78">    }</span>
+
+    /** @return the transcription configuration */
+    public Transcription getTranscription() {
+<span class="fc" id="L82">        return transcription;</span>
+    }
+
+    /** @param transcription the transcription configuration */
+    public void setTranscription(Transcription transcription) {
+<span class="fc" id="L87">        this.transcription = transcription;</span>
+<span class="fc" id="L88">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

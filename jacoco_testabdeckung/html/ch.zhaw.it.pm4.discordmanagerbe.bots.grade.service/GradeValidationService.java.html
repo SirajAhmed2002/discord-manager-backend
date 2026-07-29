@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GradeValidationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.grade.service</a> &gt; <span class="el_source">GradeValidationService.java</span></div><h1>GradeValidationService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.grade.service;
+
+import org.springframework.stereotype.Service;
+
+import static ch.zhaw.it.pm4.discordmanagerbe.bots.grade.GradeBotConstants.*;
+
+/**
+ * Service for validating and normalizing grade-related inputs
+ */
+@Service
+<span class="fc" id="L11">public class GradeValidationService {</span>
+    
+    /**
+     * Validates that a grade is within the valid range (1.0 - 6.0)
+     * @param value the grade value to validate
+     */
+    public void validateGrade(double value) {
+<span class="fc bfc" id="L18" title="All 4 branches covered.">        if (value &lt; MIN_GRADE || value &gt; MAX_GRADE) {</span>
+<span class="fc" id="L19">            throw new IllegalArgumentException(</span>
+<span class="fc" id="L20">                String.format(&quot;Note muss zwischen %.1f und %.1f liegen! Eingegeben: %.2f&quot;, </span>
+<span class="fc" id="L21">                    MIN_GRADE, MAX_GRADE, value)</span>
+            );
+        }
+<span class="fc" id="L24">    }</span>
+    
+    /**
+     * Validates that a weight is within the valid range (0.0 - 1.0)
+     * @param weight the weight value to validate
+     */
+    public void validateWeight(double weight) {
+<span class="fc bfc" id="L31" title="All 4 branches covered.">        if (weight &lt; MIN_WEIGHT || weight &gt; MAX_WEIGHT) {</span>
+<span class="fc" id="L32">            throw new IllegalArgumentException(</span>
+<span class="fc" id="L33">                String.format(&quot;Gewichtung muss zwischen %.1f und %.1f liegen! Eingegeben: %.2f&quot;, </span>
+<span class="fc" id="L34">                    MIN_WEIGHT, MAX_WEIGHT, weight)</span>
+            );
+        }
+<span class="fc" id="L37">    }</span>
+    
+    /**
+     * Normalizes and validates a grade value.
+     * Converts grades &gt; 6.0 by dividing by 10 (e.g., 45 -&gt; 4.5)
+     * @param value the grade value to normalize
+     */
+    public double normalizeGrade(double value) {
+<span class="fc bfc" id="L45" title="All 2 branches covered.">        if (value &gt; GRADE_THRESHOLD) {</span>
+<span class="fc" id="L46">            value = value / GRADE_NORMALIZATION_FACTOR;</span>
+        }
+<span class="fc" id="L48">        validateGrade(value);</span>
+<span class="fc" id="L49">        return value;</span>
+    }
+    
+    /**
+     * Normalizes and validates a weight value.
+     * Converts weights &gt; 1.0 by dividing by 100 (e.g., 50 -&gt; 0.5)
+     * @param weight the weight value to normalize
+     */
+    public double normalizeWeight(double weight) {
+<span class="fc bfc" id="L58" title="All 2 branches covered.">        if (weight &gt; PERCENTAGE_THRESHOLD) {</span>
+<span class="fc" id="L59">            weight = weight / WEIGHT_NORMALIZATION_FACTOR;</span>
+        }
+<span class="fc" id="L61">        validateWeight(weight);</span>
+<span class="fc" id="L62">        return weight;</span>
+    }
+    
+    /**
+     * Validates that a string is not null or empty
+     * @param value the string value to validate
+     */
+    public void validateNotEmpty(String value, String fieldName) {
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        if (isNullOrEmpty(value)) {</span>
+<span class="fc" id="L71">            throw new IllegalArgumentException(fieldName + &quot; darf nicht leer sein!&quot;);</span>
+        }
+<span class="fc" id="L73">    }</span>
+    
+    /**
+     * Validates that credits are positive
+     * @param credits the number of credits to validate
+     */
+    public void validateCredits(int credits) {
+<span class="fc bfc" id="L80" title="All 2 branches covered.">        if (credits &lt;= 0) {</span>
+<span class="fc" id="L81">            throw new IllegalArgumentException(&quot;Credits müssen größer als 0 sein!&quot;);</span>
+        }
+<span class="fc" id="L83">    }</span>
+    
+    /**
+     * Validates all parameters for adding a grade
+     * @param subjectName the name of the subject
+     */
+    public void validateAddGradeParameters(String subjectName, double note, double weight) {
+<span class="fc" id="L90">        validateNotEmpty(subjectName, &quot;Fachname&quot;);</span>
+<span class="fc" id="L91">        validateGrade(note);</span>
+<span class="fc" id="L92">        validateWeight(weight);</span>
+<span class="fc" id="L93">    }</span>
+    
+    /**
+     * Validates all parameters for creating a subject
+     * @param subjectName the name of the subject
+     */
+    public void validateCreateSubjectParameters(String subjectName, int credits) {
+<span class="fc" id="L100">        validateNotEmpty(subjectName, &quot;Fachname&quot;);</span>
+<span class="fc" id="L101">        validateCredits(credits);</span>
+<span class="fc" id="L102">    }</span>
+
+    /**
+     * Checks if a string is null or empty
+     * @param value the string to check
+     */
+    private boolean isNullOrEmpty(String value) {
+<span class="fc bfc" id="L109" title="All 4 branches covered.">        return value == null || value.trim().isEmpty();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

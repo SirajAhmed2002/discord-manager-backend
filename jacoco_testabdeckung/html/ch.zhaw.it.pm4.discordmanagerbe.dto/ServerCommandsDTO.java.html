@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServerCommandsDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.dto</a> &gt; <span class="el_source">ServerCommandsDTO.java</span></div><h1>ServerCommandsDTO.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.dto;
+
+import java.util.List;
+
+/**
+ * DTO representing all bot commands available on a Discord server.
+ * Contains a list of bot command configurations.
+ */
+public class ServerCommandsDTO {
+    /** List of bot commands available on the server */
+    private List&lt;BotCommandsDTO&gt; botCommands;
+
+    /**
+     * Default constructor.
+     */
+<span class="nc" id="L16">    public ServerCommandsDTO() {</span>
+        // Default constructor
+<span class="nc" id="L18">    }</span>
+
+    /**
+     * Gets the list of bot commands.
+     * @return List of bot command configurations
+     */
+    public List&lt;BotCommandsDTO&gt; getBotCommands() {
+<span class="nc" id="L25">        return botCommands;</span>
+    }
+
+    /**
+     * Sets the list of bot commands.
+     * @param botCommands List of bot command configurations to set
+     */
+    public void setBotCommands(List&lt;BotCommandsDTO&gt; botCommands) {
+<span class="nc" id="L33">        this.botCommands = botCommands;</span>
+<span class="nc" id="L34">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

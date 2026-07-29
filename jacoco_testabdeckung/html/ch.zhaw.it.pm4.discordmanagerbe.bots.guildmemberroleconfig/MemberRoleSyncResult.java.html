@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MemberRoleSyncResult.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildmemberroleconfig</a> &gt; <span class="el_source">MemberRoleSyncResult.java</span></div><h1>MemberRoleSyncResult.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildmemberroleconfig;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * Contains the results of a member role synchronization operation.
+ * Tracks successful role assignments, removals, and any errors encountered.
+ */
+public class MemberRoleSyncResult {
+
+    /** Whether the sync operation was successful. */
+    private boolean success;
+
+    /** Message describing the operation result. */
+    private String message;
+
+    /** List of successful role assignments. */
+<span class="fc" id="L20">    private final List&lt;MemberRoleChangeInfo&gt; roleAssignments = new ArrayList&lt;&gt;();</span>
+
+    /** List of successful role removals. */
+<span class="fc" id="L23">    private final List&lt;MemberRoleChangeInfo&gt; roleRemovals = new ArrayList&lt;&gt;();</span>
+
+    /** List of errors encountered during sync. */
+<span class="fc" id="L26">    private final List&lt;String&gt; errors = new ArrayList&lt;&gt;();</span>
+
+    /**
+     * Creates a new sync result.
+     *
+     * @param success whether the operation was successful
+     * @param message descriptive message about the result
+     */
+<span class="fc" id="L34">    public MemberRoleSyncResult(boolean success, String message) {</span>
+<span class="fc" id="L35">        this.success = success;</span>
+<span class="fc" id="L36">        this.message = message;</span>
+<span class="fc" id="L37">    }</span>
+
+    /**
+     * Adds a successful role assignment to the result.
+     *
+     * @param memberName name of the member
+     * @param roleName name of the assigned role
+     */
+    public void addRoleAssignment(String memberName, String roleName) {
+<span class="fc" id="L46">        roleAssignments.add(new MemberRoleChangeInfo(memberName, roleName));</span>
+<span class="fc" id="L47">    }</span>
+
+    /**
+     * Adds a successful role removal to the result.
+     *
+     * @param memberName name of the member
+     * @param roleName name of the removed role
+     */
+    public void addRoleRemoval(String memberName, String roleName) {
+<span class="fc" id="L56">        roleRemovals.add(new MemberRoleChangeInfo(memberName, roleName));</span>
+<span class="fc" id="L57">    }</span>
+
+    /**
+     * Adds an error message to the result.
+     *
+     * @param error the error message
+     */
+    public void addError(String error) {
+<span class="fc" id="L65">        errors.add(error);</span>
+<span class="fc" id="L66">    }</span>
+
+    /**
+     * Gets whether the sync was successful.
+     *
+     * @return true if successful, false otherwise
+     */
+<span class="fc" id="L73">    public boolean isSuccess() { return success; }</span>
+
+    /**
+     * Sets the success status.
+     *
+     * @param success the success status
+     */
+<span class="fc" id="L80">    public void setSuccess(boolean success) { this.success = success; }</span>
+
+    /**
+     * Gets the result message.
+     *
+     * @return the message
+     */
+<span class="fc" id="L87">    public String getMessage() { return message; }</span>
+
+    /**
+     * Sets the result message.
+     *
+     * @param message the message
+     */
+<span class="fc" id="L94">    public void setMessage(String message) { this.message = message; }</span>
+
+    /**
+     * Gets all successful role assignments.
+     *
+     * @return unmodifiable list of role assignments
+     */
+<span class="nc" id="L101">    public List&lt;MemberRoleChangeInfo&gt; getRoleAssignments() { return Collections.unmodifiableList(roleAssignments); }</span>
+
+    /**
+     * Gets all successful role removals.
+     *
+     * @return unmodifiable list of role removals
+     */
+<span class="nc" id="L108">    public List&lt;MemberRoleChangeInfo&gt; getRoleRemovals() { return Collections.unmodifiableList(roleRemovals); }</span>
+
+    /**
+     * Gets all errors encountered.
+     *
+     * @return unmodifiable list of error messages
+     */
+<span class="fc" id="L115">    public List&lt;String&gt; getErrors() { return Collections.unmodifiableList(errors); }</span>
+
+    /**
+     * Gets a summary of all changes made.
+     */
+    public String getSummary() {
+<span class="nc" id="L121">        return String.format(&quot;Member Role Sync Summary: Roles Added: %d, Roles Removed: %d, Errors: %d&quot;,</span>
+<span class="nc" id="L122">                roleAssignments.size(), roleRemovals.size(), errors.size());</span>
+    }
+
+    /**
+     * Information about a single member role change.
+     */
+    public static class MemberRoleChangeInfo {
+
+        /** Name of the member whose role changed. */
+        private final String memberName, roleName;
+
+        /**
+         * Creates a new role change info.
+         *
+         * @param memberName name of the member
+         * @param roleName name of the role
+         */
+<span class="fc" id="L139">        public MemberRoleChangeInfo(String memberName, String roleName) {</span>
+<span class="fc" id="L140">            this.memberName = memberName;</span>
+<span class="fc" id="L141">            this.roleName = roleName;</span>
+<span class="fc" id="L142">        }</span>
+
+        /**
+         * Gets the member name.
+         *
+         * @return the member name
+         */
+<span class="nc" id="L149">        public String getMemberName() { return memberName; }</span>
+
+        /**
+         * Gets the role name.
+         *
+         * @return the role name
+         */
+<span class="nc" id="L156">        public String getRoleName() { return roleName; }</span>
+
+        @Override
+<span class="nc" id="L159">        public String toString() { return memberName + &quot; ↔ &quot; + roleName; }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

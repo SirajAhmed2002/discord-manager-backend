@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ScheduleScraper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.schedule</a> &gt; <span class="el_source">ScheduleScraper.java</span></div><h1>ScheduleScraper.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.schedule;
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * Diese Klasse ist verantwortlich für das Scrapen des Stundenplans von der ZHAW Webseite.
+ * Sie verwendet Selenium WebDriver, um die Webseite zu laden und den Stundenplan als HTML-String zu extrahieren.
+ */
+@Component
+public class ScheduleScraper{
+
+<span class="fc" id="L27">    private static final Logger logger = LoggerFactory.getLogger(ScheduleScraper.class);</span>
+
+    private final WebDriverFactory webDriverFactory;
+
+<span class="fc" id="L31">    private final String websiteUrl = &quot;https://stundenplan.zhaw.ch/&quot;;</span>
+
+<span class="fc" id="L33">    public ScheduleScraper(WebDriverFactory webDriverFactory) {</span>
+<span class="fc" id="L34">        this.webDriverFactory = webDriverFactory;</span>
+<span class="fc" id="L35">    }</span>
+
+    /**
+     * Holt den Stundenplan als HTML-String für einen bestimmten Benutzer, Department, Semester und Woche.
+     *
+     * @param username   Der Benutzername des Studenten.
+     * @param department Das Department des Studenten.
+     * @param semester   Das Semester des Studenten.
+     * @param week       Die Woche des Stundenplans (optional).
+     * @return Der Stundenplan als HTML-String.
+     */
+    public String fetchScheduleHtml(String username, String department, String semester, String week){
+<span class="fc" id="L47">        WebDriver driver = new ChromeDriver(webDriverFactory.getChromeOptions());</span>
+<span class="fc" id="L48">        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));</span>
+
+        try{
+<span class="fc" id="L51">            driver.get(websiteUrl);</span>
+
+            // Benutzername eingeben und suchen
+<span class="fc" id="L54">            WebElement searchBox = wait.until(ExpectedConditions.elementToBeClickable(</span>
+<span class="fc" id="L55">                    By.cssSelector(&quot;input[name='ctl00$SelectionContent$txtSearch']&quot;)));</span>
+<span class="fc" id="L56">            searchBox.sendKeys(username);</span>
+<span class="fc" id="L57">            WebElement searchButton = wait.until(ExpectedConditions.elementToBeClickable(</span>
+<span class="fc" id="L58">                    By.cssSelector(&quot;button[id='SelectionContent_iptSearch']&quot;)));</span>
+<span class="fc" id="L59">            searchButton.click();</span>
+
+            // Department auswählen
+<span class="fc" id="L62">            WebElement departmentDropdown = wait.until(ExpectedConditions.elementToBeClickable(</span>
+<span class="fc" id="L63">                    By.cssSelector(&quot;select[name='ctl00$SelectionContent$selDepartment']&quot;)));</span>
+<span class="fc" id="L64">            Select departmentSelect = new Select(departmentDropdown);</span>
+<span class="fc" id="L65">            departmentSelect.selectByVisibleText(department);</span>
+
+            // Semester auswählen
+<span class="fc" id="L68">            WebElement semesterDropdown = wait.until(ExpectedConditions.elementToBeClickable(</span>
+<span class="fc" id="L69">                    By.cssSelector(&quot;select[name='ctl00$SelectionContent$selPeriodVersion']&quot;)));</span>
+<span class="fc" id="L70">            Select semesterSelect = new Select(semesterDropdown);</span>
+<span class="fc" id="L71">            semesterSelect.selectByVisibleText(semester);</span>
+
+            // Woche auswählen (neu)
+<span class="pc bpc" id="L74" title="1 of 4 branches missed.">            if(week!=null &amp;&amp; ! week.isEmpty()){</span>
+<span class="fc" id="L75">                WebElement weekDropdown = wait.until(ExpectedConditions.elementToBeClickable(</span>
+<span class="fc" id="L76">                        By.cssSelector(&quot;select[name='ctl00$SelectionContent$selWeek']&quot;)));</span>
+<span class="fc" id="L77">                Select weekSelect = new Select(weekDropdown);</span>
+<span class="fc" id="L78">                weekSelect.selectByVisibleText(week);</span>
+            }
+
+<span class="fc" id="L81">            Thread.sleep(1000);</span>
+
+            try{
+                // Benutzerinfo holen
+<span class="fc" id="L85">                WebElement userInfo = wait.until(ExpectedConditions.presenceOfElementLocated(</span>
+<span class="fc" id="L86">                        By.cssSelector(&quot;span#MainContent_lblSelectedEntitiesNames&quot;)));</span>
+<span class="fc" id="L87">                String userInfoText = userInfo.getText().trim();</span>
+
+                // Username extrahieren (alles vor dem Komma)
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">                String usernameOnly = userInfoText.contains(&quot;,&quot;) ? userInfoText.split(&quot;,&quot;)[0].trim() : userInfoText;</span>
+
+                // Stundenplan-Tabelle finden
+<span class="fc" id="L93">                WebElement scheduleTable = wait.until(ExpectedConditions.presenceOfElementLocated(By.className(&quot;schedTable&quot;)));</span>
+
+                // HTML für Stundenplan generieren mit verbessertem CSS
+<span class="fc" id="L96">                StringBuilder html = new StringBuilder();</span>
+<span class="fc" id="L97">                html.append(&quot;&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&quot;);</span>
+<span class="fc" id="L98">                html.append(&quot;&lt;meta charset='UTF-8'&gt;&lt;style&gt;&quot;);</span>
+<span class="fc" id="L99">                html.append(&quot;body { font-family: Arial, sans-serif; margin: 20px; }&quot;);</span>
+<span class="fc" id="L100">                html.append(&quot;h1 { color: #2c3e50; }&quot;);</span>
+<span class="fc" id="L101">                html.append(&quot;p { margin-top: 5px; margin-bottom: 15px; }&quot;);</span>
+<span class="fc" id="L102">                html.append(&quot;table { border-collapse: collapse; width: 100%; margin-top: 20px; }&quot;);</span>
+<span class="fc" id="L103">                html.append(&quot;th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }&quot;);</span>
+<span class="fc" id="L104">                html.append(&quot;th { background-color: #5865F2; color: white; }&quot;);</span>
+<span class="fc" id="L105">                html.append(&quot;tr:nth-child(even) { background-color: #f2f2f2; }&quot;);</span>
+<span class="fc" id="L106">                html.append(&quot;td.lesson { background-color: #e3f2fd; }&quot;);</span>
+<span class="fc" id="L107">                html.append(&quot;td.time-slot { font-weight: bold; background-color: #f0f0f0; }&quot;);</span>
+<span class="fc" id="L108">                html.append(&quot;&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&quot;);</span>
+
+                // Titel und Info-Zeile mit allen Details
+<span class="fc" id="L111">                html.append(&quot;&lt;h1&gt;Stundenplan für &quot;).append(usernameOnly).append(&quot;&lt;/h1&gt;&quot;);</span>
+<span class="fc" id="L112">                html.append(&quot;&lt;p&gt;&quot;).append(userInfoText)</span>
+<span class="fc" id="L113">                        .append(&quot; &amp;nbsp;|&amp;nbsp; &lt;b&gt;Semester:&lt;/b&gt; &quot;).append(semester)</span>
+<span class="fc" id="L114">                        .append(&quot; &amp;nbsp;|&amp;nbsp; &lt;b&gt;Woche:&lt;/b&gt; &quot;).append(week)</span>
+<span class="fc" id="L115">                        .append(&quot;&lt;/p&gt;&quot;);</span>
+
+                // Tabelle erstellen
+<span class="fc" id="L118">                html.append(&quot;&lt;table&gt;&quot;);</span>
+
+                // Header-Zeile
+<span class="fc" id="L121">                html.append(&quot;&lt;tr&gt;&quot;);</span>
+<span class="fc" id="L122">                List&lt;WebElement&gt; headers = scheduleTable.findElements(By.tagName(&quot;th&quot;));</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">                for(WebElement header : headers){</span>
+<span class="fc" id="L124">                    html.append(&quot;&lt;th&gt;&quot;).append(header.getText()).append(&quot;&lt;/th&gt;&quot;);</span>
+<span class="fc" id="L125">                }</span>
+<span class="fc" id="L126">                html.append(&quot;&lt;/tr&gt;&quot;);</span>
+
+                // Zeilen mit Daten
+<span class="fc" id="L129">                List&lt;WebElement&gt; rows = scheduleTable.findElements(By.tagName(&quot;tr&quot;));</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">                for(int i = 1; i &lt; rows.size(); i++){</span>
+<span class="fc" id="L131">                    html.append(&quot;&lt;tr&gt;&quot;);</span>
+<span class="fc" id="L132">                    List&lt;WebElement&gt; cells = rows.get(i).findElements(By.tagName(&quot;td&quot;));</span>
+
+<span class="fc bfc" id="L134" title="All 2 branches covered.">                    for(WebElement cell : cells){</span>
+<span class="fc" id="L135">                        String cellClass = &quot;&quot;;</span>
+
+                        // Prüfen, ob die Zelle ein rowspan-Attribut hat
+<span class="fc" id="L138">                        String rowspan = cell.getAttribute(&quot;rowspan&quot;);</span>
+<span class="pc bpc" id="L139" title="2 of 4 branches missed.">                        String rowspanAttr = (rowspan!=null &amp;&amp; ! rowspan.isEmpty()) ?</span>
+<span class="pc" id="L140">                                &quot; rowspan=\&quot;&quot; + rowspan + &quot;\&quot;&quot; : &quot;&quot;;</span>
+
+                        // Prüfen, ob die Zelle ein colspan-Attribut hat
+<span class="fc" id="L143">                        String colspan = cell.getAttribute(&quot;colspan&quot;);</span>
+<span class="pc bpc" id="L144" title="3 of 4 branches missed.">                        String colspanAttr = (colspan!=null &amp;&amp; ! colspan.isEmpty()) ?</span>
+<span class="pc" id="L145">                                &quot; colspan=\&quot;&quot; + colspan + &quot;\&quot;&quot; : &quot;&quot;;</span>
+
+                        // Spezielle Formatierung für Zeitslots in der ersten Spalte
+<span class="fc bfc" id="L148" title="All 2 branches covered.">                        if(Objects.requireNonNull(cell.getAttribute(&quot;class&quot;)).contains(&quot;schedTableSlotColumn&quot;)){</span>
+<span class="fc" id="L149">                            cellClass = &quot; class='time-slot'&quot;;</span>
+<span class="fc" id="L150">                            html.append(&quot;&lt;td&quot;).append(cellClass).append(rowspanAttr).append(colspanAttr).append(&quot;&gt;&quot;)</span>
+<span class="fc" id="L151">                                    .append(cell.getText().trim())</span>
+<span class="fc" id="L152">                                    .append(&quot;&lt;/td&gt;&quot;);</span>
+                        }
+                        // Formatierung für Lektionen
+<span class="fc bfc" id="L155" title="All 2 branches covered.">                        else if(Objects.requireNonNull(cell.getAttribute(&quot;class&quot;)).contains(&quot;schedPersonal&quot;)){</span>
+<span class="fc" id="L156">                            cellClass = &quot; class='lesson'&quot;;</span>
+<span class="fc" id="L157">                            html.append(&quot;&lt;td&quot;).append(cellClass).append(rowspanAttr).append(colspanAttr).append(&quot;&gt;&quot;);</span>
+
+                            // Fächer extrahieren
+<span class="fc" id="L160">                            List&lt;WebElement&gt; lessons = cell.findElements(By.className(&quot;schedLessonList&quot;));</span>
+<span class="fc bfc" id="L161" title="All 2 branches covered.">                            for(WebElement lessonList : lessons){</span>
+<span class="fc" id="L162">                                List&lt;WebElement&gt; lessonDivs = lessonList.findElements(By.tagName(&quot;div&quot;));</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">                                for(WebElement lessonDiv : lessonDivs){</span>
+<span class="fc" id="L164">                                    String lessonText = lessonDiv.getText().replace(&quot;\n&quot;, &quot;&lt;br&gt;&quot;);</span>
+<span class="fc" id="L165">                                    html.append(lessonText).append(&quot;&lt;br&gt;&quot;);</span>
+<span class="fc" id="L166">                                }</span>
+<span class="fc" id="L167">                            }</span>
+<span class="fc" id="L168">                            html.append(&quot;&lt;/td&gt;&quot;);</span>
+<span class="fc" id="L169">                        }</span>
+                        // Leere Zellen
+                        else{
+<span class="fc" id="L172">                            html.append(&quot;&lt;td&quot;).append(rowspanAttr).append(colspanAttr).append(&quot;&gt;&lt;/td&gt;&quot;);</span>
+                        }
+<span class="fc" id="L174">                    }</span>
+<span class="fc" id="L175">                    html.append(&quot;&lt;/tr&gt;&quot;);</span>
+                }
+
+<span class="fc" id="L178">                html.append(&quot;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;&quot;);</span>
+<span class="fc" id="L179">                return html.toString();</span>
+
+<span class="fc" id="L181">            } catch(Exception e){</span>
+<span class="fc" id="L182">                return &quot;&lt;html&gt;&lt;body&gt;&lt;h1&gt;Fehler&lt;/h1&gt;&lt;p&gt;Keine Ergebnisse gefunden für: &quot; + username +</span>
+                        &quot; mit Department &quot; + department + &quot; und Semester &quot; + semester + &quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;&quot;;
+            }
+
+<span class="fc" id="L186">        } catch(Exception e){</span>
+<span class="fc" id="L187">            return &quot;&lt;html&gt;&lt;body&gt;&lt;h1&gt;Fehler&lt;/h1&gt;&lt;p&gt;Ein unerwarteter Fehler ist aufgetreten: &quot; +</span>
+<span class="fc" id="L188">                    e.getMessage() + &quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;&quot;;</span>
+        } finally{
+<span class="fc" id="L190">            driver.quit();</span>
+        }
+    }
+
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

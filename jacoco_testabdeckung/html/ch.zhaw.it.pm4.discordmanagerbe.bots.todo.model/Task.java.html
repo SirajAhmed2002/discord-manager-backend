@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Task.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.todo.model</a> &gt; <span class="el_source">Task.java</span></div><h1>Task.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.todo.model;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.todo.constant.ReminderUnit;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Represents a task with a title, description, time to be done, and reminders.
+ */
+public class Task {
+
+    /**
+     * The title of the task.
+     */
+    private String title;
+
+    /**
+     * The description of the task.
+     */
+    private String description;
+
+    /**
+     * The time by which the task should be done, represented in milliseconds.
+     */
+    private long timeToBeDone;
+
+    /**
+     * List of reminder times, each represented as the time in milliseconds
+     */
+<span class="fc" id="L31">    private final List&lt;Long&gt; reminderDateTime = new ArrayList&lt;&gt;();</span>
+
+    /**
+     * Reminder value, which can be a string representation of the reminder time.
+     */
+    private String reminderValue;
+
+    /**
+     * The unit of the reminder, such as hours, days, or weeks.
+     */
+    private ReminderUnit reminderUnit;
+
+    /**
+     * Default constructor for Task.
+     * Initializes an empty task.
+     */
+<span class="fc" id="L47">    public Task() {</span>
+<span class="fc" id="L48">    }</span>
+
+    /**
+     * Constructor for Task with parameters.
+     * @param title the title of the task
+     */
+    public void setTitle(String title) {
+<span class="fc" id="L55">        this.title = title;</span>
+<span class="fc" id="L56">    }</span>
+
+    /**
+     * Sets the description of the task.
+     * @param description the description of the task
+     */
+    public void setDescription(String description) {
+<span class="fc" id="L63">        this.description = description;</span>
+<span class="fc" id="L64">    }</span>
+
+    /**
+     * Sets the time by which the task should be done.
+     * @param timeToBeDone the time in milliseconds
+     */
+    public void setTimeToBeDone(long timeToBeDone) {
+<span class="fc" id="L71">        this.timeToBeDone = timeToBeDone;</span>
+<span class="fc" id="L72">    }</span>
+
+    /**
+     * Adds a reminder to the task.
+     * @param reminder the reminder time in milliseconds before the task's time to be done
+     */
+    public void addReminder(long reminder) {
+<span class="fc" id="L79">        this.reminderDateTime.add(timeToBeDone - reminder);</span>
+<span class="fc" id="L80">    }</span>
+
+    /**
+     * Sets the reminder value and unit for the task.
+     * @param reminderValue the value of the reminder
+     */
+    public void setReminderValue(String reminderValue) {
+<span class="fc" id="L87">        this.reminderValue = reminderValue;</span>
+<span class="fc" id="L88">    }</span>
+
+    /**
+     * Sets the reminder unit for the task.
+     * @param reminderUnit the unit of the reminder (e.g., hours, days, weeks)
+     */
+    public void setReminderUnit(ReminderUnit reminderUnit) {
+<span class="fc" id="L95">        this.reminderUnit = reminderUnit;</span>
+<span class="fc" id="L96">    }</span>
+
+    /**
+     * Gets the title of the task.
+     * @return the title of the task
+     */
+    public String getTitle() {
+<span class="fc" id="L103">        return title;</span>
+    }
+
+    /**
+     * Gets the description of the task.
+     * @return the description of the task
+     */
+    public String getDescription() {
+<span class="fc" id="L111">        return description;</span>
+    }
+
+    /**
+     * Gets the time by which the task should be done.
+     * @return the time in milliseconds
+     */
+    public long getTimeToBeDone() {
+<span class="fc" id="L119">        return timeToBeDone;</span>
+    }
+
+    /**
+     * Gets the list of reminder times for the task.
+     * @return a list of reminder times in milliseconds
+     */
+    public List&lt;Long&gt; getReminderDateTime() {
+<span class="fc" id="L127">        return reminderDateTime;</span>
+    }
+
+    /**
+     * Gets the reminder value for the task.
+     * @return the reminder value as a string
+     */
+    public String getReminderValue() {
+<span class="fc" id="L135">        return reminderValue;</span>
+    }
+
+    /**
+     * Gets the unit of the reminder for the task.
+     * @return the reminder unit
+     */
+    public ReminderUnit getReminderUnit() {
+<span class="fc" id="L143">        return reminderUnit;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

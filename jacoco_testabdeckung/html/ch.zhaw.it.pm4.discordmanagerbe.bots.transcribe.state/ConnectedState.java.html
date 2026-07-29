@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConnectedState.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.state</a> &gt; <span class="el_source">ConnectedState.java</span></div><h1>ConnectedState.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.state;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.TranscribeBot;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility.BotMessages;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility.MessageKey;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.managers.AudioManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Represents the state when the bot is connected to a voice channel but not locked or recording.
+ * Handles commands related to this state and transitions to other states.
+ */
+public class ConnectedState extends AbstractBotState {
+
+    /** the logger instance for this class */
+<span class="fc" id="L21">    private static final Logger logger = LoggerFactory.getLogger(ConnectedState.class);</span>
+
+    /**
+     * Constructs a new ConnectedState with the specified bot.
+     * @param bot The TranscribeBot instance
+     */
+    public ConnectedState(TranscribeBot bot) {
+<span class="fc" id="L28">        super(bot);</span>
+<span class="fc" id="L29">    }</span>
+
+    /**
+     * Informs the user that the bot is already connected to a voice channel.
+     * @param event The slash command event
+     */
+    @Override
+    public void joinVoiceChannel(SlashCommandInteractionEvent event) {
+<span class="nc" id="L37">        event.getHook().sendMessage(BotMessages.get(MessageKey.ALREADY_CONNECTED)).queue();</span>
+<span class="nc" id="L38">    }</span>
+
+    /**
+     * Handles leaving the voice channel and transitions to DisconnectedState.
+     * @param event The slash command event
+     */
+    @Override
+    public void leaveVoiceChannel(SlashCommandInteractionEvent event) {
+<span class="fc" id="L46">        AudioManager audioManager = bot.getActiveAudioManager();</span>
+<span class="fc bfc" id="L47" title="All 4 branches covered.">        if (audioManager != null &amp;&amp; audioManager.isConnected()) {</span>
+<span class="fc" id="L48">            logger.info(&quot;Leaving voice channel&quot;);</span>
+
+<span class="fc" id="L50">            audioManager.closeAudioConnection();</span>
+<span class="fc" id="L51">            bot.setActiveAudioManager(null);</span>
+<span class="fc" id="L52">            bot.setState(bot.getDisconnectedState());</span>
+
+<span class="fc" id="L54">            event.getHook().sendMessage(BotMessages.get(MessageKey.LEAVE_SUCCESS)).queue();</span>
+<span class="fc" id="L55">            logger.info(&quot;Successfully left voice channel&quot;);</span>
+        }
+<span class="fc" id="L57">    }</span>
+
+    /**
+     * Locks the voice channel, requests recording permission, and transitions directly to PendingApprovalState.
+     * @param event The slash command event
+     */
+    @Override
+    public void lockVoiceChannel(SlashCommandInteractionEvent event) {
+<span class="fc" id="L65">        Member member = event.getMember();</span>
+<span class="fc" id="L66">        VoiceChannel voiceChannel = getAndValidateMemberVoiceChannel(member, event);</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (voiceChannel == null) {</span>
+<span class="fc" id="L68">            return;</span>
+        }
+
+<span class="fc" id="L71">        lockChannel(voiceChannel);</span>
+<span class="fc" id="L72">        requestRecordingPermission(event, voiceChannel);</span>
+<span class="fc" id="L73">        bot.setState(bot.getPendingApprovalState());</span>
+<span class="fc" id="L74">    }</span>
+
+    /**
+     * Informs the user that they need to lock the channel before starting recording.
+     * @param event The slash command event
+     */
+    @Override
+    public void startRecording(SlashCommandInteractionEvent event) {
+<span class="nc" id="L82">        Member member = event.getMember();</span>
+<span class="nc" id="L83">        VoiceChannel channel = getAndValidateMemberVoiceChannel(member, event);</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        if (channel == null) {</span>
+<span class="nc" id="L85">            return;</span>
+        }
+<span class="nc" id="L87">        event.getHook().sendMessage(BotMessages.get(MessageKey.LOCK_FIRST)).queue();</span>
+<span class="nc" id="L88">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MusicManager.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.music</a> &gt; <span class="el_source">MusicManager.java</span></div><h1>MusicManager.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.music;
+
+import com.sedmelluq.discord.lavaplayer.player.AudioConfiguration;
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
+import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler;
+import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
+import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import dev.lavalink.youtube.YoutubeAudioSourceManager;
+import net.dv8tion.jda.api.audio.AudioSendHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * This class manages the audio players and their associated schedulers for each guild.
+ * It handles loading and playing audio tracks from various sources, including YouTube.
+ */
+public class MusicManager {
+<span class="fc" id="L25">    private static final Logger logger = LoggerFactory.getLogger(MusicManager.class);</span>
+    
+    private final AudioPlayerManager playerManager;
+    private final YoutubeAudioSourceManager youtubeAudioSourceManager;
+<span class="fc" id="L29">    private final Map&lt;Long, AudioPlayer&gt; players = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L30">    private final Map&lt;Long, TrackScheduler&gt; schedulers = new ConcurrentHashMap&lt;&gt;();</span>
+    private static final int DEFAULT_VOLUME = 75;
+
+    /**
+     * Constructor for the MusicManager class.
+     * Initializes the audio player manager and registers the necessary source managers.
+     */
+<span class="fc" id="L37">    public MusicManager() {</span>
+<span class="fc" id="L38">        playerManager = new DefaultAudioPlayerManager();</span>
+<span class="fc" id="L39">        youtubeAudioSourceManager = new YoutubeAudioSourceManager();</span>
+<span class="fc" id="L40">        playerManager.getConfiguration().setFilterHotSwapEnabled(true);</span>
+<span class="fc" id="L41">        playerManager.getConfiguration().setResamplingQuality(AudioConfiguration.ResamplingQuality.HIGH);</span>
+<span class="fc" id="L42">        playerManager.registerSourceManager(youtubeAudioSourceManager);</span>
+<span class="fc" id="L43">        AudioSourceManagers.registerRemoteSources(playerManager);</span>
+<span class="fc" id="L44">        AudioSourceManagers.registerLocalSource(playerManager);</span>
+<span class="fc" id="L45">    }</span>
+
+    /**
+     * Gets or creates an audio player for the specified guild ID.
+     * @param guildId The ID of the guild.
+     * @return The audio player associated with the guild.
+     */
+    private AudioPlayer getOrCreatePlayer(long guildId) {
+<span class="fc" id="L53">        return players.computeIfAbsent(guildId, id -&gt; {</span>
+<span class="fc" id="L54">            AudioPlayer player = playerManager.createPlayer();</span>
+<span class="fc" id="L55">            player.setVolume(DEFAULT_VOLUME);</span>
+<span class="fc" id="L56">            TrackScheduler scheduler = new TrackScheduler(player);</span>
+<span class="fc" id="L57">            player.addListener(scheduler);</span>
+<span class="fc" id="L58">            schedulers.put(id, scheduler);</span>
+<span class="fc" id="L59">            return player;</span>
+        });
+    }
+
+    /**
+     * Gets or creates a track scheduler for the specified guild ID.
+     * @param guildId The ID of the guild.
+     * @return The track scheduler associated with the guild.
+     */
+    private TrackScheduler getOrCreateScheduler(long guildId) {
+<span class="fc" id="L69">        getOrCreatePlayer(guildId); // Ensures scheduler exists</span>
+<span class="fc" id="L70">        return schedulers.get(guildId);</span>
+    }
+
+    /**
+     * Loads and plays a track from the specified URL.
+     * @param guildId The ID of the guild.
+     * @param url The URL of the track to load and play.
+     */
+    public void loadAndPlay(long guildId, String url) {
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        if (!url.startsWith(&quot;http&quot;)) {</span>
+<span class="fc" id="L80">            logger.warn(&quot;Invalid URL: {}&quot;, url);</span>
+<span class="fc" id="L81">            return;</span>
+        }
+        
+<span class="fc" id="L84">        playerManager.loadItem(url, new AudioLoadResultHandler() {</span>
+            // Called when the track is loaded successfully
+            /**
+             * This method is called when a track is successfully loaded.
+             * It sets the position to 0 and queues the track for playback.
+             * @param track The loaded audio track.
+             */
+            @Override
+            public void trackLoaded(AudioTrack track) {
+<span class="fc" id="L93">                logger.info(&quot;Track loaded: {}&quot;, track.getInfo().title);</span>
+<span class="fc" id="L94">                track.setPosition(0);</span>
+<span class="fc" id="L95">                getOrCreateScheduler(guildId).queue(track);</span>
+<span class="fc" id="L96">            }</span>
+
+            // Called when a playlist is loaded successfully
+            /**
+             * This method is called when a playlist is successfully loaded.
+             * It checks if the playlist is a search result or a regular playlist,
+             * and queues the tracks accordingly.
+             * @param playlist The loaded audio playlist.
+             */
+            @Override
+            public void playlistLoaded(AudioPlaylist playlist) {
+<span class="fc bfc" id="L107" title="All 2 branches covered.">                if (playlist.isSearchResult()) {</span>
+<span class="fc" id="L108">                    AudioTrack firstTrack = playlist.getTracks().get(0);</span>
+<span class="fc" id="L109">                    logger.info(&quot;Search result loaded: {}&quot;, firstTrack.getInfo().title);</span>
+<span class="fc" id="L110">                    getOrCreateScheduler(guildId).queue(firstTrack);</span>
+<span class="fc" id="L111">                    return;</span>
+                }
+<span class="fc" id="L113">                logger.info(&quot;Playlist loaded: {} with {} tracks&quot;, playlist.getName(), playlist.getTracks().size());</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">                for (AudioTrack track : playlist.getTracks()) {</span>
+<span class="fc" id="L115">                    getOrCreateScheduler(guildId).queue(track);</span>
+<span class="fc" id="L116">                }</span>
+<span class="fc" id="L117">            }</span>
+
+            // Called when no matches are found for the provided URL
+
+            /**
+             * This method is called when no matches are found for the provided URL.
+             * It logs a warning message indicating that no matches were found.
+             */
+            @Override
+            public void noMatches() {
+<span class="fc" id="L127">                logger.warn(&quot;No matches found for: {}&quot;, url);</span>
+<span class="fc" id="L128">            }</span>
+
+            // Called when an error occurs while loading the track
+            /**
+             * This method is called when an error occurs while loading the track.
+             * It logs the error message and stack trace for debugging purposes.
+             * @param e The exception that occurred during loading.
+             */
+            @Override
+            public void loadFailed(FriendlyException e) {
+<span class="fc" id="L138">                logger.error(&quot;Failed to load: {}&quot;, e.getMessage(), e);</span>
+<span class="fc" id="L139">            }</span>
+        });
+<span class="fc" id="L141">    }</span>
+
+    /**
+     * Gets the audio send handler for the specified guild ID.
+     * @param guildId The ID of the guild.
+     * @return The audio send handler for the guild.
+     */
+    public AudioSendHandler getSendHandler(long guildId) {
+<span class="fc" id="L149">        return new AudioPlayerSendHandler(getOrCreatePlayer(guildId));</span>
+    }
+
+    /**
+     * Gets the audio player for the specified guild ID.
+     * @param guildId The ID of the guild.
+     * @return The audio player for the guild.
+     */
+    public AudioPlayer getPlayer(long guildId) {
+<span class="fc" id="L158">        return getOrCreatePlayer(guildId);</span>
+    }
+
+    /**
+     * Gets the track scheduler for the specified guild ID.
+     * @param guildId The ID of the guild.
+     * @return The track scheduler for the guild.
+     */
+    public TrackScheduler getTrackScheduler(long guildId) {
+<span class="fc" id="L167">        return getOrCreateScheduler(guildId);</span>
+    }
+    
+    /**
+     * Shuts down the music manager and cleans up all resources.
+     * This method should be called when the bot is shutting down.
+     */
+    public void shutdown() {
+<span class="fc" id="L175">        logger.info(&quot;Shutting down MusicManager&quot;);</span>
+        
+        // Stop all players and clear their queues
+<span class="fc bfc" id="L178" title="All 2 branches covered.">        for (Map.Entry&lt;Long, AudioPlayer&gt; entry : players.entrySet()) {</span>
+<span class="fc" id="L179">            AudioPlayer player = entry.getValue();</span>
+<span class="fc" id="L180">            player.stopTrack();</span>
+<span class="fc" id="L181">            player.destroy();</span>
+<span class="fc" id="L182">        }</span>
+        
+        // Clear all schedulers
+<span class="fc bfc" id="L185" title="All 2 branches covered.">        for (TrackScheduler scheduler : schedulers.values()) {</span>
+<span class="fc" id="L186">            scheduler.clearQueue();</span>
+<span class="fc" id="L187">        }</span>
+        
+        // Clear maps
+<span class="fc" id="L190">        players.clear();</span>
+<span class="fc" id="L191">        schedulers.clear();</span>
+        
+        // Shutdown player manager
+<span class="fc" id="L194">        playerManager.shutdown();</span>
+        
+<span class="fc" id="L196">        logger.info(&quot;MusicManager shutdown complete&quot;);</span>
+<span class="fc" id="L197">    }</span>
+    
+    /**
+     * Removes a specific guild's player and scheduler.
+     * This can be used when a bot leaves a guild.
+     * @param guildId The ID of the guild.
+     */
+    public void removeGuildPlayer(long guildId) {
+<span class="fc" id="L205">        AudioPlayer player = players.remove(guildId);</span>
+<span class="fc bfc" id="L206" title="All 2 branches covered.">        if (player != null) {</span>
+<span class="fc" id="L207">            player.stopTrack();</span>
+<span class="fc" id="L208">            player.destroy();</span>
+        }
+        
+<span class="fc" id="L211">        TrackScheduler scheduler = schedulers.remove(guildId);</span>
+<span class="fc bfc" id="L212" title="All 2 branches covered.">        if (scheduler != null) {</span>
+<span class="fc" id="L213">            scheduler.clearQueue();</span>
+        }
+        
+<span class="fc" id="L216">        logger.debug(&quot;Removed player and scheduler for guild: {}&quot;, guildId);</span>
+<span class="fc" id="L217">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

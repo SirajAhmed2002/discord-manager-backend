@@ -1,0 +1,439 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MemberRolesConfigBot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildmemberroleconfig</a> &gt; <span class="el_source">MemberRolesConfigBot.java</span></div><h1>MemberRolesConfigBot.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildmemberroleconfig;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.AbstractJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.BotIdentifier;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.ServerBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.MemberDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.MemberListDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.RoleDTO;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.requests.RestAction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
+
+/**
+ * Discord bot for managing member role assignments within a guild.
+ * Synchronizes member roles based on provided configuration data.
+ */
+@BotIdentifier(category = BotIdentifier.BotCategory.SERVER,
+        server = ServerBotType.GUILD_MEMBER_ROLES_CONFIG)
+@Component
+public class MemberRolesConfigBot extends AbstractJdaBot {
+
+    /** Logger for this class. */
+<span class="fc" id="L36">    private static final Logger logger = LoggerFactory.getLogger(MemberRolesConfigBot.class);</span>
+
+    /**
+     * Constructs a new MemberRolesConfigBot.
+     *
+     * @param jdaBean the JDA instance to use
+     */
+    public MemberRolesConfigBot(JDA jdaBean) {
+<span class="fc" id="L44">        super(jdaBean);</span>
+<span class="fc" id="L45">    }</span>
+
+    /**
+     * Syncs the guild's member role assignments with the provided MemberListDTO.
+     * This will:
+     * - Add members to roles they should have but don't
+     * - Remove members from roles they shouldn't have (optional)
+     * - Skip bot members and managed roles
+     *
+     * @param guildId The Discord guild ID
+     * @param memberListDTO The desired member-role configuration
+     * @param removeUnlistedRoles If true, removes members from roles not specified in the DTO
+     * @return MemberRoleSyncResult containing detailed results of the sync operation
+     */
+    public MemberRoleSyncResult syncMemberRoles(String guildId, MemberListDTO memberListDTO, boolean removeUnlistedRoles) {
+<span class="fc" id="L60">        MemberRoleSyncResult validationResult = validateInputParameters(guildId, memberListDTO);</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">        if (validationResult != null) {</span>
+<span class="fc" id="L62">            return validationResult;</span>
+        }
+
+<span class="fc" id="L65">        Guild guild = jdaBean.getGuildById(guildId);</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        if (guild == null) {</span>
+<span class="fc" id="L67">            return new MemberRoleSyncResult(false, &quot;Guild not found: &quot; + guildId);</span>
+        }
+
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        if (!guild.getSelfMember().hasPermission(Permission.MANAGE_ROLES)) {</span>
+<span class="fc" id="L71">            return new MemberRoleSyncResult(false, &quot;Bot lacks MANAGE_ROLES permission.&quot;);</span>
+        }
+
+        try {
+<span class="fc" id="L75">            List&lt;Member&gt; allMembers = loadGuildMembers(guild);</span>
+<span class="fc" id="L76">            return performRoleSync(guild, memberListDTO, allMembers, removeUnlistedRoles);</span>
+<span class="nc" id="L77">        } catch (Exception e) {</span>
+<span class="nc" id="L78">            logger.error(&quot;Error during member role sync&quot;, e);</span>
+<span class="nc" id="L79">            return new MemberRoleSyncResult(false, &quot;Failed to sync member roles: &quot; + e.getMessage());</span>
+        }
+    }
+
+    /**
+     * Validates input parameters for role sync operation.
+     *
+     * @param guildId the guild ID to validate
+     * @param memberListDTO the member list to validate
+     * @return validation error result or null if valid
+     */
+    private MemberRoleSyncResult validateInputParameters(String guildId, MemberListDTO memberListDTO) {
+<span class="fc bfc" id="L91" title="All 6 branches covered.">        if (memberListDTO == null || guildId == null || guildId.isEmpty()) {</span>
+<span class="fc" id="L92">            return new MemberRoleSyncResult(false, &quot;Invalid member list DTO or guild ID.&quot;);</span>
+        }
+<span class="fc" id="L94">        return null;</span>
+    }
+
+    /**
+     * Loads all members from the specified guild.
+     *
+     * @param guild the guild to load members from
+     * @return list of all guild members
+     * @throws Exception if loading fails or times out
+     */
+    private List&lt;Member&gt; loadGuildMembers(Guild guild) throws Exception {
+<span class="fc" id="L105">        CompletableFuture&lt;List&lt;Member&gt;&gt; membersFuture = new CompletableFuture&lt;&gt;();</span>
+<span class="fc" id="L106">        guild.loadMembers()</span>
+<span class="fc" id="L107">                .onSuccess(membersFuture::complete)</span>
+<span class="fc" id="L108">                .onError(membersFuture::completeExceptionally);</span>
+<span class="fc" id="L109">        return membersFuture.get(30, TimeUnit.SECONDS);</span>
+    }
+
+    /**
+     * Executes the role synchronization process.
+     *
+     * @param guild the target guild
+     * @param memberListDTO the desired member configuration
+     * @param allMembers all guild members
+     * @param removeUnlistedRoles whether to remove unlisted roles
+     * @return the sync operation result
+     * @throws Exception if sync operations fail
+     */
+    private MemberRoleSyncResult performRoleSync(Guild guild, MemberListDTO memberListDTO,
+                                                 List&lt;Member&gt; allMembers, boolean removeUnlistedRoles) throws Exception {
+
+<span class="fc" id="L125">        MemberRoleSyncResult result = new MemberRoleSyncResult(true, &quot;Member role sync completed.&quot;);</span>
+
+<span class="fc" id="L127">        List&lt;CompletableFuture&lt;Void&gt;&gt; allOperations = prepareRoleSyncOperations(</span>
+                guild, memberListDTO, allMembers, removeUnlistedRoles, result
+        );
+
+        // Warte auf alle Operationen, aber lasse Fehler in einzelnen Operations zu
+<span class="fc" id="L132">        CompletableFuture&lt;Void&gt; allOf = CompletableFuture.allOf(</span>
+<span class="fc" id="L133">                allOperations.toArray(new CompletableFuture[0])</span>
+        );
+
+        try {
+<span class="fc" id="L137">            allOf.get(60, TimeUnit.SECONDS);</span>
+<span class="nc" id="L138">        } catch (ExecutionException e) {</span>
+<span class="nc" id="L139">            logger.debug(&quot;Some role operations failed, but this is handled gracefully&quot;, e);</span>
+<span class="fc" id="L140">        }</span>
+
+<span class="fc" id="L142">        return finalizeResult(result);</span>
+    }
+
+    /**
+     * Prepares all role sync operations for execution.
+     *
+     * @param guild the target guild
+     * @param memberListDTO the member configuration
+     * @param allMembers all guild members
+     * @param removeUnlistedRoles whether to remove unlisted roles
+     * @return list of async operations to execute
+     */
+    private List&lt;CompletableFuture&lt;Void&gt;&gt; prepareRoleSyncOperations(Guild guild, MemberListDTO memberListDTO,
+                                                                    List&lt;Member&gt; allMembers, boolean removeUnlistedRoles,
+                                                                    MemberRoleSyncResult result) {
+
+<span class="fc" id="L158">        Map&lt;String, Member&gt; membersById = createMemberLookupMap(allMembers);</span>
+<span class="fc" id="L159">        Map&lt;String, Role&gt; rolesById = createRoleLookupMap(guild);</span>
+
+<span class="fc" id="L161">        List&lt;CompletableFuture&lt;Void&gt;&gt; allOperations = new ArrayList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L163" title="All 2 branches covered.">        for (MemberDTO memberDTO : memberListDTO.getMembers()) {</span>
+<span class="fc" id="L164">            List&lt;CompletableFuture&lt;Void&gt;&gt; memberOperations = processMemberRoleChanges(</span>
+                    guild, memberDTO, membersById, rolesById, removeUnlistedRoles, result
+            );
+<span class="fc" id="L167">            allOperations.addAll(memberOperations);</span>
+<span class="fc" id="L168">        }</span>
+<span class="fc" id="L169">        return allOperations;</span>
+    }
+
+    /**
+     * Creates a member lookup map by ID, excluding bots.
+     *
+     * @param allMembers the members to map
+     * @return map of member ID to member
+     */
+    private Map&lt;String, Member&gt; createMemberLookupMap(List&lt;Member&gt; allMembers) {
+<span class="fc" id="L179">        return allMembers.stream()</span>
+<span class="fc bfc" id="L180" title="All 2 branches covered.">                .filter(member -&gt; !member.getUser().isBot())</span>
+<span class="fc" id="L181">                .collect(Collectors.toMap(Member::getId, member -&gt; member));</span>
+    }
+
+    /**
+     * Creates a role lookup map by ID.
+     *
+     * @param guild the guild containing the roles
+     * @return map of role ID to role
+     */
+    private Map&lt;String, Role&gt; createRoleLookupMap(Guild guild) {
+<span class="fc" id="L191">        return guild.getRoles().stream()</span>
+<span class="fc" id="L192">                .collect(Collectors.toMap(Role::getId, role -&gt; role));</span>
+    }
+
+    /**
+     * Processes role changes for a single member.
+     *
+     * @param guild the target guild
+     * @param memberDTO the member configuration
+     * @param membersById member lookup map
+     * @param rolesById role lookup map
+     * @param removeUnlistedRoles whether to remove unlisted roles
+     * @param result the result object to update
+     * @return list of operations for this member
+     */
+    private List&lt;CompletableFuture&lt;Void&gt;&gt; processMemberRoleChanges(Guild guild, MemberDTO memberDTO,
+                                                                   Map&lt;String, Member&gt; membersById,
+                                                                   Map&lt;String, Role&gt; rolesById,
+                                                                   boolean removeUnlistedRoles,
+                                                                   MemberRoleSyncResult result) {
+
+<span class="fc" id="L212">        Member discordMember = membersById.get(memberDTO.getId());</span>
+<span class="fc bfc" id="L213" title="All 2 branches covered.">        if (discordMember == null) {</span>
+<span class="fc" id="L214">            result.addError(&quot;Member not found in guild: &quot; + memberDTO.getName() + &quot; (ID: &quot; + memberDTO.getId() + &quot;)&quot;);</span>
+<span class="fc" id="L215">            return Collections.emptyList();</span>
+        }
+
+<span class="fc" id="L218">        RoleDifference roleDiff = calculateRoleDifferences(discordMember, memberDTO);</span>
+
+<span class="fc" id="L220">        List&lt;CompletableFuture&lt;Void&gt;&gt; operations = new ArrayList&lt;&gt;(createRoleAddOperations(guild, discordMember, roleDiff.getRolesToAdd(),</span>
+<span class="fc" id="L221">                rolesById, memberDTO.getName(), result));</span>
+
+<span class="fc bfc" id="L223" title="All 2 branches covered.">        if (removeUnlistedRoles) {</span>
+<span class="fc" id="L224">            operations.addAll(createRoleRemoveOperations(guild, discordMember, roleDiff.getRolesToRemove(),</span>
+<span class="fc" id="L225">                    rolesById, memberDTO.getName(), result));</span>
+        }
+<span class="fc" id="L227">        return operations;</span>
+    }
+
+    /**
+     * Calculates role differences between current and desired state.
+     *
+     * @param member the Discord member
+     * @param memberDTO the desired member configuration
+     * @return the role differences
+     */
+    private RoleDifference calculateRoleDifferences(Member member, MemberDTO memberDTO) {
+<span class="fc" id="L238">        Set&lt;String&gt; currentRoleIds = member.getRoles().stream()</span>
+<span class="fc" id="L239">                .map(Role::getId)</span>
+<span class="fc" id="L240">                .collect(Collectors.toSet());</span>
+
+<span class="fc" id="L242">        Set&lt;String&gt; desiredRoleIds = memberDTO.getRoles().stream()</span>
+<span class="fc" id="L243">                .map(RoleDTO::getId)</span>
+<span class="fc" id="L244">                .filter(Objects::nonNull)</span>
+<span class="fc" id="L245">                .collect(Collectors.toSet());</span>
+
+<span class="fc" id="L247">        Set&lt;String&gt; rolesToAdd = new HashSet&lt;&gt;(desiredRoleIds);</span>
+<span class="fc" id="L248">        rolesToAdd.removeAll(currentRoleIds);</span>
+
+<span class="fc" id="L250">        Set&lt;String&gt; rolesToRemove = new HashSet&lt;&gt;(currentRoleIds);</span>
+<span class="fc" id="L251">        rolesToRemove.removeAll(desiredRoleIds);</span>
+
+<span class="fc" id="L253">        return new RoleDifference(rolesToAdd, rolesToRemove);</span>
+    }
+
+    /**
+     * Creates operations to add roles to a member.
+     *
+     * @param guild the target guild
+     * @param member the member to modify
+     * @param roleIds the role IDs to add
+     * @param rolesById role lookup map
+     * @param memberName the member's name for logging
+     * @param result the result object to update
+     * @return list of add operations
+     */
+    private List&lt;CompletableFuture&lt;Void&gt;&gt; createRoleAddOperations(Guild guild, Member member,
+                                                                  Set&lt;String&gt; roleIds, Map&lt;String, Role&gt; rolesById,
+                                                                  String memberName, MemberRoleSyncResult result) {
+<span class="fc" id="L270">        return createRoleOperations(guild::addRoleToMember, member, roleIds, rolesById, memberName, &quot;add&quot;, result);</span>
+    }
+
+    /**
+     * Creates operations to remove roles from a member.
+     *
+     * @param guild the target guild
+     * @param member the member to modify
+     * @param roleIds the role IDs to remove
+     * @param rolesById role lookup map
+     * @param memberName the member's name for logging
+     * @param result the result object to update
+     * @return list of remove operations
+     */
+    private List&lt;CompletableFuture&lt;Void&gt;&gt; createRoleRemoveOperations(Guild guild, Member member,
+                                                                     Set&lt;String&gt; roleIds, Map&lt;String, Role&gt; rolesById,
+                                                                     String memberName, MemberRoleSyncResult result) {
+<span class="fc" id="L287">        return createRoleOperations(guild::removeRoleFromMember, member, roleIds, rolesById, memberName, &quot;remove&quot;, result);</span>
+    }
+
+    /**
+     * Creates role operations for a set of role IDs.
+     *
+     * @param operation the operation function to apply
+     * @param member the target member
+     * @param roleIds the role IDs to process
+     * @param rolesById role lookup map
+     * @param memberName the member's name for logging
+     * @param actionType the action type (&quot;add&quot; or &quot;remove&quot;)
+     * @param result the result object to update
+     * @return list of role operations
+     */
+    private List&lt;CompletableFuture&lt;Void&gt;&gt; createRoleOperations(BiFunction&lt;Member, Role, RestAction&lt;Void&gt;&gt; operation,
+                                                               Member member, Set&lt;String&gt; roleIds,
+                                                               Map&lt;String, Role&gt; rolesById, String memberName,
+                                                               String actionType, MemberRoleSyncResult result) {
+
+<span class="fc" id="L307">        return roleIds.stream()</span>
+<span class="fc" id="L308">                .map(rolesById::get)</span>
+<span class="fc" id="L309">                .filter(role -&gt; validateRoleForOperation(role, memberName, result))</span>
+<span class="fc" id="L310">                .map(role -&gt; executeRoleOperation(operation, member, role, actionType, result))</span>
+<span class="fc" id="L311">                .collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Validates that a role can be managed by the bot.
+     *
+     * @param role the role to validate
+     * @param memberName the member's name for error reporting
+     * @param result the result object to update with errors
+     * @return true if role can be managed, false otherwise
+     */
+    private boolean validateRoleForOperation(Role role, String memberName, MemberRoleSyncResult result) {
+<span class="fc bfc" id="L323" title="All 2 branches covered.">        if (role == null) {</span>
+<span class="fc" id="L324">            return false;</span>
+        }
+
+<span class="pc bpc" id="L327" title="1 of 4 branches missed.">        if (!role.getGuild().getSelfMember().canInteract(role) || role.isManaged()) {</span>
+<span class="fc" id="L328">            result.addError(&quot;Cannot manage role '&quot; + role.getName() + &quot;' for member &quot; + memberName);</span>
+<span class="fc" id="L329">            return false;</span>
+        }
+<span class="fc" id="L331">        return true;</span>
+    }
+
+    /**
+     * Executes a single role operation asynchronously.
+     *
+     * @param operation the operation to execute
+     * @param member the target member
+     * @param role the target role
+     * @param actionType the action type (&quot;add&quot; or &quot;remove&quot;)
+     * @param result the result object to update
+     * @return future representing the operation
+     */
+    private CompletableFuture&lt;Void&gt; executeRoleOperation(BiFunction&lt;Member, Role, RestAction&lt;Void&gt;&gt; operation,
+                                                         Member member, Role role, String actionType,
+                                                         MemberRoleSyncResult result) {
+
+<span class="fc" id="L348">        CompletableFuture&lt;Void&gt; future = new CompletableFuture&lt;&gt;();</span>
+<span class="fc" id="L349">        boolean isAddOperation = &quot;add&quot;.equals(actionType);</span>
+
+<span class="fc" id="L351">        operation.apply(member, role).queue(</span>
+                success -&gt; {
+<span class="fc" id="L353">                    String memberName = member.getEffectiveName();</span>
+<span class="fc" id="L354">                    String roleName = role.getName();</span>
+<span class="fc bfc" id="L355" title="All 2 branches covered.">                    String logAction = isAddOperation ? &quot;Added&quot; : &quot;Removed&quot;;</span>
+<span class="fc bfc" id="L356" title="All 2 branches covered.">                    String preposition = isAddOperation ? &quot;to&quot; : &quot;from&quot;;</span>
+
+<span class="fc" id="L358">                    logger.info(&quot;{} role '{}' {} member '{}'&quot;, logAction, roleName, preposition, memberName);</span>
+
+<span class="fc bfc" id="L360" title="All 2 branches covered.">                    if (isAddOperation) {</span>
+<span class="fc" id="L361">                        result.addRoleAssignment(memberName, roleName);</span>
+                    } else {
+<span class="fc" id="L363">                        result.addRoleRemoval(memberName, roleName);</span>
+                    }
+
+<span class="fc" id="L366">                    future.complete(null);</span>
+<span class="fc" id="L367">                },</span>
+                error -&gt; {
+<span class="pc bpc" id="L369" title="1 of 2 branches missed.">                    String preposition = isAddOperation ? &quot;to&quot; : &quot;from&quot;;</span>
+<span class="fc" id="L370">                    String errorMessage = &quot;Failed to &quot; + actionType + &quot; role '&quot; + role.getName() +</span>
+<span class="fc" id="L371">                            &quot;' &quot; + preposition + &quot; member '&quot; + member.getEffectiveName() + &quot;': &quot; + error.getMessage();</span>
+
+<span class="fc" id="L373">                    logger.error(errorMessage);</span>
+<span class="fc" id="L374">                    result.addError(errorMessage);</span>
+
+                    // WICHTIG: Complete mit null statt Exception, damit allOf() nicht abbricht
+<span class="fc" id="L377">                    future.complete(null);</span>
+<span class="fc" id="L378">                }</span>
+        );
+
+<span class="fc" id="L381">        return future;</span>
+    }
+
+    /**
+     * Finalizes the sync result based on any errors encountered.
+     *
+     * @param result the result to finalize
+     * @return the finalized result
+     */
+    private MemberRoleSyncResult finalizeResult(MemberRoleSyncResult result) {
+<span class="fc bfc" id="L391" title="All 2 branches covered.">        if (!result.getErrors().isEmpty()) {</span>
+<span class="fc" id="L392">            result.setSuccess(false);</span>
+<span class="fc" id="L393">            result.setMessage(&quot;Member role sync completed with errors. Check error list for details.&quot;);</span>
+        }
+<span class="fc" id="L395">        return result;</span>
+    }
+
+    /**
+     * Represents the difference between current and desired roles for a member.
+     */
+    private static class RoleDifference {
+
+        /** Role IDs to be added. */
+        private final Set&lt;String&gt; rolesToAdd;
+
+        /** Role IDs to be removed. */
+        private final Set&lt;String&gt; rolesToRemove;
+
+        /**
+         * Creates a new RoleDifference.
+         *
+         * @param rolesToAdd roles to add
+         * @param rolesToRemove roles to remove
+         */
+<span class="fc" id="L415">        public RoleDifference(Set&lt;String&gt; rolesToAdd, Set&lt;String&gt; rolesToRemove) {</span>
+<span class="fc" id="L416">            this.rolesToAdd = rolesToAdd;</span>
+<span class="fc" id="L417">            this.rolesToRemove = rolesToRemove;</span>
+<span class="fc" id="L418">        }</span>
+
+        /**
+         * Gets roles to be added.
+         *
+         * @return set of role IDs to add
+         */
+        public Set&lt;String&gt; getRolesToAdd() {
+<span class="fc" id="L426">            return rolesToAdd;</span>
+        }
+
+        /**
+         * Gets roles to be removed.
+         *
+         * @return set of role IDs to remove
+         */
+        public Set&lt;String&gt; getRolesToRemove() {
+<span class="fc" id="L435">            return rolesToRemove;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

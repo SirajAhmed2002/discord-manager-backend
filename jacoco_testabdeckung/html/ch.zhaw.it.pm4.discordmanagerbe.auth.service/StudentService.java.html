@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StudentService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.auth.service</a> &gt; <span class="el_source">StudentService.java</span></div><h1>StudentService.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.auth.service;
+
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.Student;
+import ch.zhaw.it.pm4.discordmanagerbe.data.repositories.StudentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Optional;
+
+/**
+ * Service for managing student data.
+ */
+@Service
+public class StudentService {
+
+    /** Logger instance for logging events and debugging information. */
+<span class="fc" id="L19">    private static final Logger logger = LoggerFactory.getLogger(StudentService.class);</span>
+
+    /** Repository for accessing and managing student data. */
+    private final StudentRepository studentRepository;
+
+    /**
+     * Constructs an instance of StudentService with the required dependencies.
+     *
+     * @param studentRepository Repository for accessing and managing student data
+     */
+    @Autowired
+<span class="fc" id="L30">    public StudentService(StudentRepository studentRepository) {</span>
+<span class="fc" id="L31">        this.studentRepository = studentRepository;</span>
+<span class="fc" id="L32">    }</span>
+
+    /**
+     * Creates or updates a student with Discord information.
+     *
+     * @param discordId Discord user ID
+     * @param username Discord username
+     * @param email User email
+     * @return The existing or newly created student
+     */
+    public Student createStudentIfNotExists(String discordId, String username, String email) {
+<span class="fc" id="L43">        Optional&lt;Student&gt; existingStudent = studentRepository.findByDiscordId(discordId);</span>
+
+<span class="fc bfc" id="L45" title="All 2 branches covered.">        if (existingStudent.isPresent()) {</span>
+<span class="fc" id="L46">            logger.info(&quot;Student with Discord ID: {} already exists&quot;, discordId);</span>
+<span class="fc" id="L47">            return existingStudent.get();</span>
+        } else {
+<span class="fc" id="L49">            logger.info(&quot;Creating new student with Discord ID: {}&quot;, discordId);</span>
+<span class="fc" id="L50">            Student newStudent = new Student(discordId, username, email);</span>
+<span class="fc" id="L51">            return studentRepository.save(newStudent);</span>
+        }
+    }
+
+    /**
+     * Finds a student by Discord ID.
+     *
+     * @param discordId Discord user ID
+     * @return Optional containing the student if found
+     */
+    public Optional&lt;Student&gt; findStudentByDiscordId(String discordId) {
+<span class="fc" id="L62">        return studentRepository.findByDiscordId(discordId);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

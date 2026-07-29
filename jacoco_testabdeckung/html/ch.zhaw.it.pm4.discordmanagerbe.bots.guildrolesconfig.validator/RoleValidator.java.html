@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleValidator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.validator</a> &gt; <span class="el_source">RoleValidator.java</span></div><h1>RoleValidator.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.validator;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildrolesconfig.model.ValidationResult;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ExtendedRoleDTO;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ServerRoleListDTO;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import org.springframework.stereotype.Component;
+
+import java.util.regex.Pattern;
+
+/**
+ * Validates role sync requests and individual role configurations.
+ */
+@Component
+<span class="fc" id="L18">public class RoleValidator {</span>
+
+    /**
+     * Maximum length for role names in Discord.
+     */
+    private static final int MAX_ROLE_NAME_LENGTH = 100;
+
+    /**
+     * Pattern to validate hex color codes.
+     */
+<span class="fc" id="L28">    private static final Pattern HEX_COLOR_PATTERN = Pattern.compile(&quot;^[0-9A-Fa-f]{6}$&quot;);</span>
+
+    /**
+     * Validates a role sync request for a guild.
+     * @param guildId the ID of the guild to validate against
+     * @param roleListDTO the role list DTO containing roles to validate
+     * @param jda the JDA instance to interact with Discord
+     * @return ValidationResult indicating success or failure
+     */
+    public ValidationResult validateSyncRequest(String guildId, ServerRoleListDTO roleListDTO, JDA jda) {
+<span class="fc" id="L38">        ValidationResult basicValidation = validateBasicInputs(guildId, roleListDTO);</span>
+<span class="fc bfc" id="L39" title="All 2 branches covered.">        if (!basicValidation.isValid()) {</span>
+<span class="fc" id="L40">            return basicValidation;</span>
+        }
+        
+<span class="fc" id="L43">        Guild guild = jda.getGuildById(guildId);</span>
+<span class="fc bfc" id="L44" title="All 2 branches covered.">        if (guild == null) {</span>
+<span class="fc" id="L45">            return ValidationResult.failure(&quot;Guild not found: &quot; + guildId);</span>
+        }
+        
+<span class="fc" id="L48">        ValidationResult permissionValidation = validateBotPermissions(guild);</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        if (!permissionValidation.isValid()) {</span>
+<span class="fc" id="L50">            return permissionValidation;</span>
+        }
+        
+<span class="fc" id="L53">        return validateRoles(roleListDTO, guild);</span>
+    }
+
+    /**
+     * Validates basic inputs for a role sync request.
+     * @param guildId the ID of the guild to validate against
+     * @param roleListDTO the role list DTO containing roles to validate
+     * @return ValidationResult indicating success or failure
+     */
+    private ValidationResult validateBasicInputs(String guildId, ServerRoleListDTO roleListDTO) {
+<span class="fc bfc" id="L63" title="All 2 branches covered.">        if (roleListDTO == null) {</span>
+<span class="fc" id="L64">            return ValidationResult.failure(&quot;Role list DTO cannot be null&quot;);</span>
+        }
+        
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (isBlankString(guildId)) {</span>
+<span class="fc" id="L68">            return ValidationResult.failure(&quot;Guild ID cannot be null or empty&quot;);</span>
+        }
+        
+<span class="pc bpc" id="L71" title="1 of 4 branches missed.">        if (roleListDTO.getRoles() == null || roleListDTO.getRoles().isEmpty()) {</span>
+<span class="fc" id="L72">            return ValidationResult.failure(&quot;Role list cannot be empty&quot;);</span>
+        }
+        
+<span class="fc" id="L75">        return ValidationResult.success(null);</span>
+    }
+
+    /**
+     * Validates that the bot has the necessary permissions in the guild.
+     * @param guild the Discord guild to check permissions in
+     * @return ValidationResult indicating success or failure
+     */
+    private ValidationResult validateBotPermissions(Guild guild) {
+<span class="fc" id="L84">        Member botMember = guild.getSelfMember();</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        if (!botMember.hasPermission(Permission.MANAGE_ROLES)) {</span>
+<span class="fc" id="L86">            return ValidationResult.failure(&quot;Bot lacks MANAGE_ROLES permission&quot;);</span>
+        }
+<span class="fc" id="L88">        return ValidationResult.success(guild);</span>
+    }
+
+    /**
+     * Validates the roles in the provided ServerRoleListDTO against the guild.
+     * @param roleListDTO the ServerRoleListDTO containing roles to validate
+     * @param guild the Discord guild to validate against
+     * @return ValidationResult indicating success or failure
+     */
+    private ValidationResult validateRoles(ServerRoleListDTO roleListDTO, Guild guild) {
+<span class="fc bfc" id="L98" title="All 2 branches covered.">        for (ExtendedRoleDTO role : roleListDTO.getRoles()) {</span>
+<span class="fc" id="L99">            String error = validateSingleRole(role);</span>
+<span class="fc bfc" id="L100" title="All 2 branches covered.">            if (error != null) {</span>
+<span class="fc" id="L101">                return ValidationResult.failure(&quot;Invalid role: &quot; + error);</span>
+            }
+<span class="fc" id="L103">        }</span>
+<span class="fc" id="L104">        return ValidationResult.success(guild);</span>
+    }
+
+    /**
+     * Validates a single role configuration.
+     * @param role the ExtendedRoleDTO representing the role to validate
+     * @return null if valid, or an error message if invalid
+     */
+    private String validateSingleRole(ExtendedRoleDTO role) {
+<span class="pc bpc" id="L113" title="1 of 2 branches missed.">        if (role == null) {</span>
+<span class="nc" id="L114">            return &quot;Role cannot be null&quot;;</span>
+        }
+        
+<span class="fc bfc" id="L117" title="All 2 branches covered.">        if (isBlankString(role.getName())) {</span>
+<span class="fc" id="L118">            return &quot;Role name cannot be null or empty&quot;;</span>
+        }
+        
+<span class="fc bfc" id="L121" title="All 2 branches covered.">        if (role.getName().length() &gt; MAX_ROLE_NAME_LENGTH) {</span>
+<span class="fc" id="L122">            return String.format(&quot;Role name too long (max %d characters): %s&quot;, </span>
+<span class="fc" id="L123">                               MAX_ROLE_NAME_LENGTH, role.getName());</span>
+        }
+        
+<span class="fc bfc" id="L126" title="All 2 branches covered.">        if (!isValidHexColor(role.getColor())) {</span>
+<span class="fc" id="L127">            return &quot;Invalid color format: &quot; + role.getColor();</span>
+        }
+        
+<span class="fc" id="L130">        return null;</span>
+    }
+
+    /**
+     * Checks if a given string is a valid hex color code.
+     * @param color the color string to validate, can be null
+     * @return true if valid hex color, false otherwise
+     */
+    private boolean isValidHexColor(String color) {
+<span class="fc bfc" id="L139" title="All 2 branches covered.">        if (color == null) {</span>
+<span class="fc" id="L140">            return true;</span>
+        }
+        
+<span class="fc bfc" id="L143" title="All 2 branches covered.">        String hex = color.startsWith(&quot;#&quot;) ? color.substring(1) : color;</span>
+<span class="fc" id="L144">        return HEX_COLOR_PATTERN.matcher(hex).matches();</span>
+    }
+
+    /**
+     * Checks if a string is blank (null or empty after trimming).
+     * @param str the string to check
+     * @return true if the string is blank, false otherwise
+     */
+    private boolean isBlankString(String str) {
+<span class="fc bfc" id="L153" title="All 4 branches covered.">        return str == null || str.trim().isEmpty();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

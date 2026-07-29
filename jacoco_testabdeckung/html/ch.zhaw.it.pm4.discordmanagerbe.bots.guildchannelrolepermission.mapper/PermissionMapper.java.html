@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PermissionMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildchannelrolepermission.mapper</a> &gt; <span class="el_source">PermissionMapper.java</span></div><h1>PermissionMapper.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildchannelrolepermission.mapper;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildchannelrolepermission.config.PermissionMappingConfig;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.ChannelRolePermissionDTO;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.PermissionOverride;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Component
+public class PermissionMapper {
+
+    /**
+     * Logger for the PermissionMapper class.
+     */
+<span class="fc" id="L21">    private static final Logger log = LoggerFactory.getLogger(PermissionMapper.class);</span>
+
+    /**
+     * Configuration for custom permission mappings.
+     */
+    private final PermissionMappingConfig mappingConfig;
+
+    /**
+     * Constructor for PermissionMapper.
+     * @param mappingConfig The configuration containing custom permission mappings.
+     */
+    @Autowired
+<span class="fc" id="L33">    public PermissionMapper(PermissionMappingConfig mappingConfig) {</span>
+<span class="fc" id="L34">        this.mappingConfig = mappingConfig;</span>
+<span class="fc" id="L35">    }</span>
+
+    /**
+     * Parses a list of permission strings into a set of Permission enums.
+     * @param permissionStrings List of permission strings to parse.
+     * @return Set of Permission enums corresponding to the input strings.
+     */
+    public Set&lt;Permission&gt; parsePermissions(List&lt;String&gt; permissionStrings) {
+<span class="fc bfc" id="L43" title="All 2 branches covered.">        if (permissionStrings == null) {</span>
+<span class="fc" id="L44">            return Collections.emptySet();</span>
+        }
+
+<span class="fc" id="L47">        return permissionStrings.stream()</span>
+<span class="fc" id="L48">                .filter(Objects::nonNull)</span>
+<span class="fc" id="L49">                .map(String::trim)</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">                .filter(s -&gt; !s.isEmpty())</span>
+<span class="fc" id="L51">                .map(this::parsePermission)</span>
+<span class="fc" id="L52">                .filter(Objects::nonNull)</span>
+<span class="fc" id="L53">                .collect(Collectors.toSet());</span>
+    }
+
+    /**
+     * Converts a set of Permission enums to a sorted list of their string representations.
+     * @param permissions Set of Permission enums to convert.
+     * @return Sorted list of permission names as strings.
+     */
+    public List&lt;String&gt; permissionsToStringList(Set&lt;Permission&gt; permissions) {
+<span class="fc" id="L62">        return permissions.stream()</span>
+<span class="fc" id="L63">                .map(Permission::name)</span>
+<span class="fc" id="L64">                .sorted()</span>
+<span class="fc" id="L65">                .collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Maps a PermissionOverride object to a ChannelRolePermissionDTO.
+     * @param override The PermissionOverride object to map.
+     * @return ChannelRolePermissionDTO containing the role ID, channel ID,
+     */
+    public ChannelRolePermissionDTO mapToDTO(PermissionOverride override) {
+<span class="fc" id="L74">        ChannelRolePermissionDTO dto = new ChannelRolePermissionDTO();</span>
+<span class="fc" id="L75">        dto.setRoleId(Objects.requireNonNull(override.getRole()).getId());</span>
+<span class="fc" id="L76">        dto.setChannelId(override.getChannel().getId());</span>
+<span class="fc" id="L77">        dto.setAllowedPermissions(permissionsToStringList(override.getAllowed()));</span>
+<span class="fc" id="L78">        dto.setDeniedPermissions(permissionsToStringList(override.getDenied()));</span>
+<span class="fc" id="L79">        return dto;</span>
+    }
+
+    /**
+     * Parses a single permission string into a Permission enum.
+     * @param permissionStr The permission string to parse, e.g., &quot;MANAGE_CHANNELS&quot;.
+     * @return Permission enum corresponding to the input string, or null if unknown.
+     */
+    private Permission parsePermission(String permissionStr) {
+<span class="fc" id="L88">        String upperCase = permissionStr.toUpperCase();</span>
+
+        // Check custom mapping first
+<span class="fc" id="L91">        Permission mapped = mappingConfig.getPermissionMapping().get(upperCase);</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        if (mapped != null) {</span>
+<span class="fc" id="L93">            return mapped;</span>
+        }
+
+        // Fall back to direct enum parsing
+        try {
+<span class="fc" id="L98">            return Permission.valueOf(upperCase);</span>
+<span class="fc" id="L99">        } catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L100">            log.warn(&quot;Unknown permission: {}&quot;, permissionStr);</span>
+<span class="fc" id="L101">            return null;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

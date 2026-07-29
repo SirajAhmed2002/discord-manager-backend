@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SecurityConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.security</a> &gt; <span class="el_source">SecurityConfiguration.java</span></div><h1>SecurityConfiguration.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.security;
+
+import ch.zhaw.it.pm4.discordmanagerbe.auth.jwt.JwtAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ * Configuration class for Spring Security settings.
+ * Sets up security filters, CORS configuration, and authentication rules.
+ */
+@Configuration
+@EnableWebSecurity
+<span class="fc" id="L26">public class SecurityConfiguration {</span>
+
+    /** Comma-separated list of allowed origins for CORS. */
+    @Value(&quot;${cors.allowed-origins}&quot;)
+    private String allowedOrigins;
+
+    /** Comma-separated list of allowed HTTP methods for CORS. */
+    @Value(&quot;${cors.allowed-methods}&quot;)
+    private String allowedMethods;
+
+    /** Comma-separated list of allowed HTTP headers for CORS. */
+    @Value(&quot;${cors.allowed-headers}&quot;)
+    private String allowedHeaders;
+
+    /**
+     * Configures the security filter chain.
+     * Sets up CSRF, CORS, authorization rules, and JWT authentication.
+     *
+     * @param http The HttpSecurity to modify
+     * @param jwtAuthenticationFilter The JWT authentication filter to add
+     * @return The built SecurityFilterChain
+     * @throws Exception If an error occurs during configuration
+     */
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+<span class="fc" id="L51">        http</span>
+<span class="fc" id="L52">                .csrf(AbstractHttpConfigurer::disable)</span>
+<span class="fc" id="L53">                .cors(cors -&gt; cors.configurationSource(corsConfigurationSource()))</span>
+<span class="fc" id="L54">                .authorizeHttpRequests(auth -&gt; auth</span>
+<span class="fc" id="L55">                        .requestMatchers(&quot;/auth/callback&quot;).permitAll()</span>
+<span class="fc" id="L56">                        .requestMatchers(&quot;/auth/discord-login&quot;).permitAll()</span>
+<span class="fc" id="L57">                        .requestMatchers(&quot;/auth/check&quot;).permitAll()</span>
+<span class="fc" id="L58">                        .requestMatchers(&quot;/auth/logout&quot;).authenticated()</span>
+<span class="fc" id="L59">                        .anyRequest().authenticated()</span>
+                )
+<span class="fc" id="L61">                .sessionManagement(session -&gt; session</span>
+<span class="fc" id="L62">                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))</span>
+<span class="fc" id="L63">                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);</span>
+
+<span class="fc" id="L65">        return http.build();</span>
+    }
+
+    /**
+     * Creates a CORS configuration source based on application properties.
+     *
+     * @return The configured CorsConfigurationSource
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+<span class="fc" id="L75">        CorsConfiguration configuration = new CorsConfiguration();</span>
+<span class="fc" id="L76">        configuration.setAllowedOrigins(parseCommaSeparatedList(allowedOrigins));</span>
+<span class="fc" id="L77">        configuration.setAllowedMethods(parseCommaSeparatedList(allowedMethods));</span>
+
+<span class="pc bpc" id="L79" title="1 of 2 branches missed.">        if (&quot;*&quot;.equals(allowedMethods)) {</span>
+<span class="nc" id="L80">            configuration.setAllowedHeaders(List.of(&quot;*&quot;));</span>
+        } else {
+<span class="fc" id="L82">            configuration.setAllowedHeaders(parseCommaSeparatedList(allowedHeaders));</span>
+        }
+
+<span class="fc" id="L85">        configuration.setAllowCredentials(true);</span>
+
+<span class="fc" id="L87">        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();</span>
+<span class="fc" id="L88">        source.registerCorsConfiguration(&quot;/**&quot;, configuration);</span>
+<span class="fc" id="L89">        return source;</span>
+    }
+
+    /**
+     * Utility method to parse comma-separated strings into lists.
+     *
+     * @param commaSeparatedList The comma-separated string to parse
+     * @return A list of strings split by comma
+     */
+    private List&lt;String&gt; parseCommaSeparatedList(String commaSeparatedList) {
+<span class="fc" id="L99">        return Arrays.asList(commaSeparatedList.split(&quot;,&quot;));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

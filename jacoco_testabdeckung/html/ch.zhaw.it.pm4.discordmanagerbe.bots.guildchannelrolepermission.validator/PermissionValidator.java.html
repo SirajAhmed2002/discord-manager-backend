@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PermissionValidator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.guildchannelrolepermission.validator</a> &gt; <span class="el_source">PermissionValidator.java</span></div><h1>PermissionValidator.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.guildchannelrolepermission.validator;
+
+import ch.zhaw.it.pm4.discordmanagerbe.bots.guildchannelrolepermission.exception.PermissionConflictException;
+import net.dv8tion.jda.api.Permission;
+import org.springframework.stereotype.Component;
+
+import java.util.HashSet;
+import java.util.Set;
+
+/**
+ * Validator for permission-related operations.
+ * Provides methods to validate IDs and check for permission conflicts.
+ */
+@Component
+<span class="fc" id="L15">public class PermissionValidator {</span>
+
+    /**
+     * Validates that the provided IDs are not null or empty.
+     * @param ids the IDs to validate
+     */
+    public void validateIds(String... ids) {
+<span class="fc bfc" id="L22" title="All 2 branches covered.">        for (String id : ids) {</span>
+<span class="fc bfc" id="L23" title="All 4 branches covered.">            if (id == null || id.trim().isEmpty()) {</span>
+<span class="fc" id="L24">                throw new IllegalArgumentException(&quot;ID cannot be null or empty&quot;);</span>
+            }
+        }
+<span class="fc" id="L27">    }</span>
+
+    /**
+     * Validates that there are no conflicting permissions
+     * @param allowed the set of allowed permissions
+     * @param denied the set of denied permissions
+     */
+    public void validateNoConflicts(Set&lt;Permission&gt; allowed, Set&lt;Permission&gt; denied) {
+<span class="fc" id="L35">        Set&lt;Permission&gt; conflicts = new HashSet&lt;&gt;(allowed);</span>
+<span class="fc" id="L36">        conflicts.retainAll(denied);</span>
+
+<span class="fc bfc" id="L38" title="All 2 branches covered.">        if (!conflicts.isEmpty()) {</span>
+<span class="fc" id="L39">            throw new PermissionConflictException(</span>
+                    &quot;Conflicting permissions found (same permission in both allow and deny): &quot; + conflicts
+            );
+        }
+<span class="fc" id="L43">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

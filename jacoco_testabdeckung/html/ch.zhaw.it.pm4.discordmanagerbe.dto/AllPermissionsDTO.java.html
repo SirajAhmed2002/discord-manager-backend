@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AllPermissionsDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.dto</a> &gt; <span class="el_source">AllPermissionsDTO.java</span></div><h1>AllPermissionsDTO.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.dto;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * DTO representing a collection of all Discord permissions.
+ * Provides categorized access to channel and guild permissions.
+ */
+public class AllPermissionsDTO {
+
+    /** List of all extended permissions */
+    private final List&lt;ExtendedPermissionDTO&gt; permissions;
+
+    /** Total count of all permissions */
+    private int totalCount;
+
+    /** Count of channel-specific permissions */
+    private int channelPermissionsCount;
+
+    /** Count of guild-specific permissions */
+    private int guildPermissionsCount;
+
+    /**
+     * Default constructor initializing empty permissions list.
+     */
+<span class="nc" id="L28">    public AllPermissionsDTO() {</span>
+<span class="nc" id="L29">        this.permissions = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L30">    }</span>
+
+    /**
+     * Constructor with permissions list.
+     * @param permissions List of extended permissions, null-safe
+     */
+<span class="nc" id="L36">    public AllPermissionsDTO(List&lt;ExtendedPermissionDTO&gt; permissions) {</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">        this.permissions = permissions != null ? permissions : new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L38">    }</span>
+
+    /**
+     * Gets the total count of all permissions.
+     * @return Total permission count
+     */
+    public int getTotalCount() {
+<span class="nc" id="L45">        return totalCount;</span>
+    }
+
+    /**
+     * Gets the count of channel-specific permissions.
+     * @return Channel permissions count
+     */
+    public int getChannelPermissionsCount() {
+<span class="nc" id="L53">        return channelPermissionsCount;</span>
+    }
+
+    /**
+     * Gets the count of guild-specific permissions.
+     * @return Guild permissions count
+     */
+    public int getGuildPermissionsCount() {
+<span class="nc" id="L61">        return guildPermissionsCount;</span>
+    }
+
+    /**
+     * Gets permissions filtered by channel type.
+     * @return List of channel-specific permissions
+     */
+    public List&lt;PermissionDTO&gt; getChannelPermissions() {
+<span class="nc" id="L69">        return permissions</span>
+<span class="nc" id="L70">                .stream()</span>
+<span class="nc" id="L71">                .filter(ExtendedPermissionDTO::isChannel)</span>
+<span class="nc" id="L72">                .map(permission -&gt; new PermissionDTO(permission.getKey()))</span>
+<span class="nc" id="L73">                .collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Gets permissions filtered by guild type.
+     * @return List of guild-specific permissions
+     */
+    public List&lt;PermissionDTO&gt; getGuildPermissions() {
+<span class="nc" id="L81">        return permissions</span>
+<span class="nc" id="L82">                .stream()</span>
+<span class="nc" id="L83">                .filter(ExtendedPermissionDTO::isGuild)</span>
+<span class="nc" id="L84">                .map(permission -&gt; new PermissionDTO(permission.getKey()))</span>
+<span class="nc" id="L85">                .collect(Collectors.toList());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthApiGateway.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.api</a> &gt; <span class="el_source">AuthApiGateway.java</span></div><h1>AuthApiGateway.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.api;
+
+import ch.zhaw.it.pm4.discordmanagerbe.auth.service.AuthenticationService;
+import ch.zhaw.it.pm4.discordmanagerbe.auth.jwt.JwtService;
+import ch.zhaw.it.pm4.discordmanagerbe.data.entities.Student;
+import ch.zhaw.it.pm4.discordmanagerbe.dto.UserInfoDto;
+import ch.zhaw.it.pm4.discordmanagerbe.auth.service.StudentService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * REST controller handling authentication-related endpoints for Discord OAuth integration.
+ * Manages user login, logout, authentication status checks, and user information retrieval.
+ */
+@RestController
+@RequestMapping(&quot;/auth&quot;)
+public class AuthApiGateway {
+
+    /** Logger instance for this class. */
+<span class="fc" id="L31">    private static final Logger logger = LoggerFactory.getLogger(AuthApiGateway.class);</span>
+
+    /** Discord application client ID. */
+    private final String clientId;
+
+    /** OAuth redirect URI for Discord callbacks. */
+    private final String redirectUri;
+
+    /** OAuth scopes requested from Discord. */
+    private final String oauthScopes;
+
+    /** Frontend URL for post-authentication redirects. */
+    private final String frontendRedirectUrl;
+
+    /** Discord OAuth authorization URL. */
+    private final String discordOauthUrl;
+
+    /** Service handling authentication logic. */
+    private final AuthenticationService authenticationService;
+
+    /** Service for JWT token operations. */
+    private final JwtService jwtService;
+
+    /** Service for student data operations. */
+    private final StudentService studentService;
+
+    /**
+     * Constructs AuthApiGateway with required services and configuration values.
+     *
+     * @param authenticationService service for authentication operations
+     * @param clientId Discord application client ID
+     * @param redirectUri OAuth redirect URI
+     * @param oauthScopes OAuth scopes to request
+     * @param frontendRedirectUrl frontend URL for redirects
+     * @param discordOauthUrl Discord OAuth URL
+     * @param jwtService JWT token service
+     * @param studentService student data service
+     */
+    @Autowired
+    public AuthApiGateway(
+            AuthenticationService authenticationService,
+            @Value(&quot;${discord.client-id}&quot;) String clientId,
+            @Value(&quot;${discord.redirect-uri}&quot;) String redirectUri,
+            @Value(&quot;${discord.oauth.scopes}&quot;) String oauthScopes,
+            @Value(&quot;${frontend.redirect-url}&quot;) String frontendRedirectUrl,
+            @Value(&quot;${discord.auth-endpoints.oauth-url}&quot;) String discordOauthUrl,
+            JwtService jwtService,
+<span class="fc" id="L78">            StudentService studentService) {</span>
+<span class="fc" id="L79">        this.authenticationService = authenticationService;</span>
+<span class="fc" id="L80">        this.clientId = clientId;</span>
+<span class="fc" id="L81">        this.redirectUri = redirectUri;</span>
+<span class="fc" id="L82">        this.oauthScopes = oauthScopes;</span>
+<span class="fc" id="L83">        this.frontendRedirectUrl = frontendRedirectUrl;</span>
+<span class="fc" id="L84">        this.discordOauthUrl = discordOauthUrl;</span>
+<span class="fc" id="L85">        this.jwtService = jwtService;</span>
+<span class="fc" id="L86">        this.studentService = studentService;</span>
+<span class="fc" id="L87">    }</span>
+
+    /**
+     * Generates Discord OAuth login URL.
+     *
+     * @return response containing Discord login URL
+     */
+    @GetMapping(&quot;/discord-login&quot;)
+    public ResponseEntity&lt;String&gt; getDiscordLoginUrl() {
+<span class="nc" id="L96">        String redirectUri = getEncodedRedirectUri();</span>
+<span class="nc" id="L97">        String discordLoginUrl = buildDiscordLoginUrl(redirectUri);</span>
+<span class="nc" id="L98">        logger.debug(&quot;Generated Discord login URL with redirect to: {}&quot;, redirectUri);</span>
+<span class="nc" id="L99">        return ResponseEntity.ok(discordLoginUrl);</span>
+    }
+
+    /**
+     * Handles OAuth callback from Discord.
+     * @param code Authorization code from Discord
+     * @return Redirect to frontend with authentication cookie
+     */
+    @GetMapping(&quot;/callback&quot;)
+    public ResponseEntity&lt;String&gt; handleDiscordCallback(@RequestParam String code) {
+        try {
+<span class="nc" id="L110">            logger.info(&quot;Received Discord callback with auth code&quot;);</span>
+<span class="nc" id="L111">            Map&lt;String, String&gt; authResponse = authenticationService.authenticateWithDiscordCode(code);</span>
+<span class="nc" id="L112">            String token = authResponse.get(&quot;token&quot;);</span>
+<span class="nc" id="L113">            String username = authResponse.get(&quot;username&quot;);</span>
+<span class="nc" id="L114">            logger.info(&quot;Authentication successful for user: {}&quot;, username);</span>
+<span class="nc" id="L115">            return createSuccessRedirectResponse(token);</span>
+<span class="nc" id="L116">        } catch (Exception e) {</span>
+<span class="nc" id="L117">            logger.error(&quot;Authentication failed: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L118">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L119">                    .body(&quot;Authentication error: &quot; + e.getMessage());</span>
+        }
+    }
+
+    /**
+     * Verifies user authentication status.
+     * @param token JWT token from cookie
+     * @return Authentication status
+     */
+    @GetMapping(&quot;/check&quot;)
+    public ResponseEntity&lt;Map&lt;String, Boolean&gt;&gt; checkAuthStatus(
+            @CookieValue(name = &quot;auth_token&quot;, required = false) String token) {
+
+<span class="nc" id="L132">        Map&lt;String, Boolean&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L133" title="All 4 branches missed.">        boolean isAuthenticated = (token != null) &amp;&amp; jwtService.validateToken(token);</span>
+<span class="nc" id="L134">        response.put(&quot;authenticated&quot;, isAuthenticated);</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">        logger.debug(&quot;Auth check: {}&quot;, isAuthenticated ? &quot;authenticated&quot; : &quot;not authenticated&quot;);</span>
+<span class="nc" id="L136">        return ResponseEntity.ok(response);</span>
+    }
+
+    /**
+     * Retrieves current user information from database.
+     * Spring Security garantiert, dass Authentication nicht null ist.
+     * @param authentication Automatically injected by Spring Security
+     * @return User data or not found response
+     */
+    @GetMapping(&quot;/user&quot;)
+    public ResponseEntity&lt;UserInfoDto&gt; getCurrentUser(Authentication authentication) {
+<span class="nc" id="L147">        String discordId = getDiscordIdFromAuth(authentication);</span>
+
+<span class="nc" id="L149">        Optional&lt;Student&gt; studentOpt = studentService.findStudentByDiscordId(discordId);</span>
+
+<span class="nc bnc" id="L151" title="All 2 branches missed.">        if (studentOpt.isPresent()) {</span>
+<span class="nc" id="L152">            Student student = studentOpt.get();</span>
+<span class="nc" id="L153">            UserInfoDto userInfo = new UserInfoDto(</span>
+<span class="nc" id="L154">                    student.getUsername(),</span>
+<span class="nc" id="L155">                    student.getDiscordId(),</span>
+<span class="nc" id="L156">                    student.getEmail()</span>
+            );
+<span class="nc" id="L158">            logger.debug(&quot;Retrieved user info from database for Discord ID: {}&quot;, discordId);</span>
+<span class="nc" id="L159">            return ResponseEntity.ok(userInfo);</span>
+        } else {
+<span class="nc" id="L161">            logger.warn(&quot;No student found for Discord ID: {}&quot;, discordId);</span>
+<span class="nc" id="L162">            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();</span>
+        }
+    }
+
+    /**
+     * Logs out the current user.
+     * @param token JWT token from cookie
+     * @return Logout confirmation
+     */
+    @PostMapping(&quot;/logout&quot;)
+    public ResponseEntity&lt;String&gt; logoutUser(
+            @CookieValue(name = &quot;auth_token&quot;, required = false) String token) {
+
+<span class="nc bnc" id="L175" title="All 4 branches missed.">        if (token != null &amp;&amp; !token.isEmpty()) {</span>
+<span class="nc" id="L176">            boolean invalidated = jwtService.invalidateToken(token);</span>
+<span class="nc bnc" id="L177" title="All 2 branches missed.">            if (invalidated) {</span>
+<span class="nc" id="L178">                logger.info(&quot;User logged out successfully&quot;);</span>
+            } else {
+<span class="nc" id="L180">                logger.warn(&quot;Failed to invalidate token during logout&quot;);</span>
+            }
+        }
+<span class="nc" id="L183">        return ResponseEntity.ok()</span>
+<span class="nc" id="L184">                .header(HttpHeaders.SET_COOKIE, createExpiredCookie().toString())</span>
+<span class="nc" id="L185">                .body(&quot;Logged out successfully&quot;);</span>
+    }
+
+    /**
+     * Extracts Discord ID from Spring Security authentication object.
+     *
+     * @param auth authentication object
+     * @return Discord ID or empty string if not found
+     */
+    private String getDiscordIdFromAuth(Authentication auth) {
+<span class="nc bnc" id="L195" title="All 2 branches missed.">        if (auth == null) {</span>
+<span class="nc" id="L196">            return &quot;&quot;;</span>
+        }
+
+<span class="nc" id="L199">        Object details = auth.getDetails();</span>
+<span class="nc bnc" id="L200" title="All 2 branches missed.">        if (details instanceof Map) {</span>
+<span class="nc" id="L201">            Object discordId = ((Map&lt;?, ?&gt;) details).get(&quot;discordId&quot;);</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">            return discordId != null ? discordId.toString() : &quot;&quot;;</span>
+        }
+<span class="nc" id="L204">        return &quot;&quot;;</span>
+    }
+
+    /**
+     * URL-encodes the redirect URI for OAuth requests.
+     *
+     * @return encoded redirect URI
+     */
+    private String getEncodedRedirectUri() {
+<span class="nc" id="L213">        return URLEncoder.encode(redirectUri, StandardCharsets.UTF_8);</span>
+    }
+
+    /**
+     * Constructs complete Discord OAuth URL with required parameters.
+     *
+     * @param redirectUri encoded redirect URI
+     * @return complete Discord OAuth URL
+     */
+    private String buildDiscordLoginUrl(String redirectUri) {
+<span class="nc" id="L223">        return discordOauthUrl</span>
+                + &quot;?client_id=&quot; + clientId
+                + &quot;&amp;redirect_uri=&quot; + redirectUri
+                + &quot;&amp;response_type=code&quot;
+<span class="nc" id="L227">                + &quot;&amp;scope=&quot; + URLEncoder.encode(oauthScopes, StandardCharsets.UTF_8);</span>
+    }
+
+    /**
+     * Creates HTTP response with authentication cookie and redirect location.
+     *
+     * @param token JWT token to set in cookie
+     * @return redirect response with authentication cookie
+     */
+    private ResponseEntity&lt;String&gt; createSuccessRedirectResponse(String token) {
+<span class="nc" id="L237">        HttpCookie authCookie = createAuthCookie(token);</span>
+<span class="nc" id="L238">        return ResponseEntity.status(HttpStatus.FOUND)</span>
+<span class="nc" id="L239">                .header(HttpHeaders.SET_COOKIE, authCookie.toString())</span>
+<span class="nc" id="L240">                .header(HttpHeaders.LOCATION, frontendRedirectUrl)</span>
+<span class="nc" id="L241">                .build();</span>
+    }
+
+    /**
+     * Creates HTTP cookie containing authentication token.
+     *
+     * @param token JWT token value
+     * @return configured HTTP cookie
+     */
+    private HttpCookie createAuthCookie(String token) {
+<span class="nc" id="L251">        return ResponseCookie.from(&quot;auth_token&quot;, token)</span>
+<span class="nc" id="L252">                .httpOnly(true)</span>
+<span class="nc" id="L253">                .secure(false) // Allow HTTP</span>
+<span class="nc" id="L254">                .path(&quot;/&quot;)</span>
+<span class="nc" id="L255">                .maxAge(3600)</span>
+<span class="nc" id="L256">                .build();</span>
+    }
+
+    /**
+     * Creates expired HTTP cookie for logout operations.
+     *
+     * @return expired authentication cookie
+     */
+    private HttpCookie createExpiredCookie() {
+<span class="nc" id="L265">        return ResponseCookie.from(&quot;auth_token&quot;, &quot;&quot;)</span>
+<span class="nc" id="L266">                .httpOnly(true)</span>
+<span class="nc" id="L267">                .secure(false) // Allow HTTP</span>
+<span class="nc" id="L268">                .path(&quot;/&quot;)</span>
+<span class="nc" id="L269">                .maxAge(0)</span>
+<span class="nc" id="L270">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

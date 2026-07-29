@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotenRechnerJdaBot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.grade</a> &gt; <span class="el_source">NotenRechnerJdaBot.java</span></div><h1>NotenRechnerJdaBot.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.grade;
+
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.AbstractSlashCommandJdaBot;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.BotIdentifier;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.annotation.SlashCommandBotType;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.service.JdaEventListenerService;
+import ch.zhaw.it.pm4.discordmanagerbe.botmaker.slashcommand.service.JdaSlashCommandService;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.grade.handler.AverageCommandHandler;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.grade.handler.GradeCommandHandler;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.grade.handler.RemoveCommandHandler;
+import ch.zhaw.it.pm4.discordmanagerbe.bots.grade.handler.SubjectCommandHandler;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import static ch.zhaw.it.pm4.discordmanagerbe.bots.grade.GradeBotConstants.*;
+
+/**
+ * Discord JDA Bot for grade calculation and management.
+ * Delegates command handling to specialized handler classes.
+ */
+@BotIdentifier(category = BotIdentifier.BotCategory.SLASH_COMMAND,
+        slashCommand = SlashCommandBotType.GRADE_CALCULATOR)
+@Component
+public class NotenRechnerJdaBot extends AbstractSlashCommandJdaBot {
+
+    /**
+     * Subject command handler for managing subjects.
+     */
+    private final SubjectCommandHandler subjectHandler;
+
+    /**
+     * Grade command handler for managing grades.
+     */
+    private final GradeCommandHandler gradeHandler;
+
+    /**
+     * Average command handler for calculating and displaying averages.
+     */
+    private final AverageCommandHandler averageHandler;
+
+    /**
+     * Remove command handler for deleting subjects and grades.
+     */
+    private final RemoveCommandHandler removeHandler;
+
+    /**
+     * Constructor to initialize the bot with required services.
+     */
+    @Autowired
+    public NotenRechnerJdaBot(JDA jdaBean, 
+                              JdaSlashCommandService slashCommandService, 
+                              JdaEventListenerService slashCommandListener,
+                              SubjectCommandHandler subjectHandler,
+                              GradeCommandHandler gradeHandler,
+                              AverageCommandHandler averageHandler,
+                              RemoveCommandHandler removeHandler) {
+<span class="fc" id="L61">        super(jdaBean, slashCommandService, slashCommandListener);</span>
+<span class="fc" id="L62">        this.subjectHandler = subjectHandler;</span>
+<span class="fc" id="L63">        this.gradeHandler = gradeHandler;</span>
+<span class="fc" id="L64">        this.averageHandler = averageHandler;</span>
+<span class="fc" id="L65">        this.removeHandler = removeHandler;</span>
+<span class="fc" id="L66">        setBotType(SlashCommandBotType.GRADE_CALCULATOR);</span>
+<span class="fc" id="L67">        setDescription(BOT_DESCRIPTION);</span>
+<span class="fc" id="L68">    }</span>
+
+    /**
+     * Sets up the commands for the grade calculator bot.
+     */
+    @Override
+    protected void setupCommands() {
+<span class="fc" id="L75">        registerCreateSubjectCommand();</span>
+<span class="fc" id="L76">        registerAddGradeCommand();</span>
+<span class="fc" id="L77">        registerShowSubjectsCommand();</span>
+<span class="fc" id="L78">        registerShowGradesCommand();</span>
+<span class="fc" id="L79">        registerShowAverageCommand();</span>
+<span class="fc" id="L80">        registerShowSemestersCommand();</span>
+<span class="fc" id="L81">        registerRemoveSubjectCommand();</span>
+<span class="fc" id="L82">        registerRemoveGradesCommand();</span>
+<span class="fc" id="L83">        registerRemoveSemesterCommand();</span>
+<span class="fc" id="L84">    }</span>
+
+    /**
+     * Registers button interaction handlers.
+     */
+    @Override
+    protected void registerButtonInteractionHandlers() {
+        // No button interactions needed
+<span class="fc" id="L92">    }</span>
+
+    /**
+     * Registers string interaction handlers.
+     */
+    @Override
+    protected void registerStringInteractionHandlers() {
+        // No string interactions needed
+<span class="fc" id="L100">    }</span>
+
+    /**
+     * Registers modal interaction handlers.
+     */
+    @Override
+    protected void registerModalInteractionHandlers() {
+        // No modal interactions needed
+<span class="fc" id="L108">    }</span>
+
+    /**
+     * Registers the command to create a new subject.
+     */
+    private void registerCreateSubjectCommand() {
+<span class="fc" id="L114">        SlashCommandData command = createCommand(CMD_CREATE_SUBJECT, &quot;Erstellt ein neues Fach&quot;)</span>
+<span class="fc" id="L115">                .addOption(OptionType.STRING, OPT_NAME, &quot;Name des Fachs&quot;, true)</span>
+<span class="fc" id="L116">                .addOption(OptionType.INTEGER, OPT_CREDITS, &quot;Anzahl Credits für das Fach&quot;, true)</span>
+<span class="fc" id="L117">                .addOption(OptionType.STRING, OPT_SEMESTER, &quot;Semester (z.B. HS2023)&quot;, false);</span>
+                
+<span class="fc" id="L119">        registerCommand(CMD_CREATE_SUBJECT, &quot;Erstellt ein neues Fach&quot;, command, </span>
+                this::handleCreateSubjectCommand);
+<span class="fc" id="L121">    }</span>
+
+    /**
+     * Registers the command to add a grade to a subject.
+     */
+    private void registerAddGradeCommand() {
+<span class="fc" id="L127">        SlashCommandData command = createCommand(CMD_ADD_GRADE, &quot;Fügt eine Note zu einem Fach hinzu&quot;)</span>
+<span class="fc" id="L128">                .addOption(OptionType.STRING, OPT_FACH, &quot;Name des Fachs&quot;, true)</span>
+<span class="fc" id="L129">                .addOption(OptionType.STRING, OPT_NOTE, &quot;Note (1.0 - 6.0, z.B. 4.5)&quot;, true)</span>
+<span class="fc" id="L130">                .addOption(OptionType.STRING, OPT_GEWICHTUNG, &quot;Gewichtung der Note (0.0 - 1.0 oder 0-100%, z.B. 0.5 oder 50)&quot;, true)</span>
+<span class="fc" id="L131">                .addOption(OptionType.STRING, OPT_SEMESTER, &quot;Semester (z.B. HS2023)&quot;, false)</span>
+<span class="fc" id="L132">                .addOption(OptionType.STRING, OPT_BESCHREIBUNG, &quot;Beschreibung der Note (z.B. 'Zwischentest')&quot;, false);</span>
+                
+<span class="fc" id="L134">        registerCommand(CMD_ADD_GRADE, &quot;Fügt eine Note zu einem Fach hinzu&quot;, command, </span>
+                this::handleAddGradeCommand);
+<span class="fc" id="L136">    }</span>
+
+    /**
+     * Registers the command to show all subjects.
+     */
+    private void registerShowSubjectsCommand() {
+<span class="fc" id="L142">        SlashCommandData command = createCommand(CMD_SHOW_SUBJECTS, &quot;Zeigt alle deine Fächer an&quot;)</span>
+<span class="fc" id="L143">                .addOption(OptionType.STRING, OPT_SEMESTER, &quot;Nur Fächer dieses Semesters anzeigen&quot;, false);</span>
+                
+<span class="fc" id="L145">        registerCommand(CMD_SHOW_SUBJECTS, &quot;Zeigt alle deine Fächer an&quot;, command, </span>
+                this::handleShowSubjectsCommand);
+<span class="fc" id="L147">    }</span>
+
+    /**
+     * Registers the command to show grades for a specific subject.
+     */
+    private void registerShowGradesCommand() {
+<span class="fc" id="L153">        SlashCommandData command = createCommand(CMD_SHOW_GRADES, &quot;Zeigt die Noten für ein bestimmtes Fach an&quot;)</span>
+<span class="fc" id="L154">                .addOption(OptionType.STRING, OPT_FACH, &quot;Name des Fachs&quot;, true)</span>
+<span class="fc" id="L155">                .addOption(OptionType.STRING, OPT_SEMESTER, &quot;Semester (z.B. HS2023)&quot;, false);</span>
+                
+<span class="fc" id="L157">        registerCommand(CMD_SHOW_GRADES, &quot;Zeigt die Noten für ein bestimmtes Fach an&quot;, command, </span>
+                this::handleShowGradesCommand);
+<span class="fc" id="L159">    }</span>
+
+    /**
+     * Registers the command to show the average grade.
+     */
+    private void registerShowAverageCommand() {
+<span class="fc" id="L165">        SlashCommandData command = createCommand(CMD_SHOW_AVERAGE, &quot;Zeigt deinen aktuellen Notendurchschnitt an&quot;)</span>
+<span class="fc" id="L166">                .addOption(OptionType.STRING, OPT_SEMESTER, &quot;Nur für dieses Semester (z.B. HS2023)&quot;, false);</span>
+                
+<span class="fc" id="L168">        registerCommand(CMD_SHOW_AVERAGE, &quot;Zeigt deinen aktuellen Notendurchschnitt an&quot;, command, </span>
+                this::handleShowAverageCommand);
+<span class="fc" id="L170">    }</span>
+
+    /**
+     * Registers the command to show all semesters.
+     */
+    private void registerShowSemestersCommand() {
+<span class="fc" id="L176">        SlashCommandData command = createCommand(CMD_SHOW_SEMESTERS, &quot;Zeigt alle vorhandenen Semester an&quot;);</span>
+                
+<span class="fc" id="L178">        registerCommand(CMD_SHOW_SEMESTERS, &quot;Zeigt alle vorhandenen Semester an&quot;, command, </span>
+                this::handleShowSemestersCommand);
+<span class="fc" id="L180">    }</span>
+
+    /**
+     * Registers the command to remove a subject and all its grades.
+     */
+    private void registerRemoveSubjectCommand() {
+<span class="fc" id="L186">        SlashCommandData command = createCommand(CMD_REMOVE_SUBJECT, &quot;Löscht ein Fach und alle zugehörigen Noten&quot;)</span>
+<span class="fc" id="L187">                .addOption(OptionType.STRING, OPT_FACH, &quot;Name des zu löschenden Fachs&quot;, true)</span>
+<span class="fc" id="L188">                .addOption(OptionType.STRING, OPT_SEMESTER, &quot;Semester (z.B. HS2023)&quot;, false);</span>
+                
+<span class="fc" id="L190">        registerCommand(CMD_REMOVE_SUBJECT, &quot;Löscht ein Fach und alle zugehörigen Noten&quot;, command, </span>
+                this::handleRemoveSubjectCommand);
+<span class="fc" id="L192">    }</span>
+
+    /**
+     * Registers the command to remove all grades from a subject.
+     */
+    private void registerRemoveGradesCommand() {
+<span class="fc" id="L198">        SlashCommandData command = createCommand(CMD_REMOVE_GRADES, &quot;Löscht alle Noten aus einem Fach&quot;)</span>
+<span class="fc" id="L199">                .addOption(OptionType.STRING, OPT_FACH, &quot;Name des Fachs&quot;, true)</span>
+<span class="fc" id="L200">                .addOption(OptionType.STRING, OPT_SEMESTER, &quot;Semester (z.B. HS2023)&quot;, false);</span>
+                
+<span class="fc" id="L202">        registerCommand(CMD_REMOVE_GRADES, &quot;Löscht alle Noten aus einem Fach&quot;, command, </span>
+                this::handleRemoveGradesCommand);
+<span class="fc" id="L204">    }</span>
+
+    /**
+     * Registers the command to remove an entire semester with all subjects and grades.
+     */
+    private void registerRemoveSemesterCommand() {
+<span class="fc" id="L210">        SlashCommandData command = createCommand(CMD_REMOVE_SEMESTER, &quot;Löscht ein ganzes Semester mit allen Fächern&quot;)</span>
+<span class="fc" id="L211">                .addOption(OptionType.STRING, OPT_SEMESTER, &quot;Semester das gelöscht werden soll (z.B. HS2023)&quot;, true);</span>
+                
+<span class="fc" id="L213">        registerCommand(CMD_REMOVE_SEMESTER, &quot;Löscht ein ganzes Semester mit allen Fächern&quot;, command, </span>
+                this::handleRemoveSemesterCommand);
+<span class="fc" id="L215">    }</span>
+
+    /**
+     * Handles the command to create a new subject.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    void handleCreateSubjectCommand(SlashCommandInteractionEvent event) {
+<span class="fc" id="L222">        event.deferReply().setEphemeral(true).queue();</span>
+<span class="fc" id="L223">        subjectHandler.handleCreateSubject(event);</span>
+<span class="fc" id="L224">    }</span>
+
+    /**
+     * Handles the command to add a grade to a subject.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    void handleAddGradeCommand(SlashCommandInteractionEvent event) {
+<span class="fc" id="L231">        event.deferReply().setEphemeral(true).queue();</span>
+<span class="fc" id="L232">        gradeHandler.handleAddGrade(event);</span>
+<span class="fc" id="L233">    }</span>
+
+    /**
+     * Handles the command to show all subjects.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    void handleShowSubjectsCommand(SlashCommandInteractionEvent event) {
+<span class="fc" id="L240">        event.deferReply().setEphemeral(true).queue();</span>
+<span class="fc" id="L241">        subjectHandler.handleShowSubjects(event);</span>
+<span class="fc" id="L242">    }</span>
+
+    /**
+     * Handles the command to show grades for a specific subject.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    void handleShowGradesCommand(SlashCommandInteractionEvent event) {
+<span class="fc" id="L249">        event.deferReply().setEphemeral(true).queue();</span>
+<span class="fc" id="L250">        gradeHandler.handleShowGrades(event);</span>
+<span class="fc" id="L251">    }</span>
+
+    /**
+     * Handles the command to show the average grade.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    void handleShowAverageCommand(SlashCommandInteractionEvent event) {
+<span class="fc" id="L258">        event.deferReply().setEphemeral(true).queue();</span>
+<span class="fc" id="L259">        averageHandler.handleShowAverage(event);</span>
+<span class="fc" id="L260">    }</span>
+
+    /**
+     * Handles the command to show all semesters.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    void handleShowSemestersCommand(SlashCommandInteractionEvent event) {
+<span class="fc" id="L267">        event.deferReply().setEphemeral(true).queue();</span>
+<span class="fc" id="L268">        subjectHandler.handleShowSemesters(event);</span>
+<span class="fc" id="L269">    }</span>
+
+    /**
+     * Handles the command to remove a subject and all its grades.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    void handleRemoveSubjectCommand(SlashCommandInteractionEvent event) {
+<span class="fc" id="L276">        event.deferReply().setEphemeral(true).queue();</span>
+<span class="fc" id="L277">        removeHandler.handleRemoveSubject(event);</span>
+<span class="fc" id="L278">    }</span>
+
+    /**
+     * Handles the command to remove all grades from a subject.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    void handleRemoveGradesCommand(SlashCommandInteractionEvent event) {
+<span class="fc" id="L285">        event.deferReply().setEphemeral(true).queue();</span>
+<span class="fc" id="L286">        removeHandler.handleRemoveGrades(event);</span>
+<span class="fc" id="L287">    }</span>
+
+    /**
+     * Handles the command to remove an entire semester with all subjects and grades.
+     * @param event the SlashCommandInteractionEvent containing the command data
+     */
+    void handleRemoveSemesterCommand(SlashCommandInteractionEvent event) {
+<span class="fc" id="L294">        event.deferReply().setEphemeral(true).queue();</span>
+<span class="fc" id="L295">        removeHandler.handleRemoveSemester(event);</span>
+<span class="fc" id="L296">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomId.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.schedule</a> &gt; <span class="el_source">CustomId.java</span></div><h1>CustomId.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.schedule;
+
+/**
+ * CustomId is an enumeration that defines custom identifiers for various UI components
+ * in the Discord bot's schedule management system. These identifiers are used to handle
+ * interactions with buttons and input fields in the user interface.
+ */
+<span class="fc" id="L8">public enum CustomId{</span>
+<span class="fc" id="L9">    SUBMIT(&quot;SUBMIT_BUTTON&quot;),</span>
+<span class="fc" id="L10">    CANCEL(&quot;CANCEL_BUTTON&quot;),</span>
+<span class="fc" id="L11">    RESTART(&quot;RESTART_BUTTON&quot;),</span>
+<span class="fc" id="L12">    CONFIRM_PREFIX(&quot;CONFIRM_BUTTON_&quot;),</span>
+
+<span class="fc" id="L14">    USERNAME(&quot;USERNAME_FIELD&quot;),</span>
+<span class="fc" id="L15">    DEPARTMENT(&quot;DEPARTMENT_FIELD&quot;),</span>
+<span class="fc" id="L16">    SEMESTER(&quot;SEMESTER_FIELD&quot;),</span>
+<span class="fc" id="L17">    WEEK(&quot;WEEK_FIELD&quot;);</span>
+
+    private final String customId;
+
+    /**
+     * Constructor for CustomId enum.
+     * @param submitButton The custom ID string associated with the button or field.
+     */
+<span class="fc" id="L25">    CustomId(String submitButton){</span>
+<span class="fc" id="L26">        this.customId = submitButton;</span>
+<span class="fc" id="L27">    }</span>
+
+    /**
+     * Returns the custom ID string associated with this CustomId.
+     * @return The custom ID string.
+     */
+    public String getId() {
+<span class="fc" id="L34">        return customId;</span>
+    }
+
+    /**
+     * Converts a string to a CustomId enum constant.
+     * If the string starts with CONFIRM_PREFIX, it returns CONFIRM_PREFIX.
+     * Otherwise, it checks for a matching CustomId and returns it.
+     * @param id The string to convert.
+     * @return The corresponding CustomId enum constant.
+     * @throws IllegalArgumentException if no matching CustomId is found.
+     */
+    public static CustomId fromString(String id){
+<span class="nc bnc" id="L46" title="All 2 branches missed.">        if(id.startsWith(CONFIRM_PREFIX.getId())){</span>
+<span class="nc" id="L47">            return CONFIRM_PREFIX;</span>
+        }
+<span class="nc bnc" id="L49" title="All 2 branches missed.">        for (CustomId s : CustomId.values()) {</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">            if (s.getId().equals(id)) {</span>
+<span class="nc" id="L51">                return s;</span>
+            }
+        }
+<span class="nc" id="L54">        throw new IllegalArgumentException(&quot;No enum constant for id: &quot; + id);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

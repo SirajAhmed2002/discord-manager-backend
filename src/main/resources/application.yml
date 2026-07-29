@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: discord-manager-be
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+server:
+  port: 8081
+  address: 0.0.0.0
+# SSL Config for production
+#   ssl:
+#    enabled: true
+#    key-store: /etc/letsencrypt/live/pm4.landolt.dev/keystore.p12
+#    key-store-password: pm4
+#    key-store-type: PKCS12
+#    key-alias: tomcat
+
+token: 'YOUR_BOT_TOKEN_HERE'
+
+server.invite.link: https://discord.com/oauth2/authorize?client_id=1351316420171927634&permissions=8&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A4200%2F&integration_type=0&scope=bot+applications.commands.permissions.update+applications.commands
+discord:
+  client-id: 1351316420171927634
+  client-secret: YOUR_CLIENT_SECRET_HERE
+  redirect-uri: http://localhost:8081/auth/callback
+  # Redirect-uri for production
+  #   redirect-uri: https://pm4.landolt.dev:8081/auth/callback
+  auth-endpoints:
+    token-url: https://discord.com/api/oauth2/token
+    user-url: https://discord.com/api/users/@me
+    oauth-url: https://discord.com/api/oauth2/authorize
+  oauth:
+    scopes: identify email
+
+jwt:
+  # Secret key used for signing JWT tokens (should be at least 32 characters long)
+  secret: YOUR_JWT_SECRET_AT_LEAST_32_CHARS
+  expiration: 3600000 # 1 Stunde in Millisekunden
+  cleanup-interval: 3600000 # 1 Stunde in Millisekunden
+
+frontend:
+  redirect-url: http://localhost:4200/main-menu
+# Redirect-uri for production
+#   redirect-url: https://pm4.landolt.dev/main-menu
+
+logging:
+  level:
+    ch.zhaw.it.pm4.discordmanagerbe.auth: INFO
+    org.springframework.security: INFO
+
+cors:
+  allowed-origins: "http://localhost:4200,https://pm4.landolt.dev,https://pm4.landolt.dev:4200"
+  allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
+  allowed-headers: "*"
+
+security:
+  public-paths: /auth/discord-login,/auth/callback,/auth/check
+
+openai:
+  api:
+    key: YOUR_OPENAI_API_KEY_HERE
+    url: https://api.openai.com/v1/audio/transcriptions
+  transcription:
+    model: gpt-4o-transcribe

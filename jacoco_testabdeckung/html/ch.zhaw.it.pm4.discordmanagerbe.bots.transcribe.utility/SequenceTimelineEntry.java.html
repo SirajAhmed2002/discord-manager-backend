@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SequenceTimelineEntry.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Discord-Manager-BE</a> &gt; <a href="index.source.html" class="el_package">ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility</a> &gt; <span class="el_source">SequenceTimelineEntry.java</span></div><h1>SequenceTimelineEntry.java</h1><pre class="source lang-java linenums">package ch.zhaw.it.pm4.discordmanagerbe.bots.transcribe.utility;
+
+/**
+ * Represents a timeline entry for a speech sequence with metadata for visualization.
+ */
+public class SequenceTimelineEntry {
+
+    /** Eindeutige Kennung der Sequenz.*/
+    private final int sequenceId;
+
+    /** Discord-ID des Benutzers. */
+    private final String userId;
+
+    /** Discord-Benutzername des Benutzers. */
+    private final String username;
+
+    /** Zeitstempel, wann die Sequenz gestartet wurde. */
+    private final long startTime;
+
+    /** Zeitstempel, wann die Sequenz beendet wurde. */
+    private final long endTime;
+
+    /** Größe der Audiodaten in Bytes. */
+    private final int audioDataSize;
+
+    /** Name der Audiodatei. */
+    private final String audioFileName;
+
+    /**
+     * Creates a new timeline entry for speech sequence visualization.
+     *
+     * @param sequenceId Unique identifier for the sequence
+     * @param userId User's Discord ID
+     * @param username User's Discord username
+     * @param startTime Sequence start timestamp
+     * @param endTime Sequence end timestamp
+     * @param audioDataSize Size of audio data in bytes
+     * @param audioFileName Name of the audio file
+     */
+    public SequenceTimelineEntry(int sequenceId, String userId, String username,
+<span class="fc" id="L41">                                 long startTime, long endTime, int audioDataSize, String audioFileName) {</span>
+<span class="fc" id="L42">        this.sequenceId = sequenceId;</span>
+<span class="fc" id="L43">        this.userId = userId;</span>
+<span class="fc" id="L44">        this.username = username;</span>
+<span class="fc" id="L45">        this.startTime = startTime;</span>
+<span class="fc" id="L46">        this.endTime = endTime;</span>
+<span class="fc" id="L47">        this.audioDataSize = audioDataSize;</span>
+<span class="fc" id="L48">        this.audioFileName = audioFileName;</span>
+<span class="fc" id="L49">    }</span>
+
+    /**
+     * @return The sequence identifier
+     */
+    public int getSequenceId() {
+<span class="fc" id="L55">        return sequenceId;</span>
+    }
+
+    /**
+     * @return The user's Discord ID
+     */
+    public String getUserId() {
+<span class="fc" id="L62">        return userId;</span>
+    }
+
+    /**
+     * @return The user's Discord username
+     */
+    public String getUsername() {
+<span class="fc" id="L69">        return username;</span>
+    }
+
+    /**
+     * @return Timestamp when the sequence started
+     */
+    public long getStartTime() {
+<span class="fc" id="L76">        return startTime;</span>
+    }
+
+    /**
+     * @return Timestamp when the sequence ended
+     */
+    public long getEndTime() {
+<span class="fc" id="L83">        return endTime;</span>
+    }
+
+    /**
+     * @return Size of the audio data in bytes
+     */
+    public int getAudioDataSize() {
+<span class="fc" id="L90">        return audioDataSize;</span>
+    }
+
+    /**
+     * @return Name of the audio file
+     */
+    public String getAudioFileName() {
+<span class="fc" id="L97">        return audioFileName;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>
