@@ -1,3 +1,16 @@
+> **Hinweis zu diesem Repository**
+>
+> Dies ist ein Teamprojekt aus meinem Studium an der ZHAW (PM4). Das
+> Originalrepository mit der vollständigen Commit-Historie liegt auf der
+> ZHAW-GitHub-Instanz und ist nicht öffentlich zugänglich. Diese Kopie wurde
+> als einzelner Commit erstellt, die Contributor-Anzeige sagt daher nichts
+> darüber aus, wer welchen Teil geschrieben hat.
+>
+> Mein eigener Anteil waren die Discord-Bots mit JDA. Die REST-API, das
+> Spring-Boot-Backend und das Frontend stammen von meinen Teamkollegen.
+>
+> Zugangsdaten in `application.yml` wurden durch Platzhalter ersetzt.
+
 # D-Manager Backend
 
 ## Grobarchitektur
